@@ -4,21 +4,55 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Macro Argentina - Sistema GDS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600;8..60,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#f6f5f2;--surf:#fff;--surf2:#eeede8;--surf3:#e4e3dc;--bd:rgba(0,0,0,.08);--bd2:rgba(0,0,0,.18);--tx:#181816;--tx2:#6a6960;--tx3:#9a9990;--acc:#1a4edb;--acc2:#eef2ff;--grn:#0a7c42;--grn2:#edfaf3;--red:#c0392b;--red2:#fef1f0;--amb:#8a4e08;--amb2:#fef9ee;--pur:#6d28d9;--teal:#0d9488;--r:10px;--rl:14px;}
-@media(prefers-color-scheme:dark){:root{--bg:#111110;--surf:#1c1c1a;--surf2:#242420;--surf3:#2e2e2a;--bd:rgba(255,255,255,.07);--bd2:rgba(255,255,255,.15);--tx:#e4e3dc;--tx2:#9a9990;--tx3:#5e5d58;--acc:#7b9ef9;--acc2:#182040;--grn:#34d399;--grn2:#081f14;--red:#f87171;--red2:#290d0d;--amb:#fbbf24;--amb2:#231a06;--pur:#c4b5fd;--teal:#5eead4;}}
+:root{
+  /* Paleta editorial — warm neutrals + un acento + semánticos desaturados */
+  --bg:#faf9f6;--surf:#ffffff;--surf2:#f1efe9;--surf3:#e6e3d9;
+  --bd:rgba(15,15,15,.07);--bd2:rgba(15,15,15,.14);
+  --tx:#1a1a1a;--tx2:#525050;--tx3:#9a9690;
+  --acc:#1e4a8a;--acc2:#eef3fb;
+  --grn:#15803d;--grn2:#f0f7f2;
+  --red:#b91c1c;--red2:#fbf2f0;
+  --amb:#a85c1e;--amb2:#fbf6ee;
+  --pur:#6d28d9;--teal:#0d9488;
+  /* Tipografía */
+  --font-sans:'Inter',-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --font-serif:'Source Serif 4',Georgia,'Times New Roman',serif;
+  --font-mono:'JetBrains Mono',ui-monospace,'SF Mono',monospace;
+  /* Radio + spacing */
+  --r:8px;--rl:12px;
+}
+@media(prefers-color-scheme:dark){:root{
+  --bg:#0c0c0a;--surf:#161614;--surf2:#1f1f1c;--surf3:#2a2a26;
+  --bd:rgba(255,255,255,.06);--bd2:rgba(255,255,255,.13);
+  --tx:#ebe9e2;--tx2:#a8a59c;--tx3:#5a5752;
+  --acc:#7da7f5;--acc2:#152643;
+  --grn:#4ade80;--grn2:#0a1c12;
+  --red:#f87171;--red2:#291011;
+  --amb:#fbbf24;--amb2:#1f1607;
+  --pur:#c4b5fd;--teal:#5eead4;
+}}
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--tx);font-size:14px;line-height:1.5}
-.hdr{background:var(--surf);border-bottom:.5px solid var(--bd);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;gap:12px;flex-wrap:wrap}
-.hdr-l h1{font-size:16px;font-weight:600;letter-spacing:-.02em}
-.hdr-l p{font-size:11px;color:var(--tx2);margin-top:1px}
-.hdr-r{display:flex;align-items:center;gap:8px}
-.live-badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;background:var(--grn2);color:var(--grn);padding:3px 9px;border-radius:20px;font-weight:500}
-.live-badge::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;animation:pulse 2s ease-in-out infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-.btn{font-size:12px;padding:6px 13px;border:.5px solid var(--bd2);border-radius:8px;background:var(--surf);color:var(--tx);cursor:pointer;font-family:inherit;font-weight:500;transition:background .1s;white-space:nowrap}
-.btn:hover{background:var(--surf2)}
-.btn-p{background:var(--acc);color:#fff;border-color:transparent}
+html{font-feature-settings:"ss01","cv11","tnum";}
+body{font-family:var(--font-sans);background:var(--bg);color:var(--tx);font-size:14px;line-height:1.55;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;font-feature-settings:"tnum"}
+/* Editorial overrides */
+.serif{font-family:var(--font-serif);font-feature-settings:"tnum","onum"}
+.mono{font-family:var(--font-mono)}
+.hdr{background:var(--surf);border-bottom:.5px solid var(--bd);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;gap:16px;flex-wrap:wrap}
+.hdr-l h1{font-family:var(--font-serif);font-size:22px;font-weight:600;letter-spacing:-.015em;line-height:1.1}
+.hdr-l p{font-size:11px;color:var(--tx3);margin-top:3px;letter-spacing:.02em}
+.hdr-r{display:flex;align-items:center;gap:10px}
+.live-badge{display:inline-flex;align-items:center;gap:6px;font-size:10px;background:transparent;color:var(--tx3);padding:4px 10px;border-radius:20px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;border:.5px solid var(--bd2)}
+.live-badge::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--grn);animation:pulse 2.4s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:.9}50%{opacity:.3}}
+.btn{font-size:12px;padding:7px 14px;border:.5px solid var(--bd2);border-radius:6px;background:var(--surf);color:var(--tx);cursor:pointer;font-family:inherit;font-weight:500;transition:all .15s;white-space:nowrap;letter-spacing:-.01em}
+.btn:hover{background:var(--surf2);border-color:var(--tx3)}
+.btn-p{background:var(--tx);color:var(--surf);border-color:transparent}
+.btn-p:hover{background:#000;border-color:transparent}
+@media(prefers-color-scheme:dark){.btn-p{background:var(--tx);color:var(--bg)}.btn-p:hover{background:#fff}}
 .tabs{background:var(--surf);border-bottom:.5px solid var(--bd);padding:0 20px;display:flex;overflow-x:auto;scrollbar-width:none}
 .tabs::-webkit-scrollbar{display:none}
 .tab{font-size:13px;padding:10px 14px;cursor:pointer;border:none;background:transparent;color:var(--tx2);border-bottom:2px solid transparent;white-space:nowrap;font-family:inherit;transition:all .12s}
@@ -26,26 +60,28 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
 .tab.on{color:var(--tx);border-bottom:2px solid var(--tx);font-weight:500}
 .pg{display:none;padding:18px 20px;max-width:1100px;margin:0 auto}
 .pg.on{display:block}
-.ctrl-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px;padding:10px 14px;background:var(--surf);border:.5px solid var(--bd);border-radius:var(--r)}
-.ctrl-bar label{font-size:12px;color:var(--tx2)}
-.ctrl-bar select{font-size:12px;padding:4px 8px;border:.5px solid var(--bd2);border-radius:6px;background:var(--surf2);color:var(--tx);font-family:inherit}
-.ctrl-sep{width:1px;height:20px;background:var(--bd2);margin:0 4px}
-.toggle-row{display:flex;gap:6px;flex-wrap:wrap}
-.tbtn{font-size:11px;padding:3px 10px;border:.5px solid var(--bd2);border-radius:20px;cursor:pointer;background:var(--surf2);color:var(--tx2);font-family:inherit;transition:all .1s}
-.tbtn.on{background:var(--acc2);color:var(--acc);border-color:var(--acc);font-weight:500}
-.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:8px;margin-bottom:18px}
-.kpi{background:var(--surf2);border-radius:var(--r);padding:12px;border:.5px solid transparent}
-.kpi-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--tx2);margin-bottom:7px}
-.kpi-val{font-size:20px;font-weight:600;letter-spacing:-.02em;line-height:1}
-.kpi-sub{font-size:11px;margin-top:5px}
-.kpi-meta{font-size:10px;color:var(--tx3);margin-top:3px}
+.ctrl-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:20px;padding:10px 16px;background:transparent;border:none;border-top:.5px solid var(--bd);border-bottom:.5px solid var(--bd);border-radius:0}
+.ctrl-bar label{font-size:11px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+.ctrl-bar select{font-size:12.5px;padding:5px 10px;border:.5px solid var(--bd2);border-radius:5px;background:var(--surf);color:var(--tx);font-family:inherit;font-feature-settings:"tnum"}
+.ctrl-sep{width:1px;height:18px;background:var(--bd);margin:0 6px}
+.toggle-row{display:flex;gap:4px;flex-wrap:wrap}
+.tbtn{font-size:11.5px;padding:5px 12px;border:.5px solid var(--bd2);border-radius:4px;cursor:pointer;background:transparent;color:var(--tx2);font-family:inherit;transition:all .12s;letter-spacing:-.005em}
+.tbtn:hover{color:var(--tx);border-color:var(--tx3)}
+.tbtn.on{background:var(--tx);color:var(--surf);border-color:var(--tx);font-weight:500}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(178px,1fr));gap:1px;margin-bottom:24px;background:var(--bd);border:.5px solid var(--bd);border-radius:var(--rl);overflow:hidden}
+.kpi{background:var(--surf);padding:18px 18px 20px;border:none;transition:background .15s;cursor:default}
+.kpi:hover{background:var(--surf2)}
+.kpi-lbl{font-size:9.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--tx3);margin-bottom:14px;font-weight:600}
+.kpi-val{font-family:var(--font-serif);font-size:32px;font-weight:500;letter-spacing:-.025em;line-height:1;font-feature-settings:"tnum","onum"}
+.kpi-sub{font-size:11.5px;margin-top:8px;color:var(--tx2);font-feature-settings:"tnum"}
+.kpi-meta{font-size:10px;color:var(--tx3);margin-top:6px;font-family:var(--font-mono);letter-spacing:-.02em}
 .up{color:var(--red)}.dn{color:var(--grn)}.neu{color:var(--tx2)}
 .cgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px}
 @media(max-width:640px){.cgrid{grid-template-columns:1fr}.kpi-grid{grid-template-columns:repeat(2,1fr)}}
-.cc{background:var(--surf);border:.5px solid var(--bd);border-radius:var(--rl);padding:15px;margin-bottom:12px}
-.cc-hd{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;gap:8px;flex-wrap:wrap}
-.cc-t{font-size:13px;font-weight:500}
-.cc-s{font-size:11px;color:var(--tx2);margin-top:2px}
+.cc{background:var(--surf);border:.5px solid var(--bd);border-radius:var(--rl);padding:20px 22px;margin-bottom:14px}
+.cc-hd{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;gap:12px;flex-wrap:wrap;padding-bottom:14px;border-bottom:.5px solid var(--bd)}
+.cc-t{font-family:var(--font-serif);font-size:17px;font-weight:600;letter-spacing:-.01em;line-height:1.25}
+.cc-s{font-size:12px;color:var(--tx2);margin-top:4px;line-height:1.5}
 .dl-btn{font-size:11px;border:.5px solid var(--bd);background:transparent;color:var(--tx2);padding:3px 8px;border-radius:5px;cursor:pointer;font-family:inherit}
 .dl-btn:hover{background:var(--surf2)}
 .note{font-size:10px;color:var(--tx3);margin-top:6px;font-style:italic}
@@ -69,14 +105,17 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
 .bproj{font-size:10px;padding:2px 7px;border-radius:4px;background:var(--amb2);color:var(--amb);font-weight:500}
 .breal{font-size:10px;padding:2px 7px;border-radius:4px;background:var(--grn2);color:var(--grn);font-weight:500}
 .bsrc{font-size:10px;padding:2px 7px;border-radius:4px;background:var(--acc2);color:var(--acc);font-weight:500}
-.info-box{background:var(--amb2);border:.5px solid var(--amb);border-radius:var(--r);padding:10px 14px;font-size:12px;color:var(--amb);margin-bottom:16px;line-height:1.6}
+.info-box{background:transparent;border-left:2px solid var(--tx3);border-radius:0;padding:8px 16px;font-size:12px;color:var(--tx2);margin-bottom:24px;line-height:1.65;font-style:italic;font-family:var(--font-serif)}
+.info-box b,.info-box strong{font-style:normal;color:var(--tx);font-family:var(--font-sans);font-weight:600}
+.info-box em{font-style:italic;color:var(--tx);font-weight:500}
 .src-row{background:var(--surf);border:.5px solid var(--bd);border-radius:var(--r);padding:11px 15px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:7px}
 .src-n{font-size:13px;font-weight:500}
 .src-d{font-size:11px;color:var(--tx2);margin-top:1px}
 .dot{width:7px;height:7px;border-radius:50%}
 .dg{background:var(--grn)}.da{background:var(--amb)}
-.tag{font-size:10px;padding:2px 7px;border-radius:4px;font-weight:500;margin-left:6px}
-.tag-g{background:var(--grn2);color:var(--grn)}.tag-a{background:var(--amb2);color:var(--amb)}
+.tag{font-size:9px;padding:3px 7px;border-radius:3px;font-weight:600;margin-left:7px;text-transform:uppercase;letter-spacing:.06em;font-family:var(--font-sans);vertical-align:middle}
+.tag-g{background:var(--grn2);color:var(--grn);border:.5px solid color-mix(in srgb,var(--grn) 18%,transparent)}
+.tag-a{background:var(--amb2);color:var(--amb);border:.5px solid color-mix(in srgb,var(--amb) 18%,transparent)}
 .tok-box{background:var(--surf);border:.5px solid var(--bd);border-radius:var(--rl);padding:15px;margin-bottom:16px}
 .tok-box h3{font-size:13px;font-weight:500;margin-bottom:8px}
 .tok-row{display:flex;gap:7px}
@@ -96,18 +135,21 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
 #toast{position:fixed;bottom:20px;right:20px;background:var(--surf);border:.5px solid var(--bd2);border-radius:10px;padding:9px 15px;font-size:12px;box-shadow:0 4px 14px rgba(0,0,0,.15);opacity:0;transition:opacity .22s;pointer-events:none;z-index:200;max-width:280px}
 #toast.on{opacity:1}
 hr.d{border:none;border-top:.5px solid var(--bd);margin:16px 0}
-.slbl{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--tx3);margin:0 0 10px}
+.slbl{font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--tx3);margin:0 0 16px;font-weight:600}
 
-.layout{display:flex;min-height:calc(100vh - 56px)}
-.sidebar{width:215px;flex-shrink:0;background:var(--surf);border-right:.5px solid var(--bd);padding:10px 0;position:sticky;top:56px;height:calc(100vh - 56px);overflow-y:auto;scrollbar-width:none}
+.layout{display:flex;min-height:calc(100vh - 62px)}
+.sidebar{width:240px;flex-shrink:0;background:var(--surf);border-right:.5px solid var(--bd);padding:18px 0;position:sticky;top:62px;height:calc(100vh - 62px);overflow-y:auto;scrollbar-width:none}
 .sidebar::-webkit-scrollbar{display:none}
-.sb-sec{padding:0 10px}
-.sb-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--tx3);padding:10px 8px 4px;display:block}
-.nav-item{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:8px;cursor:pointer;border:none;background:transparent;color:var(--tx2);font-family:inherit;font-size:13px;width:100%;text-align:left;transition:all .12s}
+.sb-sec{padding:0 12px}
+.sb-lbl{font-size:9.5px;text-transform:uppercase;letter-spacing:.1em;color:var(--tx3);padding:18px 12px 6px;display:block;font-weight:600}
+.nav-item{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;cursor:pointer;border:none;background:transparent;color:var(--tx2);font-family:inherit;font-size:13.5px;width:100%;text-align:left;transition:all .12s;letter-spacing:-.005em}
 .nav-item:hover{background:var(--surf2);color:var(--tx)}
-.nav-item.on{background:var(--acc2);color:var(--acc);font-weight:500}
-.nav-ic{font-size:14px;width:19px;text-align:center;flex-shrink:0}
-.nav-badge{margin-left:auto;font-size:9px;background:var(--grn2);color:var(--grn);padding:1px 5px;border-radius:8px;font-weight:600}
+.nav-item.on{background:var(--tx);color:var(--surf);font-weight:500}
+.nav-ic{font-size:0;width:6px;height:6px;border-radius:50%;background:var(--tx3);flex-shrink:0;transition:background .12s}
+.nav-item:hover .nav-ic{background:var(--tx2)}
+.nav-item.on .nav-ic{background:var(--surf)}
+.nav-badge{margin-left:auto;font-size:9px;background:var(--surf2);color:var(--tx2);padding:2px 6px;border-radius:8px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.nav-item.on .nav-badge{background:rgba(255,255,255,.18);color:var(--surf)}
 .content-area{flex:1;min-width:0}
 .tabs{display:none!important}
 @media(max-width:700px){
@@ -156,7 +198,7 @@ hr.d{border:none;border-top:.5px solid var(--bd);margin:16px 0}
 </head>
 <body>
 <div class="hdr">
-  <div class="hdr-l"><h1>Macro Argentina</h1><p id="upd-txt">Sistema GDS - Datos reales del Excel</p></div>
+  <div class="hdr-l"><h1>Macro Argentina</h1><p id="upd-txt">Indicadores económicos · actualización diaria</p></div>
   <div class="hdr-r"><span class="live-badge">En vivo</span><input type="file" id="xls-up" accept=".xls,.xlsx" style="display:none" onchange="handleXlsUpload(event)"/><button class="btn" onclick="document.getElementById('xls-up').click()" title="Subir Excel (IPC, ICA, Merval, EMBI, y más)">&#128190; Subir Excel</button> <button class="btn btn-p" onclick="reloadDataJson()">&#8635; Actualizar</button></div>
 </div>
 <div class="tabs">
@@ -211,7 +253,7 @@ hr.d{border:none;border-top:.5px solid var(--bd);margin:16px 0}
   </div>
 </nav>
 <div class="content-area"><div id="pg-dash" class="pg on">
-  <div class="info-box"><strong>Datos del Excel GDS.</strong> Real hasta Mar 2026 (INDEC). Proyecciones REM/BCRA marcadas con línea punteada. El botón <em>Actualizar</em> sincroniza BCRA+datos.gob.ar. Usa <em>Subir Excel</em> para cargar el xls mensual de INDEC cuando datos.gob.ar lagea. Las actualizaciones persisten en localStorage.</div>
+  <div class="info-box">Datos oficiales de <strong>INDEC</strong> y <strong>BCRA</strong>, actualizados automáticamente a primera hora de la mañana. Las proyecciones REM aparecen marcadas con línea punteada.</div>
   <div class="slbl">Indicadores clave</div>
   <div class="kpi-grid" id="kpi-grid"></div>
   <hr class="d"/>
