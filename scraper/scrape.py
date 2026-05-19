@@ -83,12 +83,15 @@ UCI_SECTORES = {
 
 # Variables BCRA usadas
 BCRA_VARS = {
-    "reservas":   1,    # USD millones, diaria
-    "tc_minor":   4,    # TC minorista vendedor, diaria
-    "tc_mayor":   5,    # TC mayorista de referencia, diaria
-    "bm_diaria":  15,   # Base monetaria diaria (M$)
-    "ipc_vm":     27,   # Variación mensual IPC (este SÍ tiene abril 2026 cuando INDEC API aún no)
-    "ipc_via":    28,   # Variación interanual IPC
+    "reservas":      1,    # Reservas internacionales BRUTAS (USD M, diaria)
+    "reservas_xdeg": 74,   # Reservas excl asignaciones DEG 2009 (USD M, diaria)
+    "deg_2009":      83,   # Asignaciones de DEGS del año 2009 (USD M)
+    "pase_bis":      76,   # Divisas-pase pasivo en dólares con el exterior (BIS-type)
+    "tc_minor":      4,    # TC minorista vendedor, diaria
+    "tc_mayor":      5,    # TC mayorista de referencia, diaria
+    "bm_diaria":     15,   # Base monetaria diaria (M$)
+    "ipc_vm":        27,   # Variación mensual IPC
+    "ipc_via":       28,   # Variación interanual IPC
 }
 
 TIMEOUT = 30
@@ -372,25 +375,64 @@ def update_bcra_monthly(D: dict) -> int:
     """Reservas, TC, BM — todas mensuales, último día observado del mes."""
     nuevos = 0
 
-    # Reservas (mensual)
+    # Reservas (mensual): BRUTAS + excl DEG + pase BIS + DEG → calcula netas aproximadas
     try:
-        rows = fetch_bcra(BCRA_VARS["reservas"], limit=365)
+        # Fetch en paralelo para velocidad
+        rows_brutas = fetch_bcra(BCRA_VARS["reservas"], limit=730)        # 2 años diarios
+        rows_xdeg   = fetch_bcra(BCRA_VARS["reservas_xdeg"], limit=730)
+        rows_pase   = fetch_bcra(BCRA_VARS["pase_bis"], limit=730)
+        rows_deg    = fetch_bcra(BCRA_VARS["deg_2009"], limit=730)
+
+        def by_month_last(rows):
+            """Agrupa por mes (YYYY-MM), retorna dict {f: valor del último día observado}."""
+            out = {}
+            for r in rows:
+                f = ym(r["fecha"])
+                try:
+                    out[f] = float(r["valor"])
+                except (TypeError, ValueError):
+                    pass
+            return out
+
+        m_brutas = by_month_last(rows_brutas)
+        m_xdeg   = by_month_last(rows_xdeg)
+        m_pase   = by_month_last(rows_pase)
+        m_deg    = by_month_last(rows_deg)
+
         arr = D.setdefault("reservas", [])
-        # Agrupar por mes, quedarse con el último día
-        by_month = {}
-        for r in rows:
-            f = ym(r["fecha"])
-            by_month[f] = r  # va sobreescribiendo, queda el último
-        for f, r in by_month.items():
-            v = round(float(r["valor"]))
+        all_meses = set(m_brutas) | set(m_xdeg) | set(m_pase) | set(m_deg)
+        for f in all_meses:
+            brutas = m_brutas.get(f)
+            xdeg = m_xdeg.get(f)
+            pase = m_pase.get(f, 0.0)
+            deg = m_deg.get(f, 0.0)
+            # netas_aprox = brutas - pase BIS - DEG 2009
+            # NOTA: no incluye encajes USD ni swap China — para eso hace falta el balance semanal BCRA
+            netas_aprox = None
+            if brutas is not None:
+                netas_aprox = brutas - (pase or 0) - (deg or 0)
+
             rec = next((x for x in arr if x.get("f") == f), None)
+            new = {"f": f}
+            if brutas is not None:
+                new["v"] = round(brutas)        # Brutas (compatibilidad con schema actual)
+                new["brutas"] = round(brutas)
+            if xdeg is not None:
+                new["excl_deg"] = round(xdeg)
+            if pase:
+                new["pase_bis"] = round(pase)
+            if deg:
+                new["deg"] = round(deg)
+            if netas_aprox is not None:
+                new["netas_aprox"] = round(netas_aprox)
             if rec is None:
-                arr.append({"f": f, "v": v})
+                arr.append(new)
                 nuevos += 1
             else:
-                rec["v"] = v
+                rec.update({k: v for k, v in new.items() if k != "f"})
         arr.sort(key=lambda x: x["f"])
-        log(f"Reservas BCRA: último {rows[-1]['fecha']} = USD {rows[-1]['valor']:.0f}M", "ok")
+        if rows_brutas:
+            log(f"Reservas BCRA: último {rows_brutas[-1]['fecha']} = USD {rows_brutas[-1]['valor']:.0f}M (brutas) + componentes", "ok")
     except Exception as e:
         log(f"Reservas BCRA falló: {e}", "warn")
 

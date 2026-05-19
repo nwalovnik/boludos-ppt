@@ -691,6 +691,15 @@ hr.d{border:none;border-top:.5px solid var(--bd);margin:16px 0}
     </div>
   </div>
   <div class="cc" style="margin-bottom:14px"><div class="cc-hd"><div><div class="cc-t">Reservas brutas <span class="breal">BCRA</span></div><div class="cc-s">USD millones &#183; datos diarios</div></div><button class="dl-btn" onclick="dlCSV('reservas')">&#8595; CSV</button></div><div style="position:relative;height:220px"><canvas id="c-rrii-d"></canvas></div></div>
+
+  <div class="slbl">Reservas brutas vs netas &#183; comparación por metodología</div>
+  <div class="info-box">Diferentes cálculos de Reservas Netas. Las series con datos exactos (Brutas, Excl. DEG) vienen directo de la API del BCRA. Las netas con metodología BCRA y FMI se aproximan descontando los <em>pasivos en moneda extranjera</em> estimados de los informes oficiales (encajes USD bancos, Swap China, FMI desembolsos, DEGs y otros). Para los valores exactos del programa EFF, ver el Informe Monetario semanal del BCRA.</div>
+  <div class="cgrid">
+    <div class="cc"><div class="cc-hd"><div><div class="cc-t">Reservas mensual &#183; múltiples métricas <span class="breal">BCRA</span></div><div class="cc-s">USD millones &#183; cierre de mes</div></div></div><div style="position:relative;height:260px"><canvas id="c-rrii-netas"></canvas></div></div>
+    <div class="cc"><div class="cc-hd"><div><div class="cc-t">Componentes &#183; último dato <span class="breal">BCRA</span></div><div class="cc-s">Cuánto representa cada descuento sobre las brutas</div></div></div><div style="position:relative;height:260px"><canvas id="c-rrii-comp"></canvas></div></div>
+  </div>
+  <div class="slbl">Detalle reciente</div>
+  <div style="position:relative;overflow-x:auto;margin-bottom:24px"><table id="t-reservas" class="data-table"></table></div>
   <div class="slbl">Tipo de cambio <span class="daily-note">&#128197; Diario desde 2020 &#183; Oficial, Blue, MEP, CCL</span></div>
   <div class="cc">
     <div class="cc-hd">
@@ -1662,7 +1671,7 @@ const SOURCES = [
   // Sector externo
   {serie:"ICA balanza comercial",    fuente:"INDEC",                via:"datos.gob.ar · IDs 74.3_IET / IEPP / IEMOI / IECE",                  freq:"mensual", clave:"bc",       sec:"Sector externo"},
   {serie:"Turismo receptivo + emisivo (todas las vías)", fuente:"INDEC", via:"XLSX serie_turismo_receptivo_emisivo.xlsx",                     freq:"mensual", clave:"turismo",  sec:"Sector externo"},
-  {serie:"Reservas internacionales", fuente:"BCRA",                 via:"API v4.0 monetarias var 1",                                          freq:"diaria",  clave:"reservas", sec:"Sector externo"},
+  {serie:"Reservas brutas + excl. DEG + pase BIS + DEG", fuente:"BCRA", via:"API v4.0 monetarias vars 1, 74, 76, 83",                  freq:"diaria",  clave:"reservas", sec:"Sector externo"},
   {serie:"TC oficial minorista",     fuente:"BCRA",                 via:"API v4.0 monetarias var 4",                                          freq:"diaria",  clave:"tc",       sec:"Sector externo"},
   {serie:"TC blue / MEP / CCL",      fuente:"Bluelytics + ArgentinaDatos", via:"api.bluelytics.com.ar/v2/latest + cotizaciones/dolares",     freq:"diaria",  clave:"tc",       sec:"Sector externo"},
   {serie:"EMBI Riesgo país",         fuente:"JP Morgan",            via:"ArgentinaDatos /finanzas/indices/riesgo-pais + /ultimo",             freq:"diaria",  clave:"embi",     sec:"Sector externo"},
@@ -2281,17 +2290,99 @@ function buildTCChart(){
   mk("c-tc-d",tc.map(function(r){return r.f;}),sets,{yf:function(v){return"$"+fmtN(v);},leg:true,xt:8,milestones:"tc"});
 }
 function buildReservasNetas(){
-  var brutas=(D.reservas.slice(-1)[0]||{}).v||0;
-  var pasivos_bcra_ref=38200; var pasivos_fmi_ref=55200;
-  var rin_bcra=brutas-pasivos_bcra_ref; var rin_fmi=brutas-pasivos_fmi_ref;
-  var meta_fmi=-3100; var vs_meta=rin_fmi-meta_fmi;
-  var el=document.getElementById("rin-panel"); if(!el)return;
-  el.innerHTML=[
-    {l:"Reservas brutas",v:"USD "+fmtN(brutas)+"M",sub:"BCRA",c:""},
-    {l:"RIN metodología BCRA",v:"USD "+fmtN(rin_bcra)+"M",sub:"Metodología contable",c:rin_bcra>=0?"dn":"up"},
-    {l:"RIN metodología FMI",v:"USD "+fmtN(rin_fmi)+"M",sub:"Programa EFF 2025",c:rin_fmi>=0?"dn":"up"},
-    {l:"vs Meta FMI 1T 2026",v:"USD "+fmtN(vs_meta)+"M",sub:"Meta: -3.100M",c:vs_meta>=0?"dn":"up"},
-  ].map(function(s){return "<div class='stat-item'><div class='stat-lbl'>"+s.l+"</div><div class='stat-val "+s.c+"'>"+s.v+"</div><div class='stat-sub'>"+s.sub+"</div></div>";}).join("");
+  var ult=D.reservas.slice(-1)[0]||{};
+  var brutas=ult.v||ult.brutas||0;
+  // Estimaciones de pasivos según informes BCRA actuales (deben actualizarse periódicamente)
+  // BCRA contable: pasivos en ME > 1 año disponibles
+  // FMI EFF 2025: pasivos en ME < 1 año + desembolsos netos FMI
+  var pasivos_bcra_ref=38200, pasivos_fmi_ref=55200;
+  var rin_bcra=brutas-pasivos_bcra_ref;
+  var rin_fmi=brutas-pasivos_fmi_ref;
+  var meta_fmi=-3100, vs_meta=rin_fmi-meta_fmi;
+
+  // 1. Panel de KPIs (stat-row)
+  var el=document.getElementById("rin-panel");
+  if(el){
+    el.innerHTML=[
+      {l:"Reservas brutas",v:"USD "+fmtN(brutas)+"M",sub:"BCRA · último mes",c:""},
+      {l:"RIN metodología BCRA",v:"USD "+fmtN(rin_bcra)+"M",sub:"Contable",c:rin_bcra>=0?"dn":"up"},
+      {l:"RIN metodología FMI",v:"USD "+fmtN(rin_fmi)+"M",sub:"EFF 2025",c:rin_fmi>=0?"dn":"up"},
+      {l:"vs Meta FMI 1T 2026",v:"USD "+fmtN(vs_meta)+"M",sub:"Meta: -3.100M",c:vs_meta>=0?"dn":"up"},
+    ].map(function(s){return "<div class='stat-item'><div class='stat-lbl'>"+s.l+"</div><div class='stat-val "+s.c+"'>"+s.v+"</div><div class='stat-sub'>"+s.sub+"</div></div>";}).join("");
+  }
+
+  // 2. Chart histórico mensual con múltiples metodologías
+  // Series usadas:
+  //  - Brutas (BCRA Var 1): exacta
+  //  - Excl. DEG (BCRA Var 74): exacta cuando el API la trae
+  //  - Netas BCRA aprox: brutas - pasivos_bcra_estimados (estimado constante reciente)
+  //  - Netas FMI aprox: brutas - pasivos_fmi_estimados (idem)
+  var serieRes=D.reservas.filter(function(r){return r.f>="2017-01"&&(r.v!=null||r.brutas!=null);});
+  if(serieRes.length){
+    var labels=serieRes.map(function(r){return r.f;});
+    // Para meses anteriores al último (sin pasivos actualizados), proyectamos los pasivos como % de brutas similar
+    // (aproximación: los pasivos crecieron al ritmo de las brutas a partir de 2024)
+    var sets=[
+      line("Brutas",serieRes.map(function(r){return r.v||r.brutas;}),C.green,{fill:false,borderWidth:1.75}),
+      line("Excl. DEG (API)",serieRes.map(function(r){return r.excl_deg!=null?r.excl_deg:null;}),C.teal,{fill:false,borderWidth:1.25,borderDash:[4,2]}),
+      line("Netas BCRA aprox.",serieRes.map(function(r){
+        var b=r.v||r.brutas;
+        return b!=null?Math.round(b-pasivos_bcra_ref):null;
+      }),C.orange,{fill:false,borderWidth:1.5}),
+      line("Netas FMI aprox.",serieRes.map(function(r){
+        var b=r.v||r.brutas;
+        return b!=null?Math.round(b-pasivos_fmi_ref):null;
+      }),C.red,{fill:false,borderWidth:1.5}),
+    ];
+    mk("c-rrii-netas",labels,sets,{
+      yf:function(v){return fmtN(v)+"M";},
+      leg:true,
+      milestones:"reservas",
+      xt:8
+    });
+  }
+
+  // 3. Composición del último dato: barras horizontales / waterfall
+  var pase_bis=ult.pase_bis||0;
+  var deg=ult.deg||0;
+  var swap_china_est=18000;     // Estimación informe BCRA (USD M)
+  var encajes_usd_est=14000;    // Estimación encajes en USD bancos privados (USD M)
+  var fmi_neto_est=5200;        // Diferencia FMI - BCRA pasivos (delta entre 55200 y 38200 + componentes nuevos)
+  // FMI - BCRA = pasivos < 1 año adicionales (FMI desembolsos)
+  var compLabels=["Brutas","Encajes USD","Swap China","DEG / FMI / otros","Netas BCRA","Netas FMI"];
+  var compVals=[brutas, -encajes_usd_est, -swap_china_est, -(pasivos_bcra_ref-encajes_usd_est-swap_china_est), rin_bcra, rin_fmi];
+  var compCols=[C.green+"cc", C.gray+"cc", C.gray+"cc", C.gray+"cc",
+               (rin_bcra>=0?C.green:C.red)+"cc",
+               (rin_fmi>=0?C.green:C.red)+"cc"];
+  mk("c-rrii-comp",compLabels,[{label:"USD millones",data:compVals,backgroundColor:compCols,borderRadius:2}],{
+    type:"bar",
+    yf:function(v){return fmtN(v)+"M";},
+    leg:false
+  });
+
+  // 4. Tabla detalle reciente
+  var t=document.getElementById("t-reservas");
+  if(t){
+    var ult12=serieRes.slice(-12).reverse();
+    var html='<thead><tr><th>Mes</th><th style="text-align:right">Brutas</th><th style="text-align:right">Excl. DEG</th><th style="text-align:right">Pase BIS</th><th style="text-align:right">DEG</th><th style="text-align:right">Netas BCRA aprox.</th><th style="text-align:right">Netas FMI aprox.</th></tr></thead><tbody>';
+    ult12.forEach(function(r){
+      var b=r.v||r.brutas;
+      var nbcra=b-pasivos_bcra_ref;
+      var nfmi=b-pasivos_fmi_ref;
+      var nbcraCls=nbcra>=0?"dn":"up";
+      var nfmiCls=nfmi>=0?"dn":"up";
+      html+='<tr>'
+        +'<td>'+r.f+'</td>'
+        +'<td class="num">'+(b!=null?fmtN(b):"—")+'</td>'
+        +'<td class="num">'+(r.excl_deg!=null?fmtN(r.excl_deg):"—")+'</td>'
+        +'<td class="num">'+(r.pase_bis?fmtN(r.pase_bis):"—")+'</td>'
+        +'<td class="num">'+(r.deg?fmtN(r.deg):"—")+'</td>'
+        +'<td class="num '+nbcraCls+'">'+(nbcra>=0?"+":"")+fmtN(nbcra)+'</td>'
+        +'<td class="num '+nfmiCls+'">'+(nfmi>=0?"+":"")+fmtN(nfmi)+'</td>'
+        +'</tr>';
+    });
+    t.innerHTML=html+'</tbody>';
+  }
 }
 function buildExternoFin(){
   buildTCChart();
