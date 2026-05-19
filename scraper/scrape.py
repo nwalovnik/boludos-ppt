@@ -70,6 +70,8 @@ INDEC_SERIES = {
     "empleo_priv":   "151.1_AARIADODAD_2012_M_31",   # Asalariados sector privado (con est) — en miles
     "turismo_rec":   "322.3_TURISMO_REIVO__17",      # Turismo receptivo (Ezeiza+Aeroparque)
     "turismo_em":    "322.3_TURISMO_EMIVO__15",      # Turismo emisivo
+    "sal_primario":  "452.3_RESULTADO_RIO_0_M_18_54", # IMIG resultado primario mensual SPNF
+    "sal_financiero":"378.9_RESULTADO_017_0_M_18_90", # Resultado financiero (met 2017) mensual
 }
 
 # UCI sectorial (INDEC publica por sector; nivel general "tot" sale del PDF y lo dejamos del histórico)
@@ -843,6 +845,226 @@ def update_daily_series(D: dict) -> int:
 
     return nuevos
 
+def update_empresas(D: dict) -> int:
+    """Empresas privadas activas inscriptas en SIPA, anual.
+
+    Fuente: OEDE (Observatorio de Empleo y Dinámica Empresarial - Ministerio de Trabajo)
+    XLSX: nacional_serie_empresas_1.xlsx → Cuadro 1
+    Schema: D.empresas = [{a, n, via}]
+    """
+    arr = D.setdefault("empresas", [])
+    nuevos = 0
+    url = "https://www.argentina.gob.ar/sites/default/files/nacional_serie_empresas_1.xlsx"
+    try:
+        import openpyxl
+        r = requests.get(url, timeout=TIMEOUT, headers={**HEADERS, "User-Agent": "Mozilla/5.0"})
+        r.raise_for_status()
+        wb = openpyxl.load_workbook(io.BytesIO(r.content), data_only=True)
+        ws = wb["C 1"]
+        for row_idx in range(7, min(50, ws.max_row + 1)):  # datos desde fila 7
+            anio_cell = ws.cell(row_idx, 1).value
+            empresas_cell = ws.cell(row_idx, 2).value
+            via_cell = ws.cell(row_idx, 3).value
+            if anio_cell is None or empresas_cell is None:
+                continue
+            anio_str = str(anio_cell).rstrip("*").strip()
+            if not anio_str.isdigit() or len(anio_str) != 4:
+                continue
+            anio = int(anio_str)
+            n = int(round(float(empresas_cell)))
+            via = round(float(via_cell) * 100, 2) if via_cell is not None else None
+            rec = next((x for x in arr if x.get("a") == anio), None)
+            new = {"a": anio, "n": n}
+            if via is not None:
+                new["via"] = via
+            if rec is None:
+                arr.append(new)
+                nuevos += 1
+            else:
+                rec.update(new)
+        arr.sort(key=lambda x: x["a"])
+        if arr:
+            log(f"Empresas OEDE: actualizado (último {arr[-1]['a']} = {arr[-1]['n']:,} empresas)", "ok")
+    except Exception as e:
+        log(f"Empresas OEDE falló: {e}", "warn")
+    return nuevos
+
+def update_fiscal_indec(D: dict) -> int:
+    """Resultado fiscal SPNF mensual desde la API de INDEC (IMIG).
+
+    Más confiable que parsear los XLSX de Hacienda (que tienen fórmulas #REF! rotas).
+    Schema: D.fiscal = [{f, sal_prim, sal_fin}] en MILLONES de pesos.
+    """
+    arr = D.setdefault("fiscal", [])
+    nuevos = 0
+    try:
+        ids = [INDEC_SERIES["sal_primario"], INDEC_SERIES["sal_financiero"]]
+        data = fetch_indec(ids, last=120)  # ~10 años
+        for row in data:
+            if not row[0]:
+                continue
+            f = ym(row[0])
+            prim = row[1]
+            fin = row[2]
+            if prim is None and fin is None:
+                continue
+            rec_existing = next((x for x in arr if x.get("f") == f), None)
+            new = {"f": f}
+            if prim is not None:
+                new["sal_prim"] = round(float(prim), 1)
+            if fin is not None:
+                new["sal_fin"] = round(float(fin), 1)
+            if rec_existing is None:
+                arr.append(new)
+                nuevos += 1
+            else:
+                rec_existing.update({k: v for k, v in new.items() if k != "f"})
+        arr.sort(key=lambda x: x["f"])
+        if arr:
+            log(f"Fiscal INDEC (IMIG): actualizado, último {arr[-1]['f']} (sal_prim={arr[-1].get('sal_prim','-')})", "ok")
+    except Exception as e:
+        log(f"Fiscal INDEC falló: {e}", "warn")
+    return nuevos
+
+def _parse_fiscal_xlsx(content: bytes) -> dict | None:
+    """Extrae ingresos/gastos/sal_prim/sal_fin de un XLSX de Hacienda.
+
+    Soporta dos formatos:
+      - CORTO: hojas 'Mes' y 'Acumulado' (filename mes_aa.xlsx) - solo el más reciente
+      - LARGO: hojas 'VarMensual'/'AIF'/'SALIDA PRENSA MES' (formato histórico)
+
+    Devuelve dict con valores en MILLONES de pesos, o None si no se pudo parsear.
+    """
+    import openpyxl
+    try:
+        wb = openpyxl.load_workbook(io.BytesIO(content), data_only=True)
+    except Exception:
+        return None
+
+    # Patterns de búsqueda
+    KEYS = {
+        "ingresos":   ["INGRESOS DESPUES DE FIGURAT", "INGRESOS TOTALES"],
+        "gastos":     ["GASTOS DESPUES DE FIGURAT", "GASTOS TOTALES"],
+        "sal_prim":   ["RESULTADO PRIMARIO", "SUPERAVIT PRIMARIO", "DEFICIT PRIMARIO"],
+        "sal_fin":    ["RESULTADO FINANCIERO", "SUPERAVIT FINANCIERO", "DEFICIT FINANCIERO"],
+    }
+
+    def num_de_row(ws, row_idx: int) -> float | None:
+        """Devuelve primer número finito de la fila buscando en cols 7-10 (excluye #REF y texto)."""
+        for c in (7, 8, 9, 10):
+            v = ws.cell(row_idx, c).value
+            if isinstance(v, (int, float)) and not isinstance(v, bool):
+                return float(v)
+        return None
+
+    out = {"ingresos": None, "gastos": None, "sal_prim": None, "sal_fin": None}
+    # Intentar hoja por hoja hasta encontrar valores
+    for sn in wb.sheetnames:
+        ws = wb[sn]
+        if ws.max_row < 5:
+            continue
+        for r in range(1, ws.max_row + 1):
+            concepto = ws.cell(r, 2).value
+            if not concepto:
+                continue
+            cnorm = str(concepto).upper().strip()
+            for key, patterns in KEYS.items():
+                if out[key] is not None:
+                    continue
+                if any(p in cnorm for p in patterns):
+                    v = num_de_row(ws, r)
+                    if v is not None:
+                        out[key] = v
+                        break
+        # Si encontramos al menos sal_prim y sal_fin, ya está
+        if out["sal_prim"] is not None and out["sal_fin"] is not None:
+            break
+
+    if all(v is None for v in out.values()):
+        return None
+    return out
+
+def update_fiscal(D: dict) -> int:
+    """Sector Público Nacional No Financiero — Esquema Ahorro-Inversión base caja.
+
+    Fuente: Secretaría de Hacienda (argentina.gob.ar/economia/sechacienda/infoestadistica).
+
+    Patrones de URL observados:
+      - `marzo_26.xlsx` (formato corto, sólo el mes más reciente)
+      - `2026/02/sector_publico_base_caja_enero_2026.xlsx` (formato histórico)
+    El archivo se publica en el MES SIGUIENTE al dato. Ej: enero 2026 → carpeta 2026/02/.
+
+    Schema: D.fiscal = [{f, ingresos, gastos, sal_prim, sal_fin}] en millones de pesos.
+    """
+    MESES_ES = ["enero","febrero","marzo","abril","mayo","junio",
+                "julio","agosto","septiembre","octubre","noviembre","diciembre"]
+    BASE = "https://www.argentina.gob.ar/sites/default/files"
+    arr = D.setdefault("fiscal", [])
+    nuevos = 0
+    today = datetime.now(timezone.utc)
+    fallidos_seguidos = 0
+    encontrados = []
+
+    for delta in range(0, 96):  # hasta 8 años atrás (~2018)
+        # Mes del DATO = today.month - 1 (el último publicado) - delta
+        y, m = today.year, today.month - 1 - delta
+        while m <= 0:
+            m += 12
+            y -= 1
+        if y < 2017:
+            break
+        mes_es = MESES_ES[m - 1]
+        # Mes de PUBLICACION = mes_dato + 1
+        pub_y, pub_m = y, m + 1
+        if pub_m > 12:
+            pub_m -= 12
+            pub_y += 1
+
+        urls_try = [
+            f"{BASE}/{mes_es}_{y % 100:02d}.xlsx",  # formato corto
+            f"{BASE}/{pub_y}/{pub_m:02d}/sector_publico_base_caja_{mes_es}_{y}.xlsx",
+            f"{BASE}/sector_publico_base_caja_{mes_es}_{y}.xlsx",
+        ]
+        bytes_xlsx = None
+        for url in urls_try:
+            try:
+                resp = requests.get(url, timeout=15, headers={**HEADERS, "User-Agent": "Mozilla/5.0"})
+                if resp.status_code == 200 and len(resp.content) > 5000 and resp.content[:2] == b"PK":
+                    bytes_xlsx = resp.content
+                    break
+            except Exception:
+                continue
+
+        if bytes_xlsx is None:
+            fallidos_seguidos += 1
+            # Si llevamos muchos fallos seguidos cerca del fin de serie, cortar
+            if fallidos_seguidos > 8 and len(encontrados) > 0:
+                break
+            continue
+        fallidos_seguidos = 0
+
+        parsed = _parse_fiscal_xlsx(bytes_xlsx)
+        if parsed is None:
+            continue
+
+        f = f"{y:04d}-{m:02d}"
+        rec_existing = next((x for x in arr if x.get("f") == f), None)
+        new = {"f": f}
+        for k, v in parsed.items():
+            if v is not None:
+                new[k] = round(v, 1)
+        if rec_existing is None:
+            arr.append(new)
+            nuevos += 1
+        else:
+            rec_existing.update(new)
+        encontrados.append(f)
+
+    arr.sort(key=lambda x: x["f"])
+    if arr:
+        log(f"Fiscal SPNF: {len(encontrados)} meses procesados, total serie: {len(arr)}, último {arr[-1]['f']}", "ok")
+    return nuevos
+
 def update_merval(D: dict) -> int:
     """MERVAL via Yahoo Finance directo (sin proxy CORS porque corremos en GitHub Actions)."""
     arr = D.setdefault("merval", [])
@@ -1290,6 +1512,8 @@ def main() -> int:
     update_uci_sectorial(D)
     update_salarios(D)
     update_empleo(D)
+    update_empresas(D)
+    update_fiscal_indec(D)
     update_turismo(D)
     update_merval(D)
     update_daily_series(D)

@@ -381,6 +381,13 @@ hr.d{border:none;border-top:.5px solid var(--bd);margin:16px 0}
     <div class="cc"><div class="cc-hd"><div><div class="cc-t">RIPTE <span class="breal">MTEYSS</span></div><div class="cc-s">Variación real mensual e interanual &#183; descontada inflación</div></div><button class="dl-btn" onclick="dlCSV('ripte')">&#8595; CSV</button></div><div style="position:relative;height:180px"><canvas id="c-ripte"></canvas></div></div>
     <div class="cc"><div class="cc-hd"><div><div class="cc-t">Jubilación mínima real <span class="breal">ANSES</span></div><div class="cc-s">Total y haber mínimo deflactados por IPC &#183; poder adquisitivo</div></div><button class="dl-btn" onclick="dlCSV('jubi')">&#8595; CSV</button></div><div style="position:relative;height:180px"><canvas id="c-jubi"></canvas></div></div>
   </div>
+  <hr class="d"/>
+  <div class="slbl">Empresas privadas activas &#183; OEDE (anual)</div>
+  <div class="info-box">Cantidad de firmas privadas inscriptas en SIPA al cierre de cada año. Fuente: <strong>OEDE</strong> (Observatorio de Empleo y Dinámica Empresarial - Ministerio de Trabajo).</div>
+  <div class="cgrid">
+    <div class="cc"><div class="cc-hd"><div><div class="cc-t">Empresas activas <span class="breal">OEDE</span></div><div class="cc-s">Total nacional al cierre de cada año</div></div><button class="dl-btn" onclick="dlCSV('empresas')">&#8595; CSV</button></div><div style="position:relative;height:200px"><canvas id="c-empresas"></canvas></div></div>
+    <div class="cc"><div class="cc-hd"><div><div class="cc-t">Variación anual %</div><div class="cc-s">Crecimiento/caída de empresas año vs anterior</div></div></div><div style="position:relative;height:200px"><canvas id="c-empresas-var"></canvas></div></div>
+  </div>
 </div>
 
 <div id="pg-externo" class="pg">
@@ -452,6 +459,15 @@ hr.d{border:none;border-top:.5px solid var(--bd);margin:16px 0}
   </div>
   <div class="slbl">Detalle reciente · variación real interanual por tributo</div>
   <div style="position:relative;overflow-x:auto;margin-bottom:24px"><table id="t-rec" class="data-table"></table></div>
+  <hr class="d"/>
+  <div class="slbl">Resultado fiscal SPNF &#183; INDEC IMIG (mensual)</div>
+  <div class="info-box">Sector Público Nacional No Financiero, base caja. Resultado <strong>primario</strong> = ingresos menos gastos sin intereses de deuda. Resultado <strong>financiero</strong> = primario menos intereses. Fuente: <strong>INDEC IMIG / Sec. Hacienda</strong>.</div>
+  <div class="cgrid">
+    <div class="cc"><div class="cc-hd"><div><div class="cc-t">Resultado primario mensual <span class="breal">SPNF</span></div><div class="cc-s">Millones de pesos · positivo = superávit</div></div><button class="dl-btn" onclick="dlCSV('fiscal')">&#8595; CSV</button></div><div style="position:relative;height:200px"><canvas id="c-fiscal-prim"></canvas></div></div>
+    <div class="cc"><div class="cc-hd"><div><div class="cc-t">Resultado financiero mensual <span class="breal">SPNF</span></div><div class="cc-s">Millones de pesos · neto de intereses</div></div></div><div style="position:relative;height:200px"><canvas id="c-fiscal-fin"></canvas></div></div>
+  </div>
+  <div class="slbl">Saldo fiscal últimos 12 meses</div>
+  <div style="position:relative;overflow-x:auto;margin-bottom:24px"><table id="t-fiscal" class="data-table"></table></div>
   <hr class="d"/>
   <div class="slbl">Deuda y vencimientos</div>
   <div class="cgrid">
@@ -1371,6 +1387,18 @@ function buildLaboral(){
   } else {
     mk("c-jubi",jb.map(function(r){return r.f;}),[bar("Haber mín.",jb.map(function(r){return r.hm;}),C.blue,{stack:"s"}),bar("Bonos",jb.map(function(r){return r.bo;}),C.green,{stack:"s"})],{type:"bar",yf:function(v){return"$"+fmtN(v);},leg:true});
   }
+
+  // Empresas privadas activas (OEDE - anual)
+  var empr=D.empresas||[];
+  if(empr.length){
+    mk("c-empresas",empr.map(function(r){return r.a;}),[
+      bar("Empresas activas",empr.map(function(r){return r.n;}),C.blue)
+    ],{type:"bar",yf:function(v){return(v/1000).toFixed(0)+"K";}});
+    var emprVarCl=empr.map(function(r){return (r.via||0)>=0?C.green+"cc":C.red+"cc";});
+    mk("c-empresas-var",empr.map(function(r){return r.a;}),[
+      {label:"Var. anual %",data:empr.map(function(r){return r.via;}),backgroundColor:emprVarCl,borderRadius:2}
+    ],{type:"bar",yf:function(v){return(v>0?"+":"")+v.toFixed(1)+"%";}});
+  }
 }
 
 function buildExterno(){
@@ -1539,6 +1567,32 @@ function buildFiscal(){
     t.innerHTML=html+'</tbody>';
   }
 
+  // Saldo fiscal SPNF (resultado primario y financiero mensual)
+  var fis=(D.fiscal||[]).filter(function(r){return r.f>=desde;});
+  if(fis.length){
+    var primCl=fis.map(function(r){return (r.sal_prim||0)>=0?C.green+"cc":C.red+"cc";});
+    mk("c-fiscal-prim",fis.map(function(r){return r.f;}),[
+      {label:"Resultado primario",data:fis.map(function(r){return r.sal_prim;}),backgroundColor:primCl,borderRadius:2}
+    ],{type:"bar",yf:function(v){return(v/1e6).toFixed(1)+"B$";}});
+    var finCl=fis.map(function(r){return (r.sal_fin||0)>=0?C.green+"cc":C.red+"cc";});
+    mk("c-fiscal-fin",fis.map(function(r){return r.f;}),[
+      {label:"Resultado financiero",data:fis.map(function(r){return r.sal_fin;}),backgroundColor:finCl,borderRadius:2}
+    ],{type:"bar",yf:function(v){return(v/1e6).toFixed(1)+"B$";}});
+    // Tabla
+    var tf=document.getElementById("t-fiscal");
+    if(tf){
+      var ult=fis.slice(-12).reverse();
+      var html='<thead><tr><th>Mes</th><th style="text-align:right">Resultado primario (M$)</th><th style="text-align:right">Resultado financiero (M$)</th><th style="text-align:right">Carga de intereses</th></tr></thead><tbody>';
+      ult.forEach(function(r){
+        var prCls=(r.sal_prim||0)>=0?"dn":"up";
+        var fiCls=(r.sal_fin||0)>=0?"dn":"up";
+        var intereses=(r.sal_prim!=null&&r.sal_fin!=null)?r.sal_prim-r.sal_fin:null;
+        html+='<tr><td>'+r.f+'</td><td class="num '+prCls+'">'+(r.sal_prim!=null?(r.sal_prim>=0?"+":"")+fmtN(r.sal_prim):"—")+'</td><td class="num '+fiCls+'">'+(r.sal_fin!=null?(r.sal_fin>=0?"+":"")+fmtN(r.sal_fin):"—")+'</td><td class="num">'+(intereses!=null?fmtN(intereses):"—")+'</td></tr>';
+      });
+      tf.innerHTML=html+'</tbody>';
+    }
+  }
+
   // Vencimientos FMI
   var fmi=filt(D.venc_fmi,desde);
   mk("c-fmi",fmi.map(function(r){return r.f;}),[bar("FMI",fmi.map(function(r){return r.fmi;}),C.red,{stack:"s"}),bar("Privados",fmi.map(function(r){return r.priv;}),C.orange,{stack:"s"})],{type:"bar",yf:function(v){return fmtN(v)+"M";},leg:true});
@@ -1565,6 +1619,8 @@ var CSV_MAP={
   isac:{g:function(){return D.isac;},n:"isac_const",f:["f","orig","via","dest","vm"],h:["Fecha","Original","VIA_pct","Desest","VM_pct"]},
   pbi:{g:function(){return D.pbi;},n:"pbi_trim",f:["p","pbi","via","vm"],h:["Trimestre","PBI_2004","VIA_pct","VM_pct"]},
   pbi_anual:{g:function(){return D.pbi_anual;},n:"pbi_anual",f:["a","pbi","via"],h:["Anio","PBI_2004","VIA_pct"]},
+  empresas:{g:function(){return D.empresas;},n:"empresas_oede",f:["a","n","via"],h:["Anio","Empresas_activas","Var_pct"]},
+  fiscal:{g:function(){return D.fiscal;},n:"fiscal_spnf",f:["f","sal_prim","sal_fin"],h:["Mes","Resultado_primario_Mpesos","Resultado_financiero_Mpesos"]},
   jubi:{g:function(){return D.jubi;},n:"jubilaciones",f:["f","hm","bo","tot"],h:["Fecha","Haber_min","Bonos","Total"]},
   turismo:{g:function(){return D.turismo;},n:"turismo",f:["f","rec","em","sal"],h:["Fecha","Receptivo","Emisivo","Saldo"]},
   bal_cam:{g:function(){return D.bal_cam||[];},n:"balance_cambiario_bcra",f:["f","total","cta_cte","bienes","cta_fin","var_rrii"],h:["Fecha","Total_BC","Cta_Corriente","Saldo_Bienes","Cta_Financiera","Var_RRII"]}
