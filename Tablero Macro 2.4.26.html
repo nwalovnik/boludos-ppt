@@ -145,6 +145,20 @@ hr.d{border:none;border-top:.5px solid var(--bd);margin:16px 0}
 .data-table tbody tr:hover{background:var(--surf2)}
 .data-table .up{color:var(--red)}
 .data-table .dn{color:var(--grn)}
+.data-table .neu{color:var(--tx2)}
+/* Pipeline stats (visor de fuentes) */
+.src-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:0;border:.5px solid var(--bd);border-radius:var(--rl);overflow:hidden;background:var(--surf);margin-bottom:24px}
+.src-stat{padding:16px 18px;border-right:.5px solid var(--bd);border-bottom:.5px solid var(--bd);margin-right:-.5px;margin-bottom:-.5px;background:var(--surf)}
+.src-stat-val{font-family:var(--font-serif);font-size:30px;font-weight:500;letter-spacing:-.02em;line-height:1;font-feature-settings:"tnum"}
+.src-stat-val.mono{font-family:var(--font-mono);font-weight:500}
+.src-stat-lbl{font-size:9.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--tx3);margin-top:10px;font-weight:600}
+/* Freq tags */
+.freq-tag{font-size:9.5px;padding:2px 7px;border-radius:3px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;font-family:var(--font-sans);display:inline-block}
+.freq-diaria{background:var(--grn2);color:var(--grn);border:.5px solid color-mix(in srgb,var(--grn) 22%,transparent)}
+.freq-mensual{background:var(--acc2);color:var(--acc);border:.5px solid color-mix(in srgb,var(--acc) 22%,transparent)}
+.freq-trimestral{background:var(--amb2);color:var(--amb);border:.5px solid color-mix(in srgb,var(--amb) 22%,transparent)}
+.freq-semestral{background:var(--surf3);color:var(--tx2);border:.5px solid var(--bd2)}
+.freq-anual{background:var(--surf3);color:var(--tx2);border:.5px solid var(--bd2)}
 
 .layout{display:flex;min-height:calc(100vh - 62px)}
 .sidebar{width:240px;flex-shrink:0;background:var(--surf);border-right:.5px solid var(--bd);padding:18px 0;position:sticky;top:62px;height:calc(100vh - 62px);overflow-y:auto;scrollbar-width:none}
@@ -526,13 +540,101 @@ hr.d{border:none;border-top:.5px solid var(--bd);margin:16px 0}
 </div>
 
 <div id="pg-fuentes" class="pg">
-  <div class="tok-box"><h3>Token estadisticasbcra.com (opcional)</h3><div class="tok-row"><input type="password" id="tok-in" placeholder="Token para dolar CCL, MERVAL tiempo real..."/><button class="btn btn-p" onclick="saveTok()">Guardar</button></div><div class="tok-hint">Registrate gratis en <a href="https://estadisticasbcra.com/api/registracion" target="_blank">estadisticasbcra.com</a></div></div>
-  <div class="slbl">Fuentes</div>
-  <div class="src-row"><div style="display:flex;gap:10px;align-items:flex-start;flex:1"><div class="dot dg"></div><div><div class="src-n">Excel GDS Datos Macroeconomicos <span class="tag tag-g">Cargado Feb 2026</span></div><div class="src-d">23 series: EMAE, IPC, TC, Reservas, EMBI, BC, EPH, Salarios, Pobreza, MERVAL, PBI y mas</div></div></div></div>
-  <div class="src-row"><div style="display:flex;gap:10px;align-items:flex-start;flex:1"><div class="dot dg"></div><div><div class="src-n">BCRA API oficial v4.0 <span class="tag tag-g">Sin clave</span></div><div class="src-d">Reservas, base monetaria, TC, tasas - api.bcra.gob.ar</div></div></div><button class="btn" onclick="refreshBCRA()">Actualizar</button> <button class="btn" onclick="clearOverrides()" style="margin-left:6px" title="Borra las actualizaciones guardadas en localStorage">Borrar cache local</button></div>
-  <div class="src-row"><div style="display:flex;gap:10px;align-items:flex-start;flex:1"><div class="dot da" id="dot-ext"></div><div><div class="src-n">estadisticasbcra.com <span class="tag tag-a" id="tag-ext">Token requerido</span></div><div class="src-d">Dolar CCL, informal, MERVAL tiempo real</div></div></div><button class="btn" onclick="refreshExt()">Actualizar</button></div>
+  <div class="info-box">Catálogo completo de fuentes oficiales que alimentan el tablero. Cada serie indica origen real, ruta de acceso, periodicidad de publicación y último dato disponible. Todas las fuentes se consultan automáticamente cada día a las 08:30 ART.</div>
+
+  <div class="slbl">Estado del pipeline</div>
+  <div class="src-grid" id="src-pipeline-stats"></div>
+
+  <div class="slbl">Detalle por serie</div>
+  <div class="ctrl-bar" style="gap:8px">
+    <label>Filtrar:</label>
+    <input type="text" id="src-filter" placeholder="Buscar serie, fuente o tag..." oninput="renderSourcesTable()" style="font-size:13px;padding:6px 10px;border:.5px solid var(--bd2);border-radius:6px;background:var(--surf);color:var(--tx);font-family:inherit;min-width:240px"/>
+    <div class="ctrl-sep"></div>
+    <div class="toggle-row" id="src-filter-freq">
+      <button class="tbtn on" data-freq="all" onclick="filterFreq(this,'all')">Todas</button>
+      <button class="tbtn" data-freq="diaria" onclick="filterFreq(this,'diaria')">Diaria</button>
+      <button class="tbtn" data-freq="mensual" onclick="filterFreq(this,'mensual')">Mensual</button>
+      <button class="tbtn" data-freq="trimestral" onclick="filterFreq(this,'trimestral')">Trimestral</button>
+      <button class="tbtn" data-freq="anual" onclick="filterFreq(this,'anual')">Anual</button>
+    </div>
+  </div>
+  <div style="position:relative;overflow-x:auto"><table id="t-sources" class="data-table"></table></div>
+
   <hr class="d"/>
-  <div class="slbl">Busqueda libre</div>
+  <div class="slbl">APIs y endpoints técnicos</div>
+  <div class="cgrid">
+    <div class="cc">
+      <div class="cc-hd"><div><div class="cc-t">INDEC datos.gob.ar</div><div class="cc-s">API de series estadísticas del sector público nacional</div></div></div>
+      <div style="font-size:12.5px;line-height:1.7">
+        <div><strong>Base:</strong> <code style="font-family:var(--font-mono);font-size:11.5px">apis.datos.gob.ar/series/api/series/</code></div>
+        <div><strong>Catálogo:</strong> <a href="https://datos.gob.ar/series" target="_blank">datos.gob.ar/series</a></div>
+        <div><strong>Series usadas:</strong> IPC, EMAE, IPI, ISAC, RIPTE, salarios, EPH, ICA, recaudación, resultado primario IMIG, turismo</div>
+        <div style="color:var(--tx3);font-size:11px;margin-top:6px;font-style:italic">Lag de la API: 4-6 semanas vs PDFs publicados. Por eso para EMAE/IPI/UCI/turismo usamos directamente los XLS oficiales.</div>
+      </div>
+    </div>
+    <div class="cc">
+      <div class="cc-hd"><div><div class="cc-t">BCRA API v4.0</div><div class="cc-s">Banco Central de la República Argentina · estadísticas monetarias</div></div></div>
+      <div style="font-size:12.5px;line-height:1.7">
+        <div><strong>Base:</strong> <code style="font-family:var(--font-mono);font-size:11.5px">api.bcra.gob.ar/estadisticas/v4.0/monetarias/</code></div>
+        <div><strong>Doc:</strong> <a href="https://www.bcra.gob.ar/Catalogo/api.asp" target="_blank">bcra.gob.ar/Catalogo</a></div>
+        <div><strong>Variables usadas:</strong> 1 (Reservas), 4 (TC minorista), 5 (TC mayorista), 6 (Tasa política), 15 (Base monetaria), 26 (Préstamos s.priv.), 27/28 (var IPC), 91 (Depósitos), 883/884 (Préstamos familias/empresas), 1232/1234/1239 (M1/M3/M2), 121 (BM operada), 215 (RM netas)</div>
+      </div>
+    </div>
+    <div class="cc">
+      <div class="cc-hd"><div><div class="cc-t">INDEC XLS oficiales</div><div class="cc-s">Cuadros publicados con cada informe de prensa</div></div></div>
+      <div style="font-size:12.5px;line-height:1.7">
+        <div><strong>Base:</strong> <code style="font-family:var(--font-mono);font-size:11.5px">indec.gob.ar/ftp/cuadros/economia/</code></div>
+        <div><strong>Archivos:</strong> sh_emae_mensual_base2004.xls, sh_ipi_manufacturero_YYYY.xls, sh_capacidad_MM_YY.xls, serie_turismo_receptivo_emisivo.xlsx</div>
+        <div style="color:var(--tx3);font-size:11px;margin-top:6px;font-style:italic">Estos XLS tienen el último dato del mismo día que el PDF de prensa, sin esperar a que se actualice la API series.</div>
+      </div>
+    </div>
+    <div class="cc">
+      <div class="cc-hd"><div><div class="cc-t">OEDE · Min. Trabajo</div><div class="cc-s">Observatorio de Empleo y Dinámica Empresarial</div></div></div>
+      <div style="font-size:12.5px;line-height:1.7">
+        <div><strong>Página:</strong> <a href="https://www.argentina.gob.ar/trabajo/estadisticas/oede-estadisticas-nacionales" target="_blank">argentina.gob.ar/trabajo/estadisticas/oede</a></div>
+        <div><strong>Archivo:</strong> nacional_serie_empresas_1.xlsx</div>
+        <div><strong>Series:</strong> Empresas privadas activas (anual desde 1996, base SIPA)</div>
+      </div>
+    </div>
+    <div class="cc">
+      <div class="cc-hd"><div><div class="cc-t">Secretaría de Hacienda</div><div class="cc-s">Sector Público Nacional No Financiero · base caja</div></div></div>
+      <div style="font-size:12.5px;line-height:1.7">
+        <div><strong>Página:</strong> <a href="https://www.argentina.gob.ar/economia/sechacienda/infoestadistica" target="_blank">argentina.gob.ar/economia/sechacienda</a></div>
+        <div><strong>Vía:</strong> Distribución estandarizada por INDEC IMIG (Informe Mensual de Ingresos y Gastos)</div>
+        <div><strong>Series:</strong> Resultado primario, Resultado financiero (Metodología 2017)</div>
+        <div style="color:var(--tx3);font-size:11px;margin-top:6px;font-style:italic">Datos base caja, no devengado.</div>
+      </div>
+    </div>
+    <div class="cc">
+      <div class="cc-hd"><div><div class="cc-t">ArgentinaDatos · Bluelytics · Yahoo Finance</div><div class="cc-s">Mercados financieros</div></div></div>
+      <div style="font-size:12.5px;line-height:1.7">
+        <div><strong>ArgentinaDatos:</strong> <a href="https://argentinadatos.com" target="_blank">argentinadatos.com</a> — EMBI riesgo país (JP Morgan via api.argentinadatos.com/v1/finanzas/indices/riesgo-pais)</div>
+        <div><strong>Bluelytics:</strong> <a href="https://bluelytics.com.ar" target="_blank">bluelytics.com.ar</a> — TC blue / MEP / CCL</div>
+        <div><strong>Yahoo Finance:</strong> <code style="font-family:var(--font-mono);font-size:11.5px">query1.finance.yahoo.com/v8/finance/chart/^MERV</code> — MERVAL</div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="d"/>
+  <div class="slbl">Repositorio y pipeline</div>
+  <div class="cc">
+    <div class="cc-hd"><div><div class="cc-t">Arquitectura del sistema</div><div class="cc-s">Open source · Python scraper + GitHub Actions cron + Netlify auto-deploy</div></div></div>
+    <div style="font-size:12.5px;line-height:1.7">
+      <div><strong>Código:</strong> <a href="https://github.com/nwalovnik/boludos-ppt" target="_blank">github.com/nwalovnik/boludos-ppt</a></div>
+      <div><strong>Workflow:</strong> .github/workflows/daily-update.yml — cron diario 08:30 ART</div>
+      <div><strong>Scraper:</strong> scraper/scrape.py — Python 3.12, dependencias: requests, xlrd, openpyxl</div>
+      <div><strong>Output:</strong> data.json (~430 KB) regenerado y comiteado por el bot todos los días</div>
+      <div><strong>Bedrock histórico:</strong> scraper/historical.json — datos desde 2014/2016 que no rotan más</div>
+      <div style="margin-top:10px;padding-top:10px;border-top:.5px solid var(--bd);color:var(--tx3);font-size:11px;font-style:italic">Cualquier persona puede correr el scraper localmente: <code style="font-family:var(--font-mono);font-size:11px">python scraper/scrape.py</code></div>
+    </div>
+  </div>
+
+  <hr class="d"/>
+  <div class="slbl">Tokens opcionales</div>
+  <div class="tok-box"><h3>Token estadisticasbcra.com (opcional)</h3><div class="tok-row"><input type="password" id="tok-in" placeholder="Token para dolar CCL, MERVAL tiempo real..."/><button class="btn btn-p" onclick="saveTok()">Guardar</button></div><div class="tok-hint">Registrate gratis en <a href="https://estadisticasbcra.com/api/registracion" target="_blank">estadisticasbcra.com</a> · Sólo necesario si querés acceder a datos intraday del MERVAL desde el browser. La cron diaria no usa este token.</div></div>
+
+  <hr class="d"/>
+  <div class="slbl">Búsqueda libre &#183; vía Claude API</div>
   <div class="srow"><input type="text" id="srch" placeholder="Ej: inflación enero 2026, reservas netas..."/><button class="btn btn-p" onclick="doSearch()">Buscar</button></div>
   <div class="log" id="log"></div>
 </div>
@@ -961,7 +1063,7 @@ function T(name,el){
   document.getElementById("pg-"+name).classList.add("on");
   if(el)el.classList.add("on");
   var nv=document.getElementById("nav-"+name);if(nv)nv.classList.add("on");
-  var b={actividad:buildActividad,precios:buildPrecios,laboral:buildLaboral,externo:buildExterno,fiscal:buildFiscal,financiero:buildFinanciero,sem:buildSem,industria:buildIndustria,externo_fin:buildExternoFin,mercados:buildMercados,turismo:buildTurismo,pbi:buildPBI};
+  var b={actividad:buildActividad,precios:buildPrecios,laboral:buildLaboral,externo:buildExterno,fiscal:buildFiscal,financiero:buildFinanciero,sem:buildSem,industria:buildIndustria,externo_fin:buildExternoFin,mercados:buildMercados,turismo:buildTurismo,pbi:buildPBI,fuentes:buildFuentes};
   if(b[name]&&!CH["_b_"+name]){b[name]();CH["_b_"+name]=1;}
 }
 function tog(el,k){SM[k]=!SM[k];el.classList.toggle("on",SM[k]);rebuildDash();}
@@ -1540,6 +1642,117 @@ function buildPBI(){
     var vmCls=r.vm>=0?"dn":"up";
     html+='<tr><td>'+r.p+'</td><td class="num">'+fmtN(r.pbi)+'</td><td class="num">'+(r.dest?fmtN(r.dest):"—")+'</td><td class="num '+viaCls+'">'+(r.via!=null?(r.via>=0?"+":"")+r.via.toFixed(1)+"%":"—")+'</td><td class="num '+vmCls+'">'+(r.vm!=null?(r.vm>=0?"+":"")+r.vm.toFixed(1)+"%":"—")+'</td><td class="num">'+(r.comp&&r.comp.c_priv?fmtN(r.comp.c_priv):"—")+'</td><td class="num">'+(r.comp&&r.comp.fbcf?fmtN(r.comp.fbcf):"—")+'</td></tr>';
   });
+  t.innerHTML=html+'</tbody>';
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// VISOR DE FUENTES
+// Catálogo declarativo de cada serie con su fuente, ruta, frecuencia y dato.
+// ════════════════════════════════════════════════════════════════════════
+const SOURCES = [
+  // Precios
+  {serie:"IPC nivel general",       fuente:"INDEC",                via:"datos.gob.ar/series · ID 148.3_INIVELNAL_DICI_M_26 + BCRA 27/28",  freq:"mensual", clave:"ipc",      sec:"Precios"},
+  // Actividad
+  {serie:"EMAE (general + 14 sectores)", fuente:"INDEC",            via:"XLS sh_emae_mensual_base2004.xls + sh_emae_actividad_base2004.xls",  freq:"mensual", clave:"emae",     sec:"Actividad"},
+  {serie:"IPI manufacturero (general + 16 ramas)", fuente:"INDEC",   via:"XLS sh_ipi_manufacturero_YYYY.xls (Cuadros 1 + 5)",                  freq:"mensual", clave:"ipi",      sec:"Actividad"},
+  {serie:"ISAC (construcción)",      fuente:"INDEC",                via:"datos.gob.ar · ID 33.2_ISAC_SIN_EDAD_0_M_23_56",                     freq:"mensual", clave:"isac",     sec:"Actividad"},
+  {serie:"UCI nivel general + 12 sectores", fuente:"INDEC",         via:"XLS sh_capacidad_MM_YY.xls",                                          freq:"mensual", clave:"uci",      sec:"Actividad"},
+  {serie:"PBI trimestral + componentes demanda", fuente:"INDEC CCNN", via:"Bedrock baked + datos.gob.ar",                                      freq:"trimestral", clave:"pbi",    sec:"Actividad"},
+  {serie:"PBI anual",                fuente:"INDEC CCNN",           via:"Bedrock baked",                                                       freq:"anual",   clave:"pbi_anual",sec:"Actividad"},
+  // Sector externo
+  {serie:"ICA balanza comercial",    fuente:"INDEC",                via:"datos.gob.ar · IDs 74.3_IET / IEPP / IEMOI / IECE",                  freq:"mensual", clave:"bc",       sec:"Sector externo"},
+  {serie:"Turismo receptivo + emisivo (todas las vías)", fuente:"INDEC", via:"XLSX serie_turismo_receptivo_emisivo.xlsx",                     freq:"mensual", clave:"turismo",  sec:"Sector externo"},
+  {serie:"Reservas internacionales", fuente:"BCRA",                 via:"API v4.0 monetarias var 1",                                          freq:"diaria",  clave:"reservas", sec:"Sector externo"},
+  {serie:"TC oficial minorista",     fuente:"BCRA",                 via:"API v4.0 monetarias var 4",                                          freq:"diaria",  clave:"tc",       sec:"Sector externo"},
+  {serie:"TC blue / MEP / CCL",      fuente:"Bluelytics + ArgentinaDatos", via:"api.bluelytics.com.ar/v2/latest + cotizaciones/dolares",     freq:"diaria",  clave:"tc",       sec:"Sector externo"},
+  {serie:"EMBI Riesgo país",         fuente:"JP Morgan",            via:"ArgentinaDatos /finanzas/indices/riesgo-pais + /ultimo",             freq:"diaria",  clave:"embi",     sec:"Sector externo"},
+  // Mercado laboral
+  {serie:"EPH desocupación · actividad · empleo", fuente:"INDEC",   via:"datos.gob.ar · ID 45.2_ECTDT_0_T_33",                                freq:"trimestral", clave:"eph",  sec:"Mercado laboral"},
+  {serie:"Trabajadores SIPA total + privados", fuente:"INDEC (datos OEDE)", via:"datos.gob.ar · IDs 151.1_TL_ESTADAD + AARIADODAD",          freq:"mensual", clave:"trabajo",  sec:"Mercado laboral"},
+  {serie:"Empresas privadas activas", fuente:"OEDE Min. Trabajo",   via:"XLSX nacional_serie_empresas_1.xlsx",                                freq:"anual",   clave:"empresas", sec:"Mercado laboral"},
+  {serie:"Salarios (privado reg. / no reg. / público)", fuente:"INDEC", via:"datos.gob.ar · IDs 149.1_SOR_PRIADO / SOR_PUBICO",              freq:"mensual", clave:"salarios", sec:"Mercado laboral"},
+  {serie:"RIPTE",                    fuente:"INDEC",                via:"datos.gob.ar · ID 158.1_REPTE_0_0_5",                                freq:"mensual", clave:"ripte",    sec:"Mercado laboral"},
+  {serie:"Pobreza e indigencia",     fuente:"INDEC EPH",            via:"Bedrock baked",                                                       freq:"semestral", clave:"pobreza",sec:"Mercado laboral"},
+  {serie:"Jubilación mínima",        fuente:"ANSES",                via:"Bedrock baked",                                                       freq:"mensual", clave:"jubi",     sec:"Mercado laboral"},
+  // Fiscal / monetario
+  {serie:"Recaudación tributaria (IVA · Ganancias · DEX · Seg.Social)", fuente:"AFIP/ARCA", via:"datos.gob.ar · ID 172.3_TL_RECAION_M_0_0_17", freq:"mensual", clave:"rec", sec:"Fiscal y monetario"},
+  {serie:"Resultado primario + financiero SPNF", fuente:"Sec. Hacienda (base caja)", via:"INDEC IMIG · IDs 452.3_RESULTADO_RIO + 378.9_RESULTADO_017", freq:"mensual", clave:"fiscal", sec:"Fiscal y monetario"},
+  {serie:"Base monetaria",           fuente:"BCRA",                 via:"API v4.0 var 15 + datos.gob.ar 90.1_BMT",                            freq:"diaria",  clave:"bm",       sec:"Fiscal y monetario"},
+  {serie:"M1, M2, M3 agregados monetarios", fuente:"BCRA",         via:"API v4.0 vars 1232/1239/1234",                                       freq:"diaria",  clave:"bm",       sec:"Fiscal y monetario"},
+  {serie:"Préstamos a familias + empresas", fuente:"BCRA",         via:"API v4.0 vars 883/884",                                              freq:"mensual", clave:"bm",       sec:"Fiscal y monetario"},
+  {serie:"Depósitos + préstamos consolidado", fuente:"BCRA",       via:"API v4.0 vars 26 + 91",                                              freq:"mensual", clave:"bm",       sec:"Fiscal y monetario"},
+  {serie:"Vencimientos FMI",         fuente:"MECON",                via:"Bedrock baked",                                                       freq:"mensual", clave:"venc_fmi", sec:"Fiscal y monetario"},
+  // Bursátil
+  {serie:"MERVAL mensual",           fuente:"Yahoo Finance",        via:"query1.finance.yahoo.com/v8/finance/chart/^MERV",                    freq:"diaria",  clave:"merval",   sec:"Mercados"},
+  {serie:"Balance cambiario BCRA",   fuente:"BCRA",                 via:"Bedrock baked (metodología propia)",                                  freq:"mensual", clave:"bal_cam",  sec:"Sector externo"},
+];
+
+let SRC_FREQ_FILTER = "all";
+let SRC_TEXT_FILTER = "";
+
+function buildFuentes(){
+  renderPipelineStats();
+  renderSourcesTable();
+}
+
+function renderPipelineStats(){
+  var el=document.getElementById("src-pipeline-stats");if(!el)return;
+  var diarias=SOURCES.filter(function(s){return s.freq==="diaria";}).length;
+  var mensuales=SOURCES.filter(function(s){return s.freq==="mensual";}).length;
+  var trim=SOURCES.filter(function(s){return s.freq==="trimestral";}).length;
+  var anu=SOURCES.filter(function(s){return s.freq==="anual"||s.freq==="semestral";}).length;
+  var total=SOURCES.length;
+  var meta=D._meta||{};
+  var gen=meta.generated_at?new Date(meta.generated_at).toLocaleString("es-AR",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"}):"—";
+  el.innerHTML='<div class="src-stat"><div class="src-stat-val">'+total+'</div><div class="src-stat-lbl">Series totales</div></div>'
+    +'<div class="src-stat"><div class="src-stat-val">'+diarias+'</div><div class="src-stat-lbl">Diarias</div></div>'
+    +'<div class="src-stat"><div class="src-stat-val">'+mensuales+'</div><div class="src-stat-lbl">Mensuales</div></div>'
+    +'<div class="src-stat"><div class="src-stat-val">'+(trim+anu)+'</div><div class="src-stat-lbl">Trim./anual</div></div>'
+    +'<div class="src-stat"><div class="src-stat-val mono" style="font-size:14px">'+gen+'</div><div class="src-stat-lbl">Último deploy</div></div>';
+}
+
+function filterFreq(el, freq){
+  document.querySelectorAll('#src-filter-freq .tbtn').forEach(function(b){b.classList.remove('on');});
+  el.classList.add('on');
+  SRC_FREQ_FILTER=freq;
+  renderSourcesTable();
+}
+
+function ultimoDato(clave){
+  var arr=D[clave];if(!Array.isArray(arr)||!arr.length)return"—";
+  var ult=arr[arr.length-1];
+  if(ult.f)return ult.f;
+  if(ult.p)return ult.p;
+  if(ult.a)return String(ult.a);
+  return "—";
+}
+
+function renderSourcesTable(){
+  var inp=document.getElementById("src-filter");
+  SRC_TEXT_FILTER=inp?inp.value.toLowerCase().trim():"";
+  var t=document.getElementById("t-sources");if(!t)return;
+  var filtered=SOURCES.filter(function(s){
+    if(SRC_FREQ_FILTER!=="all"&&s.freq!==SRC_FREQ_FILTER)return false;
+    if(SRC_TEXT_FILTER){
+      var hay=(s.serie+" "+s.fuente+" "+s.via+" "+s.sec).toLowerCase();
+      if(hay.indexOf(SRC_TEXT_FILTER)<0)return false;
+    }
+    return true;
+  });
+  var freqColors={diaria:"dn",mensual:"",trimestral:"neu",semestral:"neu",anual:"neu"};
+  var html='<thead><tr><th>Serie</th><th>Sección</th><th>Fuente original</th><th>Ruta de acceso</th><th>Frecuencia</th><th style="text-align:right">Último dato</th></tr></thead><tbody>';
+  filtered.forEach(function(s){
+    var cls=freqColors[s.freq]||"";
+    html+='<tr>'
+      +'<td><strong>'+s.serie+'</strong></td>'
+      +'<td style="color:var(--tx2)">'+s.sec+'</td>'
+      +'<td>'+s.fuente+'</td>'
+      +'<td style="color:var(--tx2);font-size:11.5px"><span style="font-family:var(--font-mono);font-size:11px">'+s.via+'</span></td>'
+      +'<td><span class="freq-tag freq-'+s.freq+'">'+s.freq+'</span></td>'
+      +'<td class="num">'+ultimoDato(s.clave)+'</td>'
+      +'</tr>';
+  });
+  if(!filtered.length)html+='<tr><td colspan="6" style="text-align:center;color:var(--tx3);padding:24px">Sin resultados</td></tr>';
   t.innerHTML=html+'</tbody>';
 }
 
