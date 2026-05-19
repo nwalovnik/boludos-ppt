@@ -19,6 +19,7 @@ Diseño: idempotente, no rompe si una fuente falla (loggea y sigue).
 from __future__ import annotations
 
 import argparse
+import io
 import json
 import sys
 import time
@@ -27,6 +28,7 @@ from pathlib import Path
 from typing import Any
 
 import requests
+import xlrd  # noqa: E402  (.xls 97-2003 lectura)
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Paths
@@ -691,6 +693,245 @@ def update_merval(D: dict) -> int:
     return nuevos
 
 # ──────────────────────────────────────────────────────────────────────────────
+# INDEC XLS oficiales (cuando la API series está atrasada vs los Excel publicados)
+# ──────────────────────────────────────────────────────────────────────────────
+MONTHS_ES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+             "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
+INDEC_XLS_BASE = "https://www.indec.gob.ar/ftp/cuadros/economia"
+
+def download_xls(url: str) -> xlrd.book.Book:
+    """Descarga un .xls de INDEC y devuelve el workbook."""
+    r = requests.get(url, timeout=TIMEOUT, headers={**HEADERS, "User-Agent": "Mozilla/5.0"})
+    r.raise_for_status()
+    return xlrd.open_workbook(file_contents=r.content)
+
+def _month_num(cell_str: str) -> int | None:
+    """'Enero' / 'Enero*' → 1, 'Febrero' → 2, etc."""
+    s = str(cell_str).strip().rstrip("*").strip()
+    return (MONTHS_ES.index(s) + 1) if s in MONTHS_ES else None
+
+def _safe_float(v) -> float | None:
+    try:
+        if v == "" or v == "///" or v is None:
+            return None
+        return float(v)
+    except (ValueError, TypeError):
+        return None
+
+def parse_emae_xls(wb: xlrd.book.Book) -> list[dict]:
+    """sh_emae_mensual_base2004.xls → [{f, orig, via, dest, vm}]"""
+    sh = wb.sheet_by_name("EMAE")
+    out, current_year = [], None
+    for r in range(sh.nrows):
+        y_cell = sh.cell_value(r, 0)
+        m_cell = sh.cell_value(r, 1)
+        # Año: float (2004.0) o str ("2026*")
+        if isinstance(y_cell, float) and y_cell > 1990:
+            current_year = int(y_cell)
+        elif isinstance(y_cell, str):
+            s = y_cell.strip().rstrip("*").strip()
+            if s.isdigit() and 1990 < int(s) < 2100:
+                current_year = int(s)
+        if not current_year:
+            continue
+        month_num = _month_num(m_cell) if m_cell else None
+        if not month_num:
+            continue
+        orig = _safe_float(sh.cell_value(r, 2))
+        via  = _safe_float(sh.cell_value(r, 3))
+        dest = _safe_float(sh.cell_value(r, 4))
+        vm   = _safe_float(sh.cell_value(r, 5))
+        if orig is None:
+            continue
+        out.append({
+            "f": f"{current_year:04d}-{month_num:02d}",
+            "orig": round(orig, 2),
+            "via":  round(via, 2)  if via  is not None else None,
+            "dest": round(dest, 2) if dest is not None else None,
+            "vm":   round(vm, 2)   if vm   is not None else None,
+        })
+    return out
+
+def parse_ipi_xls(wb: xlrd.book.Book) -> list[dict]:
+    """sh_ipi_manufacturero_YYYY.xls (Cuadro 1) → [{f, orig, via}]"""
+    try:
+        sh = wb.sheet_by_name("Cuadro 1")
+    except xlrd.biffh.XLRDError:
+        sh = wb.sheet_by_index(1)
+    out, current_year = [], None
+    for r in range(sh.nrows):
+        y_cell = sh.cell_value(r, 1)
+        m_cell = sh.cell_value(r, 2)
+        if isinstance(y_cell, float) and y_cell > 1990:
+            current_year = int(y_cell)
+        elif isinstance(y_cell, str):
+            s = y_cell.strip().rstrip("*").strip()
+            if s.isdigit() and 1990 < int(s) < 2100:
+                current_year = int(s)
+        if not current_year:
+            continue
+        month_num = _month_num(m_cell) if m_cell else None
+        if not month_num:
+            continue
+        orig = _safe_float(sh.cell_value(r, 3))
+        via  = _safe_float(sh.cell_value(r, 4))
+        if orig is None:
+            continue
+        out.append({
+            "f": f"{current_year:04d}-{month_num:02d}",
+            "orig": round(orig, 2),
+            "via":  round(via, 2) if via is not None else None,
+        })
+    return out
+
+# Mapeo columnas UCI → keys de nuestro schema
+UCI_COL_MAP = {
+    1: "tot",     # Nivel general
+    2: "alim",    # Productos alimenticios
+    3: "tabaco",  # Productos del tabaco
+    4: "text",    # Productos textiles
+    5: "papel",
+    6: "impr",    # Edición/impresión
+    7: "refin",   # Refinación
+    8: "quim",    # Sustancias químicas
+    9: "caucho",
+    10: "min",    # Productos minerales
+    11: "metal",  # Industrias metálicas básicas
+    12: "auto",   # Industria automotriz
+    13: "metalm", # Metalmecánica
+}
+
+def parse_uci_xls(wb: xlrd.book.Book) -> list[dict]:
+    """sh_capacidad_MM_YY.xls → [{f, tot, alim, ..., metalm}]"""
+    sh = wb.sheet_by_index(0)
+    out, current_year = [], None
+    for r in range(sh.nrows):
+        col0 = sh.cell_value(r, 0)
+        if isinstance(col0, str):
+            s = col0.strip()
+            # "Año 2026" o "Año 2025*"
+            if s.startswith("Año "):
+                ystr = s[4:].strip().rstrip("*").strip()
+                if ystr.isdigit():
+                    current_year = int(ystr)
+                continue
+            month_num = _month_num(s)
+            if not month_num or not current_year:
+                continue
+            rec = {"f": f"{current_year:04d}-{month_num:02d}"}
+            for col, key in UCI_COL_MAP.items():
+                v = _safe_float(sh.cell_value(r, col))
+                if v is not None:
+                    rec[key] = round(v, 1)
+            if "tot" in rec:
+                out.append(rec)
+    return out
+
+def find_uci_xls_url() -> str | None:
+    """sh_capacidad_MM_YY.xls — prueba del mes actual hacia atrás (máx 6 meses)."""
+    today = datetime.now(timezone.utc)
+    for delta in range(0, 7):
+        y, m = today.year, today.month - delta
+        while m <= 0:
+            m += 12
+            y -= 1
+        url = f"{INDEC_XLS_BASE}/sh_capacidad_{m:02d}_{y % 100:02d}.xls"
+        try:
+            r = requests.head(url, timeout=10, headers={**HEADERS, "User-Agent": "Mozilla/5.0"})
+            if r.status_code == 200 and "excel" in r.headers.get("Content-Type", "").lower():
+                return url
+        except Exception:
+            continue
+    return None
+
+def update_emae_xls(D: dict) -> int:
+    """EMAE oficial desde el XLS de INDEC (más actualizado que la API series)."""
+    arr = D.setdefault("emae", [])
+    nuevos = 0
+    try:
+        wb = download_xls(f"{INDEC_XLS_BASE}/sh_emae_mensual_base2004.xls")
+        rows = parse_emae_xls(wb)
+        for new in rows:
+            rec = next((x for x in arr if x.get("f") == new["f"]), None)
+            if rec is None:
+                arr.append(new)
+                nuevos += 1
+            else:
+                # No pisar la subdivisión sectorial 's' si la tiene del bedrock
+                for k, v in new.items():
+                    if v is not None and k != "s":
+                        rec[k] = v
+        arr.sort(key=lambda x: x.get("f", ""))
+        if rows:
+            log(f"EMAE (XLS oficial): actualizado (último {rows[-1]['f']})", "ok")
+    except Exception as e:
+        log(f"EMAE XLS falló: {e}", "warn")
+    return nuevos
+
+def update_ipi_xls(D: dict) -> int:
+    """IPI oficial desde el XLS de INDEC. Prueba YYYY actual y anterior si 404."""
+    arr = D.setdefault("ipi", [])
+    nuevos = 0
+    today = datetime.now(timezone.utc)
+    wb = None
+    for year in (today.year, today.year - 1):
+        url = f"{INDEC_XLS_BASE}/sh_ipi_manufacturero_{year}.xls"
+        try:
+            wb = download_xls(url)
+            break
+        except Exception:
+            continue
+    if wb is None:
+        log("IPI XLS no encontrado", "warn")
+        return 0
+    try:
+        rows = parse_ipi_xls(wb)
+        for new in rows:
+            rec = next((x for x in arr if x.get("f") == new["f"]), None)
+            if rec is None:
+                arr.append(new)
+                nuevos += 1
+            else:
+                for k, v in new.items():
+                    if v is not None:
+                        rec[k] = v
+        arr.sort(key=lambda x: x.get("f", ""))
+        # Recalcular vm (mensual sobre dest) si tenemos serie desestacionalizada
+        for i, r in enumerate(arr):
+            if i > 0 and r.get("dest") and arr[i-1].get("dest"):
+                r["vm"] = round((r["dest"] / arr[i-1]["dest"] - 1) * 100, 2)
+        if rows:
+            log(f"IPI (XLS oficial): actualizado (último {rows[-1]['f']})", "ok")
+    except Exception as e:
+        log(f"IPI XLS parse falló: {e}", "warn")
+    return nuevos
+
+def update_uci_xls(D: dict) -> int:
+    """UCI Nivel General + sectorial desde el XLS oficial de INDEC."""
+    arr = D.setdefault("uci", [])
+    nuevos = 0
+    url = find_uci_xls_url()
+    if not url:
+        log("UCI XLS no encontrado (probados últimos 6 meses)", "warn")
+        return 0
+    try:
+        wb = download_xls(url)
+        rows = parse_uci_xls(wb)
+        for new in rows:
+            rec = next((x for x in arr if x.get("f") == new["f"]), None)
+            if rec is None:
+                arr.append(new)
+                nuevos += 1
+            else:
+                rec.update({k: v for k, v in new.items() if v is not None})
+        arr.sort(key=lambda x: x.get("f", ""))
+        if rows:
+            log(f"UCI (XLS oficial {url.split('/')[-1]}): actualizado (último {rows[-1]['f']})", "ok")
+    except Exception as e:
+        log(f"UCI XLS parse falló: {e}", "warn")
+    return nuevos
+
+# ──────────────────────────────────────────────────────────────────────────────
 # Main
 # ──────────────────────────────────────────────────────────────────────────────
 def main() -> int:
@@ -704,8 +945,12 @@ def main() -> int:
 
     # Actualizar cada bloque (cada uno maneja sus propios errores)
     update_ipc(D)
+    # EMAE / IPI / UCI: primero API series (rápido), después XLS oficial (más fresco — pisa la API)
     update_emae(D)
+    update_emae_xls(D)
     update_ipi_isac(D)
+    update_ipi_xls(D)
+    update_uci_xls(D)
     update_bcra_monthly(D)
     update_embi(D)
     update_simple_monthly(D, "ripte", INDEC_SERIES["ripte"], "nom", "RIPTE")
