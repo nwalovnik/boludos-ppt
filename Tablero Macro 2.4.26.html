@@ -460,11 +460,11 @@ hr.d{border:none;border-top:.5px solid var(--bd);margin:16px 0}
   <div class="slbl">Detalle reciente · variación real interanual por tributo</div>
   <div style="position:relative;overflow-x:auto;margin-bottom:24px"><table id="t-rec" class="data-table"></table></div>
   <hr class="d"/>
-  <div class="slbl">Resultado fiscal SPNF &#183; INDEC IMIG (mensual)</div>
-  <div class="info-box">Sector Público Nacional No Financiero, base caja. Resultado <strong>primario</strong> = ingresos menos gastos sin intereses de deuda. Resultado <strong>financiero</strong> = primario menos intereses. Fuente: <strong>INDEC IMIG / Sec. Hacienda</strong>.</div>
+  <div class="slbl">Resultado fiscal SPNF &#183; Hacienda (base caja, mensual)</div>
+  <div class="info-box">Sector Público Nacional No Financiero. <strong>Base caja</strong> (Metodología 2017). Resultado <strong>primario</strong> = ingresos menos gastos primarios (sin intereses de deuda). Resultado <strong>financiero</strong> = primario menos intereses. Fuente original: <strong>Secretaría de Hacienda</strong>. Distribución estandarizada vía <strong>INDEC IMIG</strong>. <em>Nota: estos datos son base caja, no devengado.</em></div>
   <div class="cgrid">
-    <div class="cc"><div class="cc-hd"><div><div class="cc-t">Resultado primario mensual <span class="breal">SPNF</span></div><div class="cc-s">Millones de pesos · positivo = superávit</div></div><button class="dl-btn" onclick="dlCSV('fiscal')">&#8595; CSV</button></div><div style="position:relative;height:200px"><canvas id="c-fiscal-prim"></canvas></div></div>
-    <div class="cc"><div class="cc-hd"><div><div class="cc-t">Resultado financiero mensual <span class="breal">SPNF</span></div><div class="cc-s">Millones de pesos · neto de intereses</div></div></div><div style="position:relative;height:200px"><canvas id="c-fiscal-fin"></canvas></div></div>
+    <div class="cc"><div class="cc-hd"><div><div class="cc-t">Resultado primario mensual <span class="breal">Hacienda base caja</span></div><div class="cc-s">Millones de pesos · positivo = superávit</div></div><button class="dl-btn" onclick="dlCSV('fiscal')">&#8595; CSV</button></div><div style="position:relative;height:200px"><canvas id="c-fiscal-prim"></canvas></div></div>
+    <div class="cc"><div class="cc-hd"><div><div class="cc-t">Resultado financiero mensual <span class="breal">Hacienda base caja</span></div><div class="cc-s">Millones de pesos · neto de intereses</div></div></div><div style="position:relative;height:200px"><canvas id="c-fiscal-fin"></canvas></div></div>
   </div>
   <div class="slbl">Saldo fiscal últimos 12 meses</div>
   <div style="position:relative;overflow-x:auto;margin-bottom:24px"><table id="t-fiscal" class="data-table"></table></div>
