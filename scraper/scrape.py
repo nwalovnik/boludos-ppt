@@ -44,7 +44,7 @@ BCRA_API = "https://api.bcra.gob.ar/estadisticas/v4.0/monetarias/"
 ARG_DATOS = "https://api.argentinadatos.com/v1"
 BLUELYTICS = "https://api.bluelytics.com.ar/v2/latest"
 
-# IDs INDEC (mismas que el HTML original)
+# IDs INDEC (mismas que el HTML original + nuevas)
 INDEC_SERIES = {
     "ipc":       "148.3_INIVELNAL_DICI_M_26",
     "emae_orig": "143.3_NO_PR_2004_A_21",
@@ -60,6 +60,20 @@ INDEC_SERIES = {
     "ripte":     "158.1_REPTE_0_0_5",
     "rec":       "172.3_TL_RECAION_M_0_0_17",
     "bm":        "90.1_BMT_0_0_20",
+    # === nuevos ===
+    "sal_priv_reg":  "149.1_SOR_PRIADO_OCTU_0_25",   # Índice salarios privado registrado
+    "sal_priv_no":   "149.1_SOR_PRIADO_OCTU_0_28",   # Índice salarios privado no registrado
+    "sal_pub":       "149.1_SOR_PUBICO_OCTU_0_14",   # Índice salarios público
+    "empleo_sipa":   "151.1_TL_ESTADAD_2012_M_20",   # Total trabajadores SIPA (con est)
+    "turismo_rec":   "322.3_TURISMO_REIVO__17",      # Turismo receptivo (Ezeiza+Aeroparque)
+    "turismo_em":    "322.3_TURISMO_EMIVO__15",      # Turismo emisivo
+}
+
+# UCI sectorial (INDEC publica por sector; nivel general "tot" sale del PDF y lo dejamos del histórico)
+UCI_SECTORES = {
+    "text":   "31.3_UPT_2004_M_23",    # textiles
+    "quim":   "31.3_USPQ_2004_M_34",   # químicos
+    "metal":  "31.3_UIMB_2004_M_33",   # metales básicos
 }
 
 # Variables BCRA usadas
@@ -513,6 +527,170 @@ def recalc_via_vm(arr: list[dict], key_orig: str = "orig", key_dest: str = "dest
                 pass
 
 # ──────────────────────────────────────────────────────────────────────────────
+# Procesadores adicionales: UCI, Salarios, Empleo, Turismo, MERVAL
+# ──────────────────────────────────────────────────────────────────────────────
+def update_uci_sectorial(D: dict) -> int:
+    """UCI por sector (textiles, químicos, metales básicos). Nivel general 'tot' del histórico."""
+    arr = D.setdefault("uci", [])
+    nuevos = 0
+    # Mapeo nuestro key → series INDEC
+    rows_por_key = {}
+    for key, series_id in UCI_SECTORES.items():
+        try:
+            data = fetch_indec(series_id, last=36)
+            for row in data:
+                if not row[0] or row[1] is None:
+                    continue
+                f = ym(row[0])
+                rows_por_key.setdefault(f, {})[key] = round(float(row[1]), 1)
+        except Exception as e:
+            log(f"UCI {key} falló: {e}", "warn")
+
+    for f, vals in rows_por_key.items():
+        rec = next((x for x in arr if x.get("f") == f), None)
+        if rec is None:
+            new = {"f": f, **vals}
+            arr.append(new)
+            nuevos += 1
+        else:
+            rec.update(vals)
+    arr.sort(key=lambda x: x["f"])
+    if rows_por_key:
+        ult = max(rows_por_key.keys())
+        log(f"UCI sectorial: actualizado (último {ult})", "ok")
+    return nuevos
+
+def update_salarios(D: dict) -> int:
+    """Salarios privado registrado / no registrado / público. Schema: {f, is_r, real_pub, real_priv}."""
+    arr = D.setdefault("salarios", [])
+    nuevos = 0
+    try:
+        ids = [INDEC_SERIES["sal_priv_reg"], INDEC_SERIES["sal_priv_no"], INDEC_SERIES["sal_pub"]]
+        data = fetch_indec(ids, last=24)
+        for row in data:
+            if not row[0]:
+                continue
+            f = ym(row[0])
+            is_r = row[1]      # privado registrado (lo usamos como índice principal)
+            priv_no = row[2]
+            pub = row[3]
+            if is_r is None and priv_no is None and pub is None:
+                continue
+            rec = next((x for x in arr if x.get("f") == f), None)
+            new = {"f": f}
+            if is_r is not None:
+                new["is_r"] = round(float(is_r), 2)
+            if priv_no is not None:
+                new["real_priv"] = round(float(priv_no), 2)
+            if pub is not None:
+                new["real_pub"] = round(float(pub), 2)
+            if rec is None:
+                arr.append(new)
+                nuevos += 1
+            else:
+                rec.update(new)
+        arr.sort(key=lambda x: x["f"])
+        if data:
+            log(f"Salarios: actualizado (último {data[-1][0][:7]})", "ok")
+    except Exception as e:
+        log(f"Salarios falló: {e}", "warn")
+    return nuevos
+
+def update_empleo(D: dict) -> int:
+    """Empleo SIPA total trabajadores. Schema histórico: {f, tot}."""
+    arr = D.setdefault("trabajo", [])
+    nuevos = 0
+    try:
+        data = fetch_indec(INDEC_SERIES["empleo_sipa"], last=36)
+        for row in data:
+            if not row[0] or row[1] is None:
+                continue
+            f = ym(row[0])
+            tot = round(float(row[1]))
+            rec = next((x for x in arr if x.get("f") == f), None)
+            if rec is None:
+                arr.append({"f": f, "tot": tot})
+                nuevos += 1
+            else:
+                rec["tot"] = tot
+        arr.sort(key=lambda x: x["f"])
+        # Limpiar el registro corrupto histórico "2019-23" (era ruido del baked)
+        arr[:] = [r for r in arr if r.get("f", "").startswith("20") and "-" in r["f"] and len(r["f"]) == 7]
+        if data:
+            log(f"Empleo SIPA: actualizado (último {data[-1][0][:7]})", "ok")
+    except Exception as e:
+        log(f"Empleo SIPA falló: {e}", "warn")
+    return nuevos
+
+def update_turismo(D: dict) -> int:
+    """Turismo emisivo + receptivo. Schema: {f, rec, em, sal}."""
+    arr = D.setdefault("turismo", [])
+    nuevos = 0
+    try:
+        ids = [INDEC_SERIES["turismo_rec"], INDEC_SERIES["turismo_em"]]
+        data = fetch_indec(ids, last=36)
+        for row in data:
+            if not row[0]:
+                continue
+            f = ym(row[0])
+            rec_v, em_v = row[1], row[2]
+            if rec_v is None and em_v is None:
+                continue
+            rec_existing = next((x for x in arr if x.get("f") == f), None)
+            new = {"f": f}
+            if rec_v is not None:
+                new["rec"] = int(round(float(rec_v)))
+            if em_v is not None:
+                new["em"] = int(round(float(em_v)))
+            if "rec" in new and "em" in new:
+                new["sal"] = new["rec"] - new["em"]
+            if rec_existing is None:
+                arr.append(new)
+                nuevos += 1
+            else:
+                rec_existing.update(new)
+        arr.sort(key=lambda x: x["f"])
+        if data:
+            log(f"Turismo: actualizado (último {data[-1][0][:7]})", "ok")
+    except Exception as e:
+        log(f"Turismo falló: {e}", "warn")
+    return nuevos
+
+def update_merval(D: dict) -> int:
+    """MERVAL via Yahoo Finance directo (sin proxy CORS porque corremos en GitHub Actions)."""
+    arr = D.setdefault("merval", [])
+    nuevos = 0
+    try:
+        url = "https://query1.finance.yahoo.com/v8/finance/chart/%5EMERV"
+        data = get_json(url, params={"interval": "1d", "range": "5y"},
+                        headers={**HEADERS, "User-Agent": "Mozilla/5.0"})
+        result = data["chart"]["result"][0]
+        ts = result["timestamp"]
+        closes = result["indicators"]["quote"][0]["close"]
+        # Agrupar por mes, último día
+        by_month = {}
+        for t, c in zip(ts, closes):
+            if c is None:
+                continue
+            fecha = datetime.fromtimestamp(t, tz=timezone.utc).strftime("%Y-%m")
+            by_month[fecha] = c  # se sobreescribe, queda el último
+        for f, c in by_month.items():
+            v = round(float(c) / 1000, 1)  # convertir a "miles de puntos" como el histórico
+            rec = next((x for x in arr if x.get("f") == f), None)
+            if rec is None:
+                arr.append({"f": f, "v": v})
+                nuevos += 1
+            else:
+                rec["v"] = v
+        arr.sort(key=lambda x: x["f"])
+        if by_month:
+            ult = max(by_month.keys())
+            log(f"MERVAL Yahoo: actualizado (último {ult} = {round(by_month[ult]/1000, 1)}K)", "ok")
+    except Exception as e:
+        log(f"MERVAL Yahoo falló: {e}", "warn")
+    return nuevos
+
+# ──────────────────────────────────────────────────────────────────────────────
 # Main
 # ──────────────────────────────────────────────────────────────────────────────
 def main() -> int:
@@ -532,6 +710,11 @@ def main() -> int:
     update_embi(D)
     update_simple_monthly(D, "ripte", INDEC_SERIES["ripte"], "nom", "RIPTE")
     update_simple_monthly(D, "rec",   INDEC_SERIES["rec"],   "tot", "Recaudación")
+    update_uci_sectorial(D)
+    update_salarios(D)
+    update_empleo(D)
+    update_turismo(D)
+    update_merval(D)
 
     # Metadata
     D["_meta"] = {
