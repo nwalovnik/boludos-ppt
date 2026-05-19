@@ -643,37 +643,77 @@ def update_empleo(D: dict) -> int:
     return nuevos
 
 def update_turismo(D: dict) -> int:
-    """Turismo emisivo + receptivo. Schema: {f, rec, em, sal}."""
+    """Turismo internacional total (todas las vías). Schema: {f, rec, em, sal}.
+
+    Fuente: INDEC publica `serie_turismo_receptivo_emisivo.xlsx` con el consolidado
+    de todas las vías (no solo Ezeiza/Aeroparque como la serie de la API).
+    """
     arr = D.setdefault("turismo", [])
     nuevos = 0
+    url = f"{INDEC_XLS_BASE}/serie_turismo_receptivo_emisivo.xlsx"
     try:
-        ids = [INDEC_SERIES["turismo_rec"], INDEC_SERIES["turismo_em"]]
-        data = fetch_indec(ids, last=36)
-        for row in data:
-            if not row[0]:
+        import openpyxl  # noqa: dependencia opcional
+        r = requests.get(url, timeout=TIMEOUT, headers={**HEADERS, "User-Agent": "Mozilla/5.0"})
+        r.raise_for_status()
+        wb = openpyxl.load_workbook(io.BytesIO(r.content), data_only=True)
+        ws = wb["Turismo receptivo y emisivo"]
+        # Layout: col 1 = Período (datetime), col 2 = receptivo, col 3 = emisivo, col 4 = saldo
+        rows_parseadas = []
+        for row_idx in range(5, ws.max_row + 1):
+            periodo = ws.cell(row_idx, 1).value
+            rec_v = ws.cell(row_idx, 2).value
+            em_v = ws.cell(row_idx, 3).value
+            if periodo is None or rec_v is None or em_v is None:
                 continue
-            f = ym(row[0])
-            rec_v, em_v = row[1], row[2]
-            if rec_v is None and em_v is None:
-                continue
+            # periodo puede ser datetime o string
+            if hasattr(periodo, "strftime"):
+                f = periodo.strftime("%Y-%m")
+            else:
+                f = str(periodo)[:7]
+            rec_int = int(round(float(rec_v)))
+            em_int = int(round(float(em_v)))
+            sal_int = rec_int - em_int
             rec_existing = next((x for x in arr if x.get("f") == f), None)
-            new = {"f": f}
-            if rec_v is not None:
-                new["rec"] = int(round(float(rec_v)))
-            if em_v is not None:
-                new["em"] = int(round(float(em_v)))
-            if "rec" in new and "em" in new:
-                new["sal"] = new["rec"] - new["em"]
             if rec_existing is None:
-                arr.append(new)
+                arr.append({"f": f, "rec": rec_int, "em": em_int, "sal": sal_int})
                 nuevos += 1
             else:
-                rec_existing.update(new)
+                rec_existing["rec"] = rec_int
+                rec_existing["em"] = em_int
+                rec_existing["sal"] = sal_int
+            rows_parseadas.append(f)
         arr.sort(key=lambda x: x["f"])
-        if data:
-            log(f"Turismo: actualizado (último {data[-1][0][:7]})", "ok")
+        if rows_parseadas:
+            log(f"Turismo (XLSX oficial): actualizado (último {rows_parseadas[-1]}, todas las vías)", "ok")
     except Exception as e:
-        log(f"Turismo falló: {e}", "warn")
+        log(f"Turismo XLSX falló, fallback a API series Ezeiza+Aeroparque: {e}", "warn")
+        # Fallback: serie de aeropuertos (datos chicos, sólo Ezeiza+Aeroparque)
+        try:
+            ids = [INDEC_SERIES["turismo_rec"], INDEC_SERIES["turismo_em"]]
+            data = fetch_indec(ids, last=36)
+            for row in data:
+                if not row[0]:
+                    continue
+                f = ym(row[0])
+                rec_v, em_v = row[1], row[2]
+                if rec_v is None and em_v is None:
+                    continue
+                rec_existing = next((x for x in arr if x.get("f") == f), None)
+                new = {"f": f}
+                if rec_v is not None:
+                    new["rec"] = int(round(float(rec_v)))
+                if em_v is not None:
+                    new["em"] = int(round(float(em_v)))
+                if "rec" in new and "em" in new:
+                    new["sal"] = new["rec"] - new["em"]
+                if rec_existing is None:
+                    arr.append(new)
+                    nuevos += 1
+                else:
+                    rec_existing.update(new)
+            arr.sort(key=lambda x: x["f"])
+        except Exception as e2:
+            log(f"Turismo fallback también falló: {e2}", "warn")
     return nuevos
 
 def update_daily_series(D: dict) -> int:
