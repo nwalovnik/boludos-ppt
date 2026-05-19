@@ -663,14 +663,34 @@ const _DB64="eyJ0Y19kIjpbeyJmIjoiMjAyMC0wMy0yMCIsIm9mIjo2NS4wLCJtZXAiOjkxLjQsImN
 const DD=JSON.parse(atob(_DB64));
 
 const DARK=matchMedia("(prefers-color-scheme:dark)").matches;
+// Paleta editorial — tonos sobrios estilo NYT/FT
 const C={
-  blue:DARK?"#7b9ef9":"#1a4edb",orange:DARK?"#fbbf24":"#d97706",
-  green:DARK?"#34d399":"#0a7c42",red:DARK?"#f87171":"#c0392b",
-  purple:DARK?"#c4b5fd":"#6d28d9",teal:DARK?"#5eead4":"#0d9488",
-  gray:DARK?"#9ca3af":"#6b7280"
+  blue:   DARK?"#90b4ec":"#2c5282",
+  orange: DARK?"#f6ad55":"#b7791f",
+  green:  DARK?"#9ae6b4":"#276749",
+  red:    DARK?"#fc8181":"#9b2c2c",
+  purple: DARK?"#d6bcfa":"#553c9a",
+  teal:   DARK?"#81e6d9":"#285e61",
+  gray:   DARK?"#a0aec0":"#4a5568"
 };
-const GR=DARK?"rgba(255,255,255,.05)":"rgba(0,0,0,.05)";
-const TK=DARK?"#6b6a62":"#9a9990";
+// Gridlines: muy sutiles, casi imperceptibles
+const GR=DARK?"rgba(255,255,255,.04)":"rgba(0,0,0,.05)";
+// Ticks: más legibles que antes
+const TK=DARK?"#9a9690":"#6a6760";
+// Fuentes para los charts
+const CHART_FONT_SANS={family:"Inter, -apple-system, sans-serif"};
+const CHART_FONT_MONO={family:"'JetBrains Mono', ui-monospace, monospace"};
+// Plugin global para configurar Chart.js
+if(typeof Chart!=="undefined"){
+  Chart.defaults.font.family=CHART_FONT_SANS.family;
+  Chart.defaults.font.size=11;
+  Chart.defaults.color=TK;
+  Chart.defaults.borderColor=GR;
+  Chart.defaults.scale.grid.color=GR;
+  // Hover sin animación brusca
+  Chart.defaults.animation.duration=400;
+  Chart.defaults.transitions.active.animation.duration=200;
+}
 let TOK=localStorage.getItem("bcra_tok")||"";
 const CH={};
 const SM={orig:true,dest:false,ia:true,vm:false};
@@ -705,42 +725,94 @@ function mk(id,labels,sets,opts){
     type:opts.type||"line",
     data:{labels:labels,datasets:sets},
     options:{
-      responsive:true,maintainAspectRatio:false,animation:{duration:300},
+      responsive:true,maintainAspectRatio:false,
+      interaction:{mode:"index",intersect:false},
       plugins:{
-        legend:{display:opts.leg!==false&&sets.length>1,position:"top",labels:{color:TK,boxWidth:10,font:{size:10}}},
+        legend:{
+          display:opts.leg!==false&&sets.length>1,
+          position:"top",
+          align:"end",
+          labels:{
+            color:TK,
+            boxWidth:8,boxHeight:8,
+            usePointStyle:true,pointStyle:"rectRounded",
+            font:{size:11,family:CHART_FONT_SANS.family,weight:"500"},
+            padding:14
+          }
+        },
         tooltip:{
           enabled:true,
           mode:"index",
           intersect:false,
-          titleFont:{size:11,weight:"500"},
-          bodyFont:{size:12},
-          padding:10,
-          cornerRadius:8,
+          backgroundColor:DARK?"#1f1f1c":"#ffffff",
+          titleColor:DARK?"#ebe9e2":"#1a1a1a",
+          bodyColor:DARK?"#a8a59c":"#525050",
+          borderColor:DARK?"rgba(255,255,255,.14)":"rgba(15,15,15,.14)",
+          borderWidth:.5,
+          titleFont:{size:11,weight:"600",family:CHART_FONT_SANS.family},
+          bodyFont:{size:12,family:CHART_FONT_MONO.family},
+          padding:{top:8,bottom:8,left:12,right:12},
+          cornerRadius:6,
           displayColors:true,
-          boxWidth:8,
-          boxHeight:8,
+          boxWidth:7,boxHeight:7,
+          boxPadding:4,
           callbacks:{
             title:function(items){return items[0]?items[0].label:"";},
             label:function(ctx){
               var v=ctx.parsed.y;
               if(v==null)return null;
               var lbl=ctx.dataset.label||"";
-              var axId=ctx.dataset.yAxisID||"y";var yf=ctx.chart.options.scales[axId]&&ctx.chart.options.scales[axId].ticks&&ctx.chart.options.scales[axId].ticks.callback;
+              var axId=ctx.dataset.yAxisID||"y";
+              var yf=ctx.chart.options.scales[axId]&&ctx.chart.options.scales[axId].ticks&&ctx.chart.options.scales[axId].ticks.callback;
               var val=yf?yf(v):Intl.NumberFormat("es-AR",{maximumFractionDigits:2}).format(v);
-              return " "+lbl+": "+val;
+              return " "+lbl+":  "+val;
             }
           }
         }
       },
       scales:Object.assign({
-        x:{ticks:{color:TK,font:{size:10},maxRotation:0,autoSkip:true,maxTicksLimit:opts.xt||8},grid:{color:GR}},
-        y:{ticks:{color:TK,font:{size:11},callback:opts.yf||undefined},grid:{color:GR}}
+        x:{
+          ticks:{
+            color:TK,
+            font:{size:10.5,family:CHART_FONT_SANS.family},
+            maxRotation:0,autoSkip:true,maxTicksLimit:opts.xt||7,
+            padding:8
+          },
+          grid:{display:false,drawBorder:false},
+          border:{display:false}
+        },
+        y:{
+          ticks:{
+            color:TK,
+            font:{size:10.5,family:CHART_FONT_MONO.family},
+            callback:opts.yf||undefined,
+            padding:8,
+            maxTicksLimit:6
+          },
+          grid:{color:GR,drawBorder:false,lineWidth:.5},
+          border:{display:false}
+        }
       },opts.extra&&opts.extra.scales?opts.extra.scales:{})
     }
   });
 }
 function line(lb,dt,col,ex){
-  return Object.assign({label:lb,data:dt,borderColor:col,backgroundColor:col+"18",fill:true,tension:.4,pointRadius:0,borderWidth:2,spanGaps:true},ex||{});
+  return Object.assign({
+    label:lb,
+    data:dt,
+    borderColor:col,
+    backgroundColor:col+"10",
+    fill:false,
+    tension:.28,
+    pointRadius:0,
+    pointHoverRadius:4,
+    pointHoverBorderWidth:2,
+    pointHoverBackgroundColor:col,
+    pointHoverBorderColor:DARK?"#161614":"#ffffff",
+    borderWidth:1.75,
+    spanGaps:true,
+    cubicInterpolationMode:"monotone"
+  },ex||{});
 }
 function bar(lb,dt,col,ex){
   return Object.assign({label:lb,data:dt,backgroundColor:col+"cc",borderRadius:2},ex||{});
