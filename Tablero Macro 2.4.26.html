@@ -157,7 +157,7 @@ hr.d{border:none;border-top:.5px solid var(--bd);margin:16px 0}
 <body>
 <div class="hdr">
   <div class="hdr-l"><h1>Macro Argentina</h1><p id="upd-txt">Sistema GDS - Datos reales del Excel</p></div>
-  <div class="hdr-r"><span class="live-badge">En vivo</span><input type="file" id="xls-up" accept=".xls,.xlsx" style="display:none" onchange="handleXlsUpload(event)"/><button class="btn" onclick="document.getElementById('xls-up').click()" title="Subir Excel (IPC, ICA, Merval, EMBI, y más)">&#128190; Subir Excel</button> <button class="btn btn-p" onclick="refreshBCRA();actualizarDesdeAPI()">&#8635; Actualizar</button></div>
+  <div class="hdr-r"><span class="live-badge">En vivo</span><input type="file" id="xls-up" accept=".xls,.xlsx" style="display:none" onchange="handleXlsUpload(event)"/><button class="btn" onclick="document.getElementById('xls-up').click()" title="Subir Excel (IPC, ICA, Merval, EMBI, y más)">&#128190; Subir Excel</button> <button class="btn btn-p" onclick="reloadDataJson()">&#8635; Actualizar</button></div>
 </div>
 <div class="tabs">
   <button class="tab on" onclick="T('dash',this)">Dashboard</button>
@@ -2282,6 +2282,31 @@ function parseGenericXls(wb, filename) {
   }
 
   return false;
+}
+
+// Recargar data.json (lo que actualiza el GitHub Action diariamente)
+async function reloadDataJson(){
+  log("Recargando data.json...","inf");
+  try {
+    var dr = await fetch("data.json?ts=" + Date.now());
+    if (!dr.ok) throw new Error("HTTP " + dr.status);
+    var dj = await dr.json();
+    var meta = dj._meta || {};
+    var changed = 0;
+    Object.keys(dj).forEach(function(k){
+      if (k === "_meta") return;
+      if (Array.isArray(dj[k])) { D[k] = dj[k]; changed++; }
+    });
+    var fecha = meta.generated_at ? new Date(meta.generated_at).toLocaleString("es-AR",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"}) : "?";
+    log("data.json recargado: "+changed+" series (generado "+fecha+")","ok");
+    refreshUI();
+    var lbl = document.getElementById("upd-txt");
+    if (lbl) lbl.textContent = "Actualizado " + fecha;
+    toast("Datos actualizados (generado "+fecha+")");
+  } catch(e) {
+    log("Error recargando data.json: "+e.message,"wa");
+    toast("No se pudo recargar data.json");
+  }
 }
 
 (async function init(){
