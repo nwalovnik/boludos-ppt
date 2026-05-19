@@ -690,10 +690,7 @@ if(typeof Chart!=="undefined"){
   Chart.defaults.scale.grid.color=GR;
   Chart.defaults.animation.duration=400;
   Chart.defaults.transitions.active.animation.duration=200;
-  // Registrar plugin de annotations
-  if(typeof window.ChartAnnotation!=="undefined"){
-    Chart.register(window.ChartAnnotation);
-  }
+  // chartjs-plugin-annotation v3 se auto-registra al cargar el UMD.
 }
 
 // ════════════════════════════════════════════════════════════════════════
@@ -714,8 +711,8 @@ const MILESTONES=[
 function annotationsFor(tag, labels){
   // Convierte MILESTONES filtrados por `tag` en config Chart.js annotations.
   // labels es el array de labels del eje X (formato YYYY-MM o "1er t. 2020")
-  if(!window.ChartAnnotation)return {};
   var annos={};
+  if(!labels||!labels.length)return annos;
   MILESTONES.filter(function(m){return m.tags.indexOf(tag)>=0;}).forEach(function(m,i){
     // Buscar el índice exacto o más cercano
     var idx=labels.indexOf(m.f);
