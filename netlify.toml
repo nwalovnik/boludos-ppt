@@ -1,12 +1,19 @@
 [build]
   publish = "."
 
-# Evitar que el browser cachee los HTML viejos (los datos se cargan vía API al abrir)
+# HTML: no cachear (los datos se leen de data.json al abrir)
 [[headers]]
   for = "/*.html"
   [headers.values]
     Cache-Control = "no-cache, no-store, must-revalidate"
 
+# data.json: no cachear — esto se regenera con cada deploy
+[[headers]]
+  for = "/data.json"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+
+# JS estático (Chart.js, despidos): cachear 1h
 [[headers]]
   for = "/*.js"
   [headers.values]
