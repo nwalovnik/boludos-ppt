@@ -732,24 +732,41 @@ function annotationsFor(tag, labels){
     annos["m"+i]={
       type:"line",
       xMin:idx,xMax:idx,
-      borderColor:DARK?"rgba(168,165,156,.35)":"rgba(60,60,60,.28)",
-      borderWidth:1,
-      borderDash:[3,3],
+      borderColor:DARK?"rgba(168,165,156,.22)":"rgba(60,60,60,.18)",
+      borderWidth:.75,
+      borderDash:[2,4],
       label:{
-        display:true,
+        // Etiqueta sólo visible al hacer hover para no tapar los datos
+        display:false,
         content:m.short,
         position:"start",
-        backgroundColor:"transparent",
-        color:DARK?"#a8a59c":"#525050",
-        font:{size:10,family:CHART_FONT_SANS.family,weight:"500",style:"italic"},
-        padding:{top:2,bottom:2,left:4,right:4},
-        yAdjust:8,
+        backgroundColor:DARK?"rgba(28,28,26,.95)":"rgba(255,255,255,.95)",
+        borderColor:DARK?"rgba(255,255,255,.2)":"rgba(0,0,0,.15)",
+        borderWidth:.5,
+        borderRadius:4,
+        color:DARK?"#ebe9e2":"#1a1a1a",
+        font:{size:10.5,family:CHART_FONT_SANS.family,weight:"500"},
+        padding:{top:4,bottom:4,left:8,right:8},
+        yAdjust:-6,
         xAdjust:3,
         rotation:0,
         textAlign:"start"
       },
-      enter:function(ctx){ctx.element.options.borderColor=DARK?"rgba(255,255,255,.55)":"rgba(0,0,0,.5)";return true;},
-      leave:function(ctx){ctx.element.options.borderColor=DARK?"rgba(168,165,156,.35)":"rgba(60,60,60,.28)";return true;}
+      enter:function(ctx){
+        ctx.element.options.borderColor=DARK?"rgba(255,255,255,.6)":"rgba(0,0,0,.55)";
+        ctx.element.options.borderWidth=1.25;
+        ctx.element.options.borderDash=[];
+        ctx.element.options.label.display=true;
+        ctx.element.options.label.content=m.short+" — "+m.long;
+        return true;
+      },
+      leave:function(ctx){
+        ctx.element.options.borderColor=DARK?"rgba(168,165,156,.22)":"rgba(60,60,60,.18)";
+        ctx.element.options.borderWidth=.75;
+        ctx.element.options.borderDash=[2,4];
+        ctx.element.options.label.display=false;
+        return true;
+      }
     };
   });
   return annos;
@@ -1115,6 +1132,17 @@ function buildActividad(){
     line("Automotriz",uci.map(function(r){return r.auto;}),C.red,{fill:false}),
     line("Quimica",uci.map(function(r){return r.quim;}),C.purple,{fill:false})
   ],{yf:function(v){return v+"%";},leg:true});
+
+  // ISAC - Indicador Sintético de la Actividad de la Construcción
+  var isac=filt(D.isac,desde);
+  var isac_sets=[];
+  if(isac.some(function(r){return r.orig!=null;}))
+    isac_sets.push(line("Original",isac.map(function(r){return r.orig;}),C.blue));
+  if(isac.some(function(r){return r.dest!=null;}))
+    isac_sets.push(line("Desestacionalizada",isac.map(function(r){return r.dest;}),C.orange,{fill:false}));
+  if(!isac_sets.length)
+    isac_sets=[line("Desest.",isac.map(function(r){return r.dest;}),C.orange,{fill:false})];
+  mk("c-isac-act",isac.map(function(r){return r.f;}),isac_sets,{yf:function(v){return fmtN(v,1);},leg:true,milestones:"isac"});
 }
 
 function drillSect(el,s){
@@ -1900,11 +1928,25 @@ function buildFinanciero(){
   if(bm_f.length)mk("c-bm-fact",bm_f.map(function(r){return r.f;}),[bar("Sector financiero",bm_f.map(function(r){return r.tot_fin;}),C.blue,{stack:"s"}),bar("Sector público",bm_f.map(function(r){return r.tot_pub;}),C.orange,{stack:"s"}),bar("Compra/venta divisas",bm_f.map(function(r){return r.compras_div;}),C.green,{stack:"s"})],{type:"bar",yf:function(v){return(v/1000).toFixed(0)+"K";},leg:true,xt:10});
   var bm_via=D.bm.filter(function(r){return r.via_real!=null&&r.f>=desde;});
   if(bm_via.length)mk("c-bm-via",bm_via.map(function(r){return r.f;}),[line("Var. i.a. real %",bm_via.map(function(r){return r.via_real;}),C.purple,{fill:false})],{yf:function(v){return v+"%";}});
-  var tc60=D.tc.filter(function(r){return r.f>=desde;});
-  var ipc60=D.ipc.filter(function(r){return r.f>=desde;});
-  var n=Math.min(tc60.length,ipc60.length);var tcs=tc60.slice(-n);var ipcs=ipc60.slice(-n);
-  var bt=(tcs[0]&&tcs[0].of)||1;var bi=(ipcs[0]&&ipcs[0].n)||1;
-  mk("c-tcreal",tcs.map(function(r){return r.f;}),[line("TC nominal",tcs.map(function(r){return r.of?Math.round(r.of/bt*100):null;}),C.blue),line("IPC nivel",ipcs.map(function(r){return r.n?Math.round(r.n/bi*100):null;}),C.orange,{fill:false})],{yf:function(v){return fmtN(v,0);},leg:true});
+  // TC nominal vs IPC, base 100 = primer registro con datos válidos (no nulls)
+  var tcValidos=D.tc.filter(function(r){return r.f>=desde&&r.of!=null;});
+  var ipcValidos=D.ipc.filter(function(r){return r.f>=desde&&r.n!=null;});
+  if(tcValidos.length&&ipcValidos.length){
+    // Alinear desde el mes común más antiguo con datos válidos
+    var desdeComun=tcValidos[0].f>ipcValidos[0].f?tcValidos[0].f:ipcValidos[0].f;
+    var tcs=tcValidos.filter(function(r){return r.f>=desdeComun;});
+    var ipcs=ipcValidos.filter(function(r){return r.f>=desdeComun;});
+    var bt=tcs[0].of;var bi=ipcs[0].n;
+    // Merge labels para que las dos series compartan eje X (puede haber meses sin TC pero con IPC)
+    var fechas={};tcs.forEach(function(r){fechas[r.f]=true;});ipcs.forEach(function(r){fechas[r.f]=true;});
+    var labels=Object.keys(fechas).sort();
+    var tcMap={};tcs.forEach(function(r){tcMap[r.f]=r.of;});
+    var ipcMap={};ipcs.forEach(function(r){ipcMap[r.f]=r.n;});
+    mk("c-tcreal",labels,[
+      line("TC nominal",labels.map(function(f){return tcMap[f]?Math.round(tcMap[f]/bt*100):null;}),C.blue),
+      line("IPC nivel",labels.map(function(f){return ipcMap[f]?Math.round(ipcMap[f]/bi*100):null;}),C.orange,{fill:false})
+    ],{yf:function(v){return fmtN(v,0);},leg:true});
+  }
   buildAgregatosMonetarios();
 }
 
@@ -1933,12 +1975,19 @@ async function fetchMonetarios(){
       return det.length?det.map(function(x){return{f:x.fecha,v:x.valor};}).reverse():null;
     }catch(e){return null;}
   }
-  var res=await Promise.all([fetchSerie(1232),fetchSerie(1239),fetchSerie(1234),fetchSerie(26),fetchSerie(91)]);
+  // 1232=M1, 1239=M2 priv, 1234=M3, 26=Prest priv tot, 91=Dep pesos
+  // 883=Prest a personas humanas (familias), 884=Prest a personas jurídicas (empresas)
+  var res=await Promise.all([
+    fetchSerie(1232),fetchSerie(1239),fetchSerie(1234),fetchSerie(26),fetchSerie(91),
+    fetchSerie(883),fetchSerie(884)
+  ]);
   if(res[0]){MON_CACHE.m1=res[0];log("M1: "+res[0].length+" registros","ok");}
   if(res[1]){MON_CACHE.m2=res[1];log("M2: "+res[1].length+" registros","ok");}
   if(res[2]){MON_CACHE.m3=res[2];log("M3: "+res[2].length+" registros","ok");}
   if(res[3])MON_CACHE.prest=res[3];
   if(res[4])MON_CACHE.dep=res[4];
+  if(res[5]){MON_CACHE.prest_fam=res[5];log("Préstamos familias: "+res[5].length+" registros","ok");}
+  if(res[6]){MON_CACHE.prest_emp=res[6];log("Préstamos empresas: "+res[6].length+" registros","ok");}
   // Mora: BCRA no publica en API publica — serie del Informe sobre Bancos BCRA
   var moraRaw=[{"f":"2022-01","fam":5.8,"emp":4.1},{"f":"2022-06","fam":4.5,"emp":3.2},{"f":"2022-12","fam":3.5,"emp":2.8},{"f":"2023-06","fam":3.0,"emp":2.2},{"f":"2023-12","fam":2.5,"emp":1.6},{"f":"2024-01","fam":2.5,"emp":1.5},{"f":"2024-03","fam":2.4,"emp":1.2},{"f":"2024-06","fam":2.8,"emp":0.9},{"f":"2024-09","fam":3.5,"emp":1.0},{"f":"2024-12","fam":3.5,"emp":0.7},{"f":"2025-01","fam":2.67,"emp":0.77},{"f":"2025-02","fam":2.94,"emp":0.8},{"f":"2025-03","fam":3.2,"emp":0.9},{"f":"2025-04","fam":3.8,"emp":1.0},{"f":"2025-05","fam":4.5,"emp":1.0},{"f":"2025-06","fam":5.0,"emp":1.2},{"f":"2025-07","fam":5.8,"emp":1.4},{"f":"2025-08","fam":6.5,"emp":1.6},{"f":"2025-09","fam":7.2,"emp":1.7},{"f":"2025-10","fam":7.8,"emp":1.9},{"f":"2025-11","fam":8.5,"emp":2.2},{"f":"2025-12","fam":9.3,"emp":2.5},{"f":"2026-01","fam":10.6,"emp":2.8}];
   MON_CACHE.mora_fam=moraRaw.map(function(r){return{f:r.f,v:r.fam};});
