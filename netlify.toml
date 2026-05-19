@@ -1,0 +1,13 @@
+[build]
+  publish = "."
+
+# Evitar que el browser cachee los HTML viejos (los datos se cargan vía API al abrir)
+[[headers]]
+  for = "/*.html"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+
+[[headers]]
+  for = "/*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=3600"

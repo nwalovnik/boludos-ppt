@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Monitor de Despidos y Cierres — Sistema GDS</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#f6f5f2;--surf:#fff;--surf2:#eeede8;--surf3:#e4e3dc;
+  --bd:rgba(0,0,0,.07);--bd2:rgba(0,0,0,.15);
+  --tx:#181816;--tx2:#6a6960;--tx3:#9a9990;
+  --acc:#1a4edb;--acc2:#eef2ff;
+  --red:#c0392b;--red2:#fef1f0;
+  --grn:#0a7c42;--grn2:#edfaf3;
+  --amb:#8a4e08;--amb2:#fef9ee;
+  --r:10px;--rl:14px;
+}
+@media(prefers-color-scheme:dark){:root{
+  --bg:#111110;--surf:#1c1c1a;--surf2:#242420;--surf3:#2e2e2a;
+  --bd:rgba(255,255,255,.07);--bd2:rgba(255,255,255,.15);
+  --tx:#e4e3dc;--tx2:#9a9990;--tx3:#5e5d58;
+  --acc:#7b9ef9;--acc2:#182040;
+  --red:#f87171;--red2:#290d0d;
+  --grn:#34d399;--grn2:#081f14;
+  --amb:#fbbf24;--amb2:#231a06;
+}}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--tx);font-size:14px;line-height:1.5}
+
+/* ── Header ── */
+.hdr{background:var(--surf);border-bottom:.5px solid var(--bd);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;gap:12px;flex-wrap:wrap}
+.hdr-l h1{font-size:16px;font-weight:600;letter-spacing:-.02em}
+.hdr-l p{font-size:11px;color:var(--tx2);margin-top:1px}
+.hdr-r{display:flex;align-items:center;gap:8px}
+.badge-new{display:none;align-items:center;gap:5px;font-size:11px;background:var(--red2);color:var(--red);padding:3px 9px;border-radius:20px;font-weight:600}
+.badge-new.on{display:inline-flex}
+.badge-new::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.btn{font-size:12px;padding:6px 13px;border:.5px solid var(--bd2);border-radius:8px;background:var(--surf);color:var(--tx);cursor:pointer;font-family:inherit;font-weight:500;transition:background .1s;white-space:nowrap}
+.btn:hover{background:var(--surf2)}
+.btn-red{background:var(--red);color:#fff;border-color:transparent}
+.btn-red:hover{background:#a93226}
+
+/* ── Layout ── */
+.layout{display:flex;min-height:calc(100vh - 56px)}
+.sidebar{width:210px;flex-shrink:0;background:var(--surf);border-right:.5px solid var(--bd);padding:10px 0;position:sticky;top:56px;height:calc(100vh - 56px);overflow-y:auto;scrollbar-width:none}
+.sidebar::-webkit-scrollbar{display:none}
+.sb-sec{padding:0 10px}
+.sb-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--tx3);padding:10px 8px 4px;display:block}
+.nav-item{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:8px;cursor:pointer;border:none;background:transparent;color:var(--tx2);font-family:inherit;font-size:13px;width:100%;text-align:left;transition:all .12s}
+.nav-item:hover{background:var(--surf2);color:var(--tx)}
+.nav-item.on{background:var(--red2);color:var(--red);font-weight:500}
+.nav-ic{font-size:14px;width:19px;text-align:center;flex-shrink:0}
+.content-area{flex:1;min-width:0}
+
+/* ── Páginas ── */
+.pg{display:none;padding:18px 20px;max-width:1100px;margin:0 auto}
+.pg.on{display:block}
+
+/* ── KPIs ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:8px;margin-bottom:18px}
+.kpi{background:var(--surf);border-radius:var(--r);padding:14px;border:.5px solid var(--bd)}
+.kpi-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--tx2);margin-bottom:7px}
+.kpi-val{font-size:22px;font-weight:700;letter-spacing:-.03em;line-height:1;color:var(--red)}
+.kpi-sub{font-size:11px;margin-top:5px;color:var(--tx2)}
+
+/* ── Gráficos ── */
+.cgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px}
+@media(max-width:640px){.cgrid{grid-template-columns:1fr}}
+.cc{background:var(--surf);border:.5px solid var(--bd);border-radius:var(--rl);padding:15px;margin-bottom:12px}
+.cc-hd{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;gap:8px;flex-wrap:wrap}
+.cc-t{font-size:13px;font-weight:500}
+.cc-s{font-size:11px;color:var(--tx2);margin-top:2px}
+.slbl{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--tx3);margin:0 0 10px}
+
+/* ── Filtros ── */
+.dash-filtros{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:16px;padding:10px 14px;background:var(--surf);border:.5px solid var(--bd);border-radius:var(--r)}
+.df-grupo{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.df-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--tx3);margin-right:3px}
+.df-btn{font-size:11px;padding:3px 10px;border:.5px solid var(--bd2);border-radius:20px;background:var(--surf2);color:var(--tx2);cursor:pointer;font-family:inherit;font-weight:500;transition:all .12s}
+.df-btn:hover{background:var(--surf3);color:var(--tx)}
+.df-btn.on{background:var(--red);color:#fff;border-color:transparent}
+.df-sep{width:1px;height:22px;background:var(--bd2)}
+.filtros{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;padding:10px 14px;background:var(--surf);border:.5px solid var(--bd);border-radius:var(--r);align-items:center}
+.filtros label{font-size:12px;color:var(--tx2)}
+.filtros select,.filtros input[type=text]{font-size:12px;padding:4px 8px;border:.5px solid var(--bd2);border-radius:6px;background:var(--surf2);color:var(--tx);font-family:inherit}
+.filtros input[type=text]{width:200px}
+.ctrl-sep{width:1px;height:20px;background:var(--bd2)}
+
+/* ── Tabla ── */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{background:var(--surf2);padding:8px 10px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);border-bottom:.5px solid var(--bd2);white-space:nowrap;position:sticky;top:0}
+td{padding:8px 10px;border-bottom:.5px solid var(--bd);vertical-align:top;max-width:280px}
+tr:hover td{background:var(--surf2)}
+.td-emp{font-weight:600;color:var(--red);text-align:right}
+.td-emp.cero{color:var(--tx3)}
+.tag-fuente{font-size:9px;padding:1px 6px;border-radius:4px;font-weight:600;white-space:nowrap}
+.tag-manual{background:var(--grn2);color:var(--grn)}
+.tag-auto{background:var(--acc2);color:var(--acc)}
+.tag-pend{background:var(--amb2);color:var(--amb)}
+.tag-tipo{font-size:9px;padding:2px 7px;border-radius:4px;font-weight:700;white-space:nowrap;letter-spacing:.02em}
+.tag-desp{background:var(--red2);color:var(--red)}
+.tag-susp{background:var(--amb2);color:var(--amb)}
+.tag-cierre{background:var(--surf2);color:var(--tx2);border:.5px solid var(--bd2)}
+.td-link a{color:var(--acc);text-decoration:none;font-size:11px}
+.td-link a:hover{text-decoration:underline}
+.td-coment{color:var(--tx2);font-size:11px;line-height:1.4;max-width:300px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+.td-coment:hover{white-space:normal;overflow:visible}
+
+/* ── Paginación ── */
+.pag{display:flex;align-items:center;justify-content:space-between;padding:10px 0;font-size:12px;color:var(--tx2)}
+.pag-btns{display:flex;gap:4px}
+.pag-btn{padding:4px 10px;border:.5px solid var(--bd2);border-radius:6px;background:var(--surf);cursor:pointer;font-size:12px;font-family:inherit}
+.pag-btn:hover{background:var(--surf2)}
+.pag-btn.on{background:var(--red);color:#fff;border-color:transparent}
+
+/* ── Nuevas noticias banner ── */
+.nuevas-banner{background:var(--red2);border:.5px solid var(--red);border-radius:var(--r);padding:10px 14px;margin-bottom:14px;display:none}
+.nuevas-banner.on{display:block}
+.nuevas-banner strong{color:var(--red)}
+.nuevas-banner ul{margin:6px 0 0 16px;font-size:12px;color:var(--tx)}
+.nuevas-banner li{margin-bottom:3px}
+
+/* ── Info box ── */
+.info-box{background:var(--amb2);border:.5px solid var(--amb);border-radius:var(--r);padding:10px 14px;font-size:12px;color:var(--amb);margin-bottom:16px;line-height:1.6}
+
+/* ── Toast ── */
+#toast{position:fixed;bottom:20px;right:20px;background:var(--surf);border:.5px solid var(--bd2);border-radius:10px;padding:9px 15px;font-size:12px;box-shadow:0 4px 14px rgba(0,0,0,.15);opacity:0;transition:opacity .22s;pointer-events:none;z-index:200;max-width:300px}
+#toast.on{opacity:1}
+hr.d{border:none;border-top:.5px solid var(--bd);margin:16px 0}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-l">
+    <h1>&#128680; Monitor de Despidos y Cierres</h1>
+    <p id="upd-txt">Sistema GDS — Cargando datos...</p>
+  </div>
+  <div class="hdr-r">
+    <span class="badge-new" id="badge-new"></span>
+    <a href="Portal GDS.html" class="btn">&#8592; Portal</a>
+  </div>
+</div>
+
+<div class="layout">
+<nav class="sidebar">
+  <div class="sb-sec">
+    <span class="sb-lbl">Panorama</span>
+    <button class="nav-item on" onclick="T('dash',this)" id="nav-dash"><span class="nav-ic">&#9783;</span>Dashboard</button>
+    <button class="nav-item" onclick="T('mapa',this)" id="nav-mapa"><span class="nav-ic">&#127759;</span>Por provincia</button>
+  </div>
+  <div class="sb-sec">
+    <span class="sb-lbl">Datos</span>
+    <button class="nav-item" onclick="T('tabla',this)" id="nav-tabla"><span class="nav-ic">&#128203;</span>Tabla completa</button>
+    <button class="nav-item" onclick="T('nuevas',this)" id="nav-nuevas"><span class="nav-ic">&#128240;</span>Noticias nuevas</button>
+  </div>
+</nav>
+
+<div class="content-area">
+
+<!-- ── Dashboard ── -->
+<div id="pg-dash" class="pg on">
+  <div class="info-box" id="info-carga">&#9203; Cargando datos del archivo <b>_despidos_data.js</b>...</div>
+
+  <div class="dash-filtros">
+    <div class="df-grupo">
+      <span class="df-lbl">Tipo</span>
+      <button class="df-btn on" onclick="setDF('tipo','todos',this)">Todos</button>
+      <button class="df-btn" onclick="setDF('tipo','despido',this)">Despidos</button>
+      <button class="df-btn" onclick="setDF('tipo','suspensión',this)">Suspensiones</button>
+      <button class="df-btn" onclick="setDF('tipo','cierre',this)">Cierres</button>
+    </div>
+    <div class="df-sep"></div>
+    <div class="df-grupo">
+      <span class="df-lbl">Empresa</span>
+      <button class="df-btn on" onclick="setDF('cerro','todos',this)">Todas</button>
+      <button class="df-btn" onclick="setDF('cerro','si',this)">Cerró</button>
+      <button class="df-btn" onclick="setDF('cerro','no',this)">Sigue activa</button>
+    </div>
+  </div>
+
+  <div class="slbl">Totales acumulados</div>
+  <div class="kpi-grid">
+    <div class="kpi"><div class="kpi-lbl">Eventos registrados</div><div class="kpi-val" id="k-total">—</div><div class="kpi-sub">Noticias + carga manual</div></div>
+    <div class="kpi"><div class="kpi-lbl">Empleos afectados</div><div class="kpi-val" id="k-emp">—</div><div class="kpi-sub">Confirmados + estimados</div></div>
+    <div class="kpi"><div class="kpi-lbl">Empresas/Organismos</div><div class="kpi-val" id="k-emp2">—</div><div class="kpi-sub">Distintas entidades</div></div>
+    <div class="kpi"><div class="kpi-lbl">Provincias afectadas</div><div class="kpi-val" id="k-prov">—</div><div class="kpi-sub">Al menos 1 evento</div></div>
+    <div class="kpi"><div class="kpi-lbl">Sector privado</div><div class="kpi-val" id="k-priv">—</div><div class="kpi-sub">% del total de empleos</div></div>
+    <div class="kpi"><div class="kpi-lbl">Últimos 7 días</div><div class="kpi-val" id="k-hoy" style="color:var(--acc)">—</div><div class="kpi-sub">Noticias detectadas</div></div>
+  </div>
+
+  <hr class="d"/>
+  <div class="cgrid">
+    <div class="cc"><div class="cc-hd"><div><div class="cc-t">Empleos afectados por mes</div><div class="cc-s">Acumulado mensual</div></div></div><div style="position:relative;height:180px"><canvas id="c-mes"></canvas></div></div>
+    <div class="cc"><div class="cc-hd"><div><div class="cc-t">Por rubro</div><div class="cc-s">Top 10 rubros</div></div></div><div style="position:relative;height:180px"><canvas id="c-rubro"></canvas></div></div>
+    <div class="cc"><div class="cc-hd"><div><div class="cc-t">Sector público vs privado</div><div class="cc-s">Empleos afectados</div></div></div><div style="position:relative;height:180px"><canvas id="c-sector"></canvas></div></div>
+    <div class="cc"><div class="cc-hd"><div><div class="cc-t">Evolución acumulada</div><div class="cc-s">Empleos totales desde dic 2023</div></div></div><div style="position:relative;height:180px"><canvas id="c-acum"></canvas></div></div>
+  </div>
+</div>
+
+<!-- ── Por provincia ── -->
+<div id="pg-mapa" class="pg">
+  <div class="slbl">Empleos afectados por provincia</div>
+  <div class="cc" style="margin-bottom:18px"><div style="position:relative;height:320px"><canvas id="c-provincias"></canvas></div></div>
+  <div id="prov-detalle"></div>
+</div>
+
+<!-- ── Tabla ── -->
+<div id="pg-tabla" class="pg">
+  <div class="filtros">
+    <label>Búsqueda:</label>
+    <input type="text" id="f-buscar" placeholder="empresa, provincia, rubro..." oninput="filtrar()">
+    <div class="ctrl-sep"></div>
+    <label>Provincia:</label>
+    <select id="f-prov" onchange="filtrar()"><option value="">Todas</option></select>
+    <label>Sector:</label>
+    <select id="f-sector" onchange="filtrar()">
+      <option value="">Todos</option>
+      <option value="Sector Privado">Privado</option>
+      <option value="Sector Público">Público</option>
+    </select>
+    <label>Tipo:</label>
+    <select id="f-tipo" onchange="filtrar()">
+      <option value="">Todos</option>
+      <option value="despido">Despidos</option>
+      <option value="suspensión">Suspensiones</option>
+      <option value="cierre">Cierres</option>
+    </select>
+    <label>Fuente:</label>
+    <select id="f-fuente" onchange="filtrar()">
+      <option value="">Todas</option>
+      <option value="manual">Manual</option>
+      <option value="auto">Auto</option>
+    </select>
+    <label>Año:</label>
+    <select id="f-anio" onchange="filtrar()"><option value="">Todos</option></select>
+    <button class="btn" onclick="resetFiltros()">&#215; Limpiar</button>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr>
+        <th>Fecha</th><th>Empresa/Organismo</th><th>Tipo</th><th>Rubro</th>
+        <th style="text-align:right">Empleados</th><th>Provincia</th>
+        <th>Estado</th><th>Fuente</th><th>Noticia</th>
+      </tr></thead>
+      <tbody id="tbl-body"></tbody>
+    </table>
+  </div>
+  <div class="pag">
+    <span id="pag-info"></span>
+    <div class="pag-btns" id="pag-btns"></div>
+  </div>
+</div>
+
+<!-- ── Noticias nuevas ── -->
+<div id="pg-nuevas" class="pg">
+  <div class="slbl">Noticias detectadas automáticamente</div>
+  <div id="nuevas-lista"></div>
+</div>
+
+</div><!-- content-area -->
+</div><!-- layout -->
+
+<div id="toast"></div>
+
+<script src="_despidos_data.js"></script>
+<script>
+// ── Navegación ──────────────────────────────────────────────────────────────
+function T(id, btn){
+  document.querySelectorAll('.pg').forEach(function(p){p.classList.remove('on');});
+  document.querySelectorAll('.nav-item').forEach(function(b){b.classList.remove('on');});
+  document.getElementById('pg-'+id).classList.add('on');
+  if(btn)btn.classList.add('on');
+  else{var nb=document.getElementById('nav-'+id);if(nb)nb.classList.add('on');}
+  if(id==='mapa')buildMapa();
+  if(id==='tabla')buildTabla();
+  if(id==='nuevas')buildNuevas();
+}
+
+function toast(msg,dur){
+  var t=document.getElementById('toast');t.textContent=msg;t.classList.add('on');
+  setTimeout(function(){t.classList.remove('on');},dur||2500);
+}
+
+// ── Paleta ──────────────────────────────────────────────────────────────────
+var isDark=window.matchMedia&&window.matchMedia('(prefers-color-scheme:dark)').matches;
+var C={
+  red:   isDark?'#f87171':'#c0392b',
+  blue:  isDark?'#7b9ef9':'#1a4edb',
+  grn:   isDark?'#34d399':'#0a7c42',
+  amb:   isDark?'#fbbf24':'#e67e22',
+  pur:   isDark?'#c4b5fd':'#6d28d9',
+  teal:  isDark?'#5eead4':'#0d9488',
+  gray:  isDark?'rgba(255,255,255,.15)':'rgba(0,0,0,.08)',
+  tx2:   isDark?'#9a9990':'#6a6960',
+  surf:  isDark?'#1c1c1a':'#fff',
+};
+var PALETTE=[C.red,C.blue,C.grn,C.amb,C.pur,C.teal,'#ec4899','#f97316','#0ea5e9','#84cc16'];
+
+var chartDefaults={
+  responsive:true,maintainAspectRatio:false,
+  plugins:{legend:{display:false},tooltip:{callbacks:{}}},
+  scales:{x:{grid:{color:C.gray},ticks:{color:C.tx2,font:{size:10}}},
+          y:{grid:{color:C.gray},ticks:{color:C.tx2,font:{size:10}}}}
+};
+var CHARTS={};
+function mk(id,labels,datasets,opts){
+  var ctx=document.getElementById(id);if(!ctx)return;
+  if(CHARTS[id])CHARTS[id].destroy();
+  CHARTS[id]=new Chart(ctx,{type:opts.type||'bar',data:{labels:labels,datasets:datasets},
+    options:Object.assign({},chartDefaults,{
+      plugins:Object.assign({},chartDefaults.plugins,opts.plugins||{}),
+      scales:opts.scales!==undefined?opts.scales:chartDefaults.scales
+    })
+  });
+}
+function fmtN(n){return n>=1e6?(n/1e6).toFixed(1)+'M':n>=1000?(n/1000).toFixed(0)+'k':String(n);}
+
+// ── Datos ───────────────────────────────────────────────────────────────────
+var D=[];
+var NUEVOS=[];
+var DF={tipo:'todos', cerro:'todos'};
+
+function setDF(key, val, btn){
+  DF[key]=val;
+  // Actualizar botones del grupo
+  btn.parentElement.querySelectorAll('.df-btn').forEach(function(b){b.classList.remove('on');});
+  btn.classList.add('on');
+  buildKPIs();
+  buildDash();
+}
+
+function getDashData(){
+  return D.filter(function(r){
+    if(DF.tipo!=='todos' && (r.tipo||'despido')!==DF.tipo) return false;
+    if(DF.cerro==='si' && !r.cerro) return false;
+    if(DF.cerro==='no' && r.cerro) return false;
+    return true;
+  });
+}
+
+function initData(){
+  if(typeof DESPIDOS_DATA==='undefined'){
+    document.getElementById('info-carga').innerHTML='<b>⚠ No se encontró _despidos_data.js.</b> Ejecutá <b>correr_actualizador.bat</b> primero.';
+    return;
+  }
+  D=DESPIDOS_DATA.eventos||[];
+  NUEVOS=DESPIDOS_DATA.nuevos||[];
+  var upd=DESPIDOS_DATA.updated||'';
+  document.getElementById('upd-txt').textContent='Sistema GDS · Actualizado: '+upd;
+  document.getElementById('info-carga').style.display='none';
+
+  if(NUEVOS.length>0){
+    var b=document.getElementById('badge-new');
+    b.textContent=NUEVOS.length+' nuevas';
+    b.classList.add('on');
+  }
+
+  buildKPIs();
+  buildDash();
+  initFiltros();
+}
+
+// ── KPIs ────────────────────────────────────────────────────────────────────
+function buildKPIs(){
+  var dd=getDashData();
+  var totalEmp=dd.reduce(function(a,r){return a+(r.empleados||0);},0);
+  var empresas=new Set(dd.map(function(r){return r.empresa;})).size;
+  var provs=new Set(dd.filter(function(r){return r.provincia&&r.provincia!=='A confirmar';}).map(function(r){return r.provincia;})).size;
+  var empPriv=dd.filter(function(r){return r.sector==='Sector Privado';}).reduce(function(a,r){return a+(r.empleados||0);},0);
+  var pct=totalEmp>0?Math.round(empPriv/totalEmp*100):0;
+
+  document.getElementById('k-total').textContent=dd.length.toLocaleString('es');
+  document.getElementById('k-emp').textContent=fmtN(totalEmp);
+  document.getElementById('k-emp2').textContent=empresas.toLocaleString('es');
+  document.getElementById('k-prov').textContent=provs;
+  document.getElementById('k-priv').textContent=pct+'%';
+  document.getElementById('k-hoy').textContent=NUEVOS.length;
+}
+
+// ── Dashboard gráficos ──────────────────────────────────────────────────────
+function buildDash(){
+  var dd=getDashData();
+
+  // Por mes
+  var porMes={};
+  dd.forEach(function(r){
+    if(!r.fecha)return;
+    var k=r.fecha.slice(0,7);
+    porMes[k]=(porMes[k]||0)+(r.empleados||0);
+  });
+  var meses=Object.keys(porMes).sort().filter(function(m){return m>='2024-01';});
+  mk('c-mes',meses,
+    [{data:meses.map(function(m){return porMes[m]||0;}),
+      backgroundColor:meses.map(function(){return C.red+'aa';}),
+      borderColor:C.red,borderWidth:1}],
+    {plugins:{tooltip:{callbacks:{label:function(ctx){return fmtN(ctx.raw)+' empleos';}}}}}
+  );
+
+  // Por rubro
+  var porRubro={};
+  dd.forEach(function(r){
+    var k=(r.rubro||'Otro').replace('Administración Pública Nacional','Adm. Pública');
+    porRubro[k]=(porRubro[k]||0)+(r.empleados||0);
+  });
+  var topRubros=Object.entries(porRubro).sort(function(a,b){return b[1]-a[1];}).slice(0,10);
+  mk('c-rubro',topRubros.map(function(e){return e[0];}),
+    [{data:topRubros.map(function(e){return e[1];}),
+      backgroundColor:PALETTE.slice(0,10).map(function(c){return c+'bb';}),
+      borderWidth:0}],
+    {type:'bar',scales:{x:{ticks:{font:{size:9}}},y:{ticks:{callback:function(v){return fmtN(v);}}}}}
+  );
+
+  // Sector
+  var empPriv=dd.filter(function(r){return r.sector==='Sector Privado';}).reduce(function(a,r){return a+(r.empleados||0);},0);
+  var empPub=dd.filter(function(r){return r.sector==='Sector Público'||r.sector==='Sector P\u00FAblico';}).reduce(function(a,r){return a+(r.empleados||0);},0);
+  var empOtro=dd.reduce(function(a,r){return a+(r.empleados||0);},0)-empPriv-empPub;
+  mk('c-sector',['Privado','Público','Sin clasificar'],
+    [{data:[empPriv,empPub,empOtro>0?empOtro:0],
+      backgroundColor:[C.red+'bb',C.blue+'bb',C.gray],
+      borderWidth:0}],
+    {type:'doughnut',scales:undefined,plugins:{legend:{display:true,labels:{color:C.tx2,font:{size:11}}}}}
+  );
+
+  // Acumulado
+  var sorted=dd.filter(function(r){return r.fecha>='2024-01';}).sort(function(a,b){return a.fecha.localeCompare(b.fecha);});
+  var acum=0;
+  var acumLabels=[],acumData=[];
+  sorted.forEach(function(r){acum+=(r.empleados||0);acumLabels.push(r.fecha);acumData.push(acum);});
+  // Reducir a ~60 puntos
+  var step=Math.max(1,Math.floor(acumLabels.length/60));
+  var labSample=acumLabels.filter(function(_,i){return i%step===0;});
+  var datSample=acumData.filter(function(_,i){return i%step===0;});
+  mk('c-acum',labSample,
+    [{data:datSample,borderColor:C.red,backgroundColor:C.red+'18',fill:true,pointRadius:0,tension:0.3,borderWidth:2}],
+    {type:'line',scales:{x:{ticks:{maxTicksLimit:8,font:{size:9}}},y:{ticks:{callback:function(v){return fmtN(v);}}}}}
+  );
+}
+
+// ── Mapa / Por provincia ─────────────────────────────────────────────────────
+function buildMapa(){
+  var porProv={};
+  D.forEach(function(r){
+    var p=r.provincia||'Sin dato';
+    if(!porProv[p])porProv[p]={emp:0,cnt:0};
+    porProv[p].emp+=(r.empleados||0);
+    porProv[p].cnt++;
+  });
+  var sorted=Object.entries(porProv).sort(function(a,b){return b[1].emp-a[1].emp;});
+  var labels=sorted.map(function(e){return e[0];});
+  var values=sorted.map(function(e){return e[1].emp;});
+
+  mk('c-provincias',labels,
+    [{data:values,backgroundColor:PALETTE.concat(PALETTE).slice(0,labels.length).map(function(c){return c+'bb';}),borderWidth:0}],
+    {type:'bar',scales:{x:{ticks:{font:{size:10},maxRotation:45}},y:{ticks:{callback:function(v){return fmtN(v);}}}}}
+  );
+
+  var html='<div class="slbl">Detalle por provincia</div><div class="cgrid">';
+  sorted.slice(0,12).forEach(function(e){
+    var p=e[0];var d=e[1];
+    html+='<div class="cc"><div class="cc-t">'+p+'</div>';
+    html+='<div style="font-size:20px;font-weight:700;color:var(--red);margin:6px 0">'+fmtN(d.emp)+'</div>';
+    html+='<div style="font-size:11px;color:var(--tx2)">'+d.cnt+' eventos registrados</div></div>';
+  });
+  html+='</div>';
+  document.getElementById('prov-detalle').innerHTML=html;
+}
+
+// ── Tabla ───────────────────────────────────────────────────────────────────
+var TBL_PAGE=0;
+var TBL_PER=50;
+var TBL_FILTERED=[];
+
+function initFiltros(){
+  var provs=Array.from(new Set(D.map(function(r){return r.provincia||'';}).filter(Boolean))).sort();
+  var sel=document.getElementById('f-prov');
+  provs.forEach(function(p){var o=document.createElement('option');o.value=p;o.textContent=p;sel.appendChild(o);});
+
+  var anios=Array.from(new Set(D.map(function(r){return r.fecha?r.fecha.slice(0,4):'';}).filter(Boolean))).sort().reverse();
+  var sa=document.getElementById('f-anio');
+  anios.forEach(function(a){var o=document.createElement('option');o.value=a;o.textContent=a;sa.appendChild(o);});
+}
+
+function filtrar(){
+  TBL_PAGE=0;
+  var buscar=(document.getElementById('f-buscar').value||'').toLowerCase();
+  var prov=document.getElementById('f-prov').value;
+  var sector=document.getElementById('f-sector').value;
+  var tipo=document.getElementById('f-tipo').value;
+  var fuente=document.getElementById('f-fuente').value;
+  var anio=document.getElementById('f-anio').value;
+
+  TBL_FILTERED=D.filter(function(r){
+    if(buscar&&!(r.empresa||'').toLowerCase().includes(buscar)&&
+                !(r.rubro||'').toLowerCase().includes(buscar)&&
+                !(r.provincia||'').toLowerCase().includes(buscar)&&
+                !(r.comentario||'').toLowerCase().includes(buscar))return false;
+    if(prov&&r.provincia!==prov)return false;
+    if(sector&&r.sector!==sector)return false;
+    if(tipo&&(r.tipo||'despido')!==tipo)return false;
+    if(fuente&&r.fuente!==fuente)return false;
+    if(anio&&(!r.fecha||r.fecha.slice(0,4)!==anio))return false;
+    return true;
+  }).sort(function(a,b){return (b.fecha||'').localeCompare(a.fecha||'');});
+
+  renderTabla();
+}
+
+function resetFiltros(){
+  document.getElementById('f-buscar').value='';
+  document.getElementById('f-prov').value='';
+  document.getElementById('f-sector').value='';
+  document.getElementById('f-tipo').value='';
+  document.getElementById('f-fuente').value='';
+  document.getElementById('f-anio').value='';
+  filtrar();
+}
+
+function buildTabla(){
+  TBL_FILTERED=[...D].sort(function(a,b){return (b.fecha||'').localeCompare(a.fecha||'');});
+  renderTabla();
+}
+
+function renderTabla(){
+  var start=TBL_PAGE*TBL_PER;
+  var page=TBL_FILTERED.slice(start,start+TBL_PER);
+  var html='';
+  page.forEach(function(r){
+    var fuenteTag=r.fuente==='manual'?
+      '<span class="tag-fuente tag-manual">Manual</span>':
+      '<span class="tag-fuente tag-auto">Auto</span>';
+    var t=r.tipo||'despido';
+    var tipoTag=t==='suspensión'?'<span class="tag-tipo tag-susp">Suspensión</span>':
+                t==='cierre'?'<span class="tag-tipo tag-cierre">Cierre</span>':
+                '<span class="tag-tipo tag-desp">Despido</span>';
+    var estadoTag='';
+    if(r.estado==='Pendiente revisión')estadoTag='<span class="tag-fuente tag-pend">⏳ Pendiente</span>';
+    var empClass=r.empleados>0?'td-emp':'td-emp cero';
+    var empTxt=r.empleados>0?r.empleados.toLocaleString('es'):'—';
+    var link=r.url?'<a href="'+r.url+'" target="_blank">&#8599;</a>':'';
+    html+='<tr>'+
+      '<td>'+((r.fecha||'').slice(0,10)||'—')+'</td>'+
+      '<td><b>'+esc(r.empresa||'—')+'</b></td>'+
+      '<td>'+tipoTag+'</td>'+
+      '<td>'+esc(r.rubro||'—')+'</td>'+
+      '<td class="'+empClass+'">'+empTxt+'</td>'+
+      '<td>'+esc(r.provincia||'—')+(r.municipio?' <span style="color:var(--tx3);font-size:10px">'+esc(r.municipio)+'</span>':'')+'</td>'+
+      '<td>'+estadoTag+(r.estado&&r.estado!=='Pendiente revisión'?esc(r.estado):'')+'</td>'+
+      '<td>'+fuenteTag+'</td>'+
+      '<td class="td-link">'+link+'</td>'+
+    '</tr>';
+    if(r.comentario){
+      html+='<tr><td colspan="9"><div class="td-coment" title="'+esc(r.comentario)+'">&#128172; '+esc(r.comentario.slice(0,120))+(r.comentario.length>120?'...':'')+'</div></td></tr>';
+    }
+  });
+  document.getElementById('tbl-body').innerHTML=html||'<tr><td colspan="9" style="text-align:center;color:var(--tx3);padding:20px">Sin resultados</td></tr>';
+
+  // Info
+  var total=TBL_FILTERED.length;
+  var pages=Math.ceil(total/TBL_PER);
+  document.getElementById('pag-info').textContent='Mostrando '+(start+1)+'-'+Math.min(start+TBL_PER,total)+' de '+total+' eventos';
+
+  // Botones de paginación
+  var pbHtml='';
+  if(TBL_PAGE>0)pbHtml+='<button class="pag-btn" onclick="goPage('+(TBL_PAGE-1)+')">&#8249;</button>';
+  var from=Math.max(0,TBL_PAGE-2),to=Math.min(pages,TBL_PAGE+3);
+  for(var i=from;i<to;i++){pbHtml+='<button class="pag-btn'+(i===TBL_PAGE?' on':'')+'" onclick="goPage('+i+')">'+(i+1)+'</button>';}
+  if(TBL_PAGE<pages-1)pbHtml+='<button class="pag-btn" onclick="goPage('+(TBL_PAGE+1)+')">&#8250;</button>';
+  document.getElementById('pag-btns').innerHTML=pbHtml;
+}
+
+function goPage(p){TBL_PAGE=p;renderTabla();window.scrollTo(0,0);}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+// ── Noticias nuevas ─────────────────────────────────────────────────────────
+function buildNuevas(){
+  var c=document.getElementById('nuevas-lista');
+  if(!NUEVOS.length){
+    c.innerHTML='<div style="color:var(--tx2);font-size:13px;padding:20px 0">No hay noticias nuevas en los últimos 7 días.</div>';
+    return;
+  }
+  var html='<div class="info-box"><b>'+NUEVOS.length+' noticias detectadas en los últimos 7 días.</b> Estas están marcadas como "Pendiente revisión" en la tabla — revisalas y confirmá o eliminá las que no correspondan.</div>';
+  NUEVOS.forEach(function(r,i){
+    html+='<div class="cc" style="margin-bottom:8px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">'+
+      '<div>'+
+        '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">'+
+          '<span style="font-size:13px;font-weight:600">'+esc(r.empresa||'Sin empresa')+'</span>'+
+          (function(){var t=r.tipo||'despido';return t==='suspensión'?'<span class="tag-tipo tag-susp">Suspensión</span>':t==='cierre'?'<span class="tag-tipo tag-cierre">Cierre</span>':'<span class="tag-tipo tag-desp">Despido</span>';}())+
+        '</div>'+
+        '<div style="font-size:11px;color:var(--tx2);margin-top:2px">'+
+          (r.fecha||'')+(r.provincia?' · '+esc(r.provincia):'')+(r.rubro?' · '+esc(r.rubro):'')+'</div>'+
+        (r.comentario?'<div style="font-size:12px;color:var(--tx);margin-top:6px;line-height:1.5">'+esc(r.comentario.slice(0,200))+'</div>':'')+'</div>'+
+      '<div style="text-align:right;flex-shrink:0">'+
+        (r.empleados>0?'<div style="font-size:18px;font-weight:700;color:var(--red)">'+r.empleados.toLocaleString('es')+'</div><div style="font-size:10px;color:var(--tx3)">empleos</div>':'<div style="font-size:12px;color:var(--tx3)">sin dato</div>')+
+      '</div></div>'+
+      (r.url?'<div style="margin-top:8px"><a href="'+r.url+'" target="_blank" style="font-size:11px;color:var(--acc)">Ver noticia &#8599;</a></div>':'')+'</div>';
+  });
+  c.innerHTML=html;
+}
+
+// ── Init ────────────────────────────────────────────────────────────────────
+window.addEventListener('load', initData);
+</script>
+</body>
+</html>
