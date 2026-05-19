@@ -2285,6 +2285,22 @@ function parseGenericXls(wb, filename) {
 }
 
 // Recargar data.json (lo que actualiza el GitHub Action diariamente)
+function _applyDataJson(dj){
+  var changed = 0;
+  Object.keys(dj).forEach(function(k){
+    if (k === "_meta") return;
+    if (!Array.isArray(dj[k])) return;
+    // Claves "_d" van a DD (datos diarios), el resto va a D (mensuales)
+    if (k.endsWith("_d") && typeof DD !== "undefined" && k in DD) {
+      DD[k] = dj[k];
+    } else {
+      D[k] = dj[k];
+    }
+    changed++;
+  });
+  return changed;
+}
+
 async function reloadDataJson(){
   log("Recargando data.json...","inf");
   try {
@@ -2292,11 +2308,7 @@ async function reloadDataJson(){
     if (!dr.ok) throw new Error("HTTP " + dr.status);
     var dj = await dr.json();
     var meta = dj._meta || {};
-    var changed = 0;
-    Object.keys(dj).forEach(function(k){
-      if (k === "_meta") return;
-      if (Array.isArray(dj[k])) { D[k] = dj[k]; changed++; }
-    });
+    var changed = _applyDataJson(dj);
     var fecha = meta.generated_at ? new Date(meta.generated_at).toLocaleString("es-AR",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"}) : "?";
     log("data.json recargado: "+changed+" series (generado "+fecha+")","ok");
     refreshUI();
@@ -2320,11 +2332,7 @@ async function reloadDataJson(){
     if (dr.ok) {
       var dj = await dr.json();
       var meta = dj._meta || {};
-      // Sobreescribir cada serie de D con la versión fresca del JSON
-      Object.keys(dj).forEach(function(k){
-        if (k === "_meta") return;
-        if (Array.isArray(dj[k])) D[k] = dj[k];
-      });
+      _applyDataJson(dj);
       var ts = meta.generated_at || "?";
       log("data.json cargado (generado " + ts + ")", "ok");
     } else {
@@ -2335,12 +2343,12 @@ async function reloadDataJson(){
   }
   buildKPIs();
   buildDash("2020-01");
-  // Refrescar lo que es diario (TC, mercados) — no es necesario para INDEC/BCRA mensual
-  actualizarDesdeAPI();
-  refreshBCRA();
   buildMesesCb();
   buildAcum();
   log("Sistema cargado: "+Object.keys(D).length+" series, "+Object.values(D).reduce(function(a,v){return a+(Array.isArray(v)?v.length:0);},0)+" registros","ok");
+  // NOTA: ya no llamamos actualizarDesdeAPI/refreshBCRA en init.
+  // El scraper (GitHub Action) genera data.json diariamente y eso es la fuente de verdad.
+  // Si querés forzar refresh manual, el botón "Actualizar" recarga data.json.
 })();
 
 

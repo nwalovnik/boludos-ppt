@@ -658,6 +658,133 @@ def update_turismo(D: dict) -> int:
         log(f"Turismo falló: {e}", "warn")
     return nuevos
 
+def update_daily_series(D: dict) -> int:
+    """Series diarias (DD): rrii_d, tc_d, embi_d, merval_d. Las KPIs del HTML leen de estas."""
+    nuevos = 0
+
+    # === Reservas diaria (BCRA Var 1) — últimos ~120 días ===
+    try:
+        rows = fetch_bcra(BCRA_VARS["reservas"], limit=180)
+        arr = D.setdefault("rrii_d", [])
+        existing = {r["f"]: i for i, r in enumerate(arr) if "f" in r}
+        for r in rows:
+            f = r["fecha"]
+            v = round(float(r["valor"]))
+            if f in existing:
+                arr[existing[f]]["v"] = v
+            else:
+                arr.append({"f": f, "v": v})
+                existing[f] = len(arr) - 1
+        # Trim a últimos 180 dias
+        arr.sort(key=lambda x: x["f"])
+        D["rrii_d"] = arr[-180:]
+        if rows:
+            log(f"Reservas diaria: último {rows[-1]['fecha']} = USD {rows[-1]['valor']:.0f}M", "ok")
+    except Exception as e:
+        log(f"Reservas diaria falló: {e}", "warn")
+
+    # === TC diaria (BCRA Var 4 = minorista) ===
+    try:
+        rows = fetch_bcra(BCRA_VARS["tc_minor"], limit=180)
+        arr = D.setdefault("tc_d", [])
+        existing = {r["f"]: i for i, r in enumerate(arr) if "f" in r}
+        for r in rows:
+            f = r["fecha"]
+            v = round(float(r["valor"]), 2)
+            if f in existing:
+                arr[existing[f]]["of"] = v
+            else:
+                arr.append({"f": f, "of": v, "mep": None, "ccl": None, "blue": None})
+                existing[f] = len(arr) - 1
+        arr.sort(key=lambda x: x["f"])
+
+        # Enriquecer con MEP / CCL / Blue desde ArgentinaDatos cotizaciones
+        cotiz = fetch_cotizaciones()
+        for tipo_key, dd_field in (("bolsa", "mep"), ("contadoconliqui", "ccl"), ("blue", "blue")):
+            for x in cotiz.get(tipo_key, []):
+                if not x.get("fecha"):
+                    continue
+                f = x["fecha"]
+                v = x.get("venta") or x.get("compra")
+                if v is None:
+                    continue
+                if f in existing:
+                    arr[existing[f]][dd_field] = round(float(v), 2)
+        # Bluelytics como respaldo del blue de hoy
+        bl = fetch_bluelytics()
+        if bl:
+            f_today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            rec = next((x for x in arr if x.get("f") == f_today), None)
+            if rec is None:
+                rec = {"f": f_today, "of": None, "mep": None, "ccl": None, "blue": None}
+                arr.append(rec)
+            rec["blue"] = rec.get("blue") or round(float(bl["blue"]["value_sell"]), 2)
+            rec["of"]   = rec.get("of")   or round(float(bl["oficial"]["value_sell"]), 2)
+            arr.sort(key=lambda x: x["f"])
+        D["tc_d"] = arr[-180:]
+        log(f"TC diaria: último {arr[-1]['f']} | of={arr[-1].get('of')} blue={arr[-1].get('blue')}", "ok")
+    except Exception as e:
+        log(f"TC diaria falló: {e}", "warn")
+
+    # === EMBI diaria (ArgentinaDatos riesgo-pais) — últimos 365 días ===
+    try:
+        rp = fetch_embi_historico()
+        arr = D.setdefault("embi_d", [])
+        existing = {r["f"]: i for i, r in enumerate(arr) if "f" in r}
+        for x in rp:
+            if not x.get("fecha"):
+                continue
+            v = x.get("valor")
+            if v is None:
+                continue
+            f = x["fecha"][:10]
+            if f in existing:
+                arr[existing[f]]["v"] = v
+            else:
+                arr.append({"f": f, "v": v})
+                existing[f] = len(arr) - 1
+        ult = fetch_embi_ultimo()
+        if ult and ult.get("valor"):
+            f = ult["fecha"][:10]
+            if f in existing:
+                arr[existing[f]]["v"] = ult["valor"]
+            else:
+                arr.append({"f": f, "v": ult["valor"]})
+        arr.sort(key=lambda x: x["f"])
+        D["embi_d"] = arr[-365:]
+        log(f"EMBI diaria: último {D['embi_d'][-1]['f']} = {D['embi_d'][-1]['v']} bps", "ok")
+    except Exception as e:
+        log(f"EMBI diaria falló: {e}", "warn")
+
+    # === MERVAL diaria (Yahoo Finance) — últimos 365 días ===
+    try:
+        url = "https://query1.finance.yahoo.com/v8/finance/chart/%5EMERV"
+        data = get_json(url, params={"interval": "1d", "range": "2y"},
+                        headers={**HEADERS, "User-Agent": "Mozilla/5.0"})
+        result = data["chart"]["result"][0]
+        ts = result["timestamp"]
+        closes = result["indicators"]["quote"][0]["close"]
+        arr = D.setdefault("merval_d", [])
+        existing = {r["f"]: i for i, r in enumerate(arr) if "f" in r}
+        for t, c in zip(ts, closes):
+            if c is None:
+                continue
+            f = datetime.fromtimestamp(t, tz=timezone.utc).strftime("%Y-%m-%d")
+            v = round(float(c) / 1000, 2)  # mismas unidades que el bedrock (miles)
+            if f in existing:
+                arr[existing[f]]["v"] = v
+            else:
+                arr.append({"f": f, "v": v})
+                existing[f] = len(arr) - 1
+        arr.sort(key=lambda x: x["f"])
+        D["merval_d"] = arr[-365:]
+        if D["merval_d"]:
+            log(f"MERVAL diaria: último {D['merval_d'][-1]['f']} = {D['merval_d'][-1]['v']}K", "ok")
+    except Exception as e:
+        log(f"MERVAL diaria falló: {e}", "warn")
+
+    return nuevos
+
 def update_merval(D: dict) -> int:
     """MERVAL via Yahoo Finance directo (sin proxy CORS porque corremos en GitHub Actions)."""
     arr = D.setdefault("merval", [])
@@ -960,6 +1087,7 @@ def main() -> int:
     update_empleo(D)
     update_turismo(D)
     update_merval(D)
+    update_daily_series(D)
 
     # Metadata
     D["_meta"] = {
