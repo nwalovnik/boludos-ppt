@@ -136,6 +136,15 @@ body{font-family:var(--font-sans);background:var(--bg);color:var(--tx);font-size
 #toast.on{opacity:1}
 hr.d{border:none;border-top:.5px solid var(--bd);margin:16px 0}
 .slbl{font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--tx3);margin:0 0 16px;font-weight:600}
+/* Editorial tables */
+.data-table{width:100%;border-collapse:collapse;font-size:12.5px;font-feature-settings:"tnum"}
+.data-table thead{border-bottom:.5px solid var(--bd2)}
+.data-table th{padding:9px 12px;text-align:left;font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--tx3);white-space:nowrap}
+.data-table td{padding:9px 12px;border-bottom:.5px solid var(--bd);color:var(--tx)}
+.data-table td.num{font-family:var(--font-mono);text-align:right;font-size:12px}
+.data-table tbody tr:hover{background:var(--surf2)}
+.data-table .up{color:var(--red)}
+.data-table .dn{color:var(--grn)}
 
 .layout{display:flex;min-height:calc(100vh - 62px)}
 .sidebar{width:240px;flex-shrink:0;background:var(--surf);border-right:.5px solid var(--bd);padding:18px 0;position:sticky;top:62px;height:calc(100vh - 62px);overflow-y:auto;scrollbar-width:none}
@@ -226,6 +235,7 @@ hr.d{border:none;border-top:.5px solid var(--bd);margin:16px 0}
     <span class="sb-lbl">Actividad real</span>
     <button class="nav-item" onclick="T('actividad',this)" id="nav-actividad"><span class="nav-ic">&#128200;</span>Actividad EMAE</button>
     <button class="nav-item" onclick="T('industria',this)" id="nav-industria"><span class="nav-ic">&#127981;</span>Industria IPI</button>
+    <button class="nav-item" onclick="T('pbi',this)" id="nav-pbi"><span class="nav-ic">&#128202;</span>PBI</button>
   </div>
   <div class="sb-sec">
     <span class="sb-lbl">Precios y salarios</span>
@@ -235,11 +245,12 @@ hr.d{border:none;border-top:.5px solid var(--bd);margin:16px 0}
   <div class="sb-sec">
     <span class="sb-lbl">Sector externo</span>
     <button class="nav-item" onclick="T('externo',this)" id="nav-externo"><span class="nav-ic">&#127758;</span>Comercio exterior</button>
+    <button class="nav-item" onclick="T('turismo',this)" id="nav-turismo"><span class="nav-ic">&#9992;</span>Turismo</button>
     <button class="nav-item" onclick="T('externo_fin',this)" id="nav-externo_fin"><span class="nav-ic">&#128178;</span>RRII, TC y Riesgo<span class="nav-badge">Diario</span></button>
   </div>
   <div class="sb-sec">
     <span class="sb-lbl">Finanzas</span>
-    <button class="nav-item" onclick="T('fiscal',this)" id="nav-fiscal"><span class="nav-ic">&#127963;</span>Fiscal y PBI</button>
+    <button class="nav-item" onclick="T('fiscal',this)" id="nav-fiscal"><span class="nav-ic">&#127963;</span>Fiscal y Tributaria</button>
     <button class="nav-item" onclick="T('financiero',this)" id="nav-financiero"><span class="nav-ic">&#127981;</span>Base monetaria</button>
   </div>
   <div class="sb-sec">
@@ -387,11 +398,45 @@ hr.d{border:none;border-top:.5px solid var(--bd);margin:16px 0}
   <div class="insight warn"><strong>ICA vs Balance cambiario:</strong> El ICA mide comercio según declaraciones aduaneras. El balance cambiario BCRA mide divisas efectivamente liquidadas — pueden diferir por timing de liquidaciones.</div>
   <div class="cc"><div class="cc-hd"><div><div class="cc-t">Balance cambiario y cuenta corriente <span class="breal">BCRA</span></div><div class="cc-s">USD millones &#183; incluye servicios, rentas y transferencias</div></div><button class="dl-btn" onclick="dlCSV('bal_cam')">&#8595; CSV</button></div><div style="position:relative;height:220px"><canvas id="c-bal-cam"></canvas></div></div>
   <hr class="d"/>
-  <div class="slbl">Turismo internacional &#183; INDEC</div>
-  <div class="cgrid">
-    <div class="cc"><div class="cc-hd"><div><div class="cc-t">Turismo receptivo y emisivo <span class="breal">INDEC</span></div><div class="cc-s">Miles de personas</div></div><button class="dl-btn" onclick="dlCSV('turismo')">&#8595; CSV</button></div><div style="position:relative;height:180px"><canvas id="c-tur"></canvas></div></div>
-    <div class="cc"><div class="cc-hd"><div><div class="cc-t">Saldo turístico <span class="breal">INDEC</span></div><div class="cc-s">Receptivo menos emisivo &#183; personas</div></div></div><div style="position:relative;height:180px"><canvas id="c-tur-sal"></canvas></div></div>
+  <div class="slbl">Detalle reciente · USD millones</div>
+  <div style="position:relative;overflow-x:auto;margin-bottom:24px"><table id="t-bc" class="data-table"></table></div>
+</div>
+
+<div id="pg-turismo" class="pg">
+  <div class="ctrl-bar">
+    <label>Desde:</label>
+    <select id="tur-desde" onchange="buildTurismo()"><option value="2024-01">2024</option><option value="2022-01">2022</option><option value="2020-01" selected>2020</option><option value="2016-01">2016</option></select>
   </div>
+  <div class="info-box">Datos oficiales <strong>INDEC</strong> · serie consolidada por todas las vías (no solo aérea). Incluye Ezeiza, Aeroparque, otros aeropuertos, fronteras terrestres, puertos y río.</div>
+  <div class="slbl">Turismo internacional &#183; total mensual</div>
+  <div class="cgrid">
+    <div class="cc"><div class="cc-hd"><div><div class="cc-t">Receptivo y emisivo <span class="breal">INDEC</span></div><div class="cc-s">Miles de personas mensual</div></div><button class="dl-btn" onclick="dlCSV('turismo')">&#8595; CSV</button></div><div style="position:relative;height:220px"><canvas id="c-tur"></canvas></div></div>
+    <div class="cc"><div class="cc-hd"><div><div class="cc-t">Saldo turístico <span class="breal">INDEC</span></div><div class="cc-s">Receptivo menos emisivo · personas</div></div></div><div style="position:relative;height:220px"><canvas id="c-tur-sal"></canvas></div></div>
+  </div>
+  <div class="slbl">Detalle reciente</div>
+  <div style="position:relative;overflow-x:auto"><table id="t-tur" class="data-table"></table></div>
+</div>
+
+<div id="pg-pbi" class="pg">
+  <div class="ctrl-bar">
+    <label>Desde:</label>
+    <select id="pbi-desde" onchange="buildPBI()"><option value="2024">2024</option><option value="2020" selected>2020</option><option value="2015">2015</option><option value="2004">Todo</option></select>
+  </div>
+  <div class="info-box">Producto Bruto Interno a precios constantes 2004 · fuente <strong>INDEC</strong> Cuentas Nacionales. Serie trimestral con desestacionalizada y desglose por componente de demanda.</div>
+  <div class="slbl">Variación interanual · trimestral y anual</div>
+  <div class="cgrid">
+    <div class="cc"><div class="cc-hd"><div><div class="cc-t">PBI trimestral var. i.a. <span class="breal">INDEC</span></div><div class="cc-s">Precios constantes 2004</div></div><button class="dl-btn" onclick="dlCSV('pbi')">&#8595; CSV</button></div><div style="position:relative;height:200px"><canvas id="c-pbi"></canvas></div></div>
+    <div class="cc"><div class="cc-hd"><div><div class="cc-t">PBI anual var. i.a.</div></div></div><div style="position:relative;height:200px"><canvas id="c-pbia"></canvas></div></div>
+  </div>
+  <div class="slbl">Nivel y composición</div>
+  <div class="cgrid">
+    <div class="cc"><div class="cc-hd"><div><div class="cc-t">PBI en USD y per cápita <span class="breal">INDEC</span></div><div class="cc-s">Miles de millones USD · USD per cápita eje derecho</div></div></div><div style="position:relative;height:220px"><canvas id="c-pbi-usd"></canvas></div></div>
+    <div class="cc"><div class="cc-hd"><div><div class="cc-t">PBI por componente de demanda <span class="breal">INDEC</span></div><div class="cc-s">Consumo privado, público, inversión, expo e impo</div></div></div><div style="position:relative;height:220px"><canvas id="c-pbi-comp"></canvas></div></div>
+  </div>
+  <div class="slbl">PBI por rama de actividad · proxy EMAE (2004=100)</div>
+  <div class="cc"><div class="cc-hd"><div><div class="cc-t">Sectores económicos en niveles <span class="breal">INDEC</span></div><div class="cc-s">Serie EMAE como aproximación al PBI por sector. Para una valoración exacta usar Cuentas Nacionales (DG INDEC).</div></div></div><div style="position:relative;height:280px"><canvas id="c-pbi-sect"></canvas></div></div>
+  <div class="slbl">Detalle por trimestre · niveles y variaciones</div>
+  <div style="position:relative;overflow-x:auto"><table id="t-pbi" class="data-table"></table></div>
 </div>
 
 <div id="pg-fiscal" class="pg">
@@ -399,23 +444,18 @@ hr.d{border:none;border-top:.5px solid var(--bd);margin:16px 0}
     <label>Desde:</label>
     <select id="f-desde" onchange="buildFiscal()"><option value="2024-01">2024</option><option value="2022-01">2022</option><option value="2020-01" selected>2020</option><option value="2015-01">2015</option><option value="2004-01">Todo</option></select>
   </div>
-  <div class="slbl">Recaudación tributaria &#183; AFIP/ARCA</div>
+  <div class="info-box">Recaudación tributaria total de <strong>AFIP/ARCA</strong>, en términos nominales y deflactados. El detalle por tributo y el saldo fiscal (Tesoro) se reconstruyen a partir del Informe Mensual de Recaudación.</div>
+  <div class="slbl">Recaudación total &#183; AFIP/ARCA</div>
   <div class="cgrid">
-    <div class="cc"><div class="cc-hd"><div><div class="cc-t">Recaudación tributaria <span class="breal">AFIP</span></div><div class="cc-s">Nominal (barras) vs variación real i.a. (línea)</div></div><button class="dl-btn" onclick="dlCSV('rec')">&#8595; CSV</button></div><div style="position:relative;height:180px"><canvas id="c-rec"></canvas></div></div>
-    <div class="cc"><div class="cc-hd"><div><div class="cc-t">Composición recaudación</div><div class="cc-s">IVA - Ganancias - DEX - Seg. Social</div></div></div><div style="position:relative;height:180px"><canvas id="c-rec2"></canvas></div></div>
+    <div class="cc"><div class="cc-hd"><div><div class="cc-t">Recaudación tributaria <span class="breal">AFIP</span></div><div class="cc-s">Nominal (barras) vs variación real i.a. (línea)</div></div><button class="dl-btn" onclick="dlCSV('rec')">&#8595; CSV</button></div><div style="position:relative;height:200px"><canvas id="c-rec"></canvas></div></div>
+    <div class="cc"><div class="cc-hd"><div><div class="cc-t">Composición por impuesto</div><div class="cc-s">IVA · Ganancias · DEX · Seguridad Social</div></div></div><div style="position:relative;height:200px"><canvas id="c-rec2"></canvas></div></div>
   </div>
-  <hr class="d"/>
-  <div class="slbl">Producto Bruto Interno &#183; INDEC</div>
-  <div class="cgrid">
-    <div class="cc"><div class="cc-hd"><div><div class="cc-t">PBI trimestral var. i.a. <span class="breal">INDEC</span></div><div class="cc-s">Precios constantes 2004</div></div><button class="dl-btn" onclick="dlCSV('pbi')">&#8595; CSV</button></div><div style="position:relative;height:180px"><canvas id="c-pbi"></canvas></div></div>
-    <div class="cc"><div class="cc-hd"><div><div class="cc-t">PBI anual var. i.a.</div></div></div><div style="position:relative;height:180px"><canvas id="c-pbia"></canvas></div></div>
-    <div class="cc"><div class="cc-hd"><div><div class="cc-t">PBI en USD y per cápita <span class="breal">INDEC</span></div><div class="cc-s">Miles de millones USD &#183; USD per cápita eje derecho</div></div></div><div style="position:relative;height:200px"><canvas id="c-pbi-usd"></canvas></div></div>
-    <div class="cc"><div class="cc-hd"><div><div class="cc-t">PBI por componente de demanda <span class="breal">INDEC</span></div><div class="cc-s">Consumo privado, público, inversión, expo e impo</div></div></div><div style="position:relative;height:200px"><canvas id="c-pbi-comp"></canvas></div></div>
-  </div>
+  <div class="slbl">Detalle reciente · variación real interanual por tributo</div>
+  <div style="position:relative;overflow-x:auto;margin-bottom:24px"><table id="t-rec" class="data-table"></table></div>
   <hr class="d"/>
   <div class="slbl">Deuda y vencimientos</div>
   <div class="cgrid">
-    <div class="cc"><div class="cc-hd"><div><div class="cc-t">Vencimientos FMI <span class="breal">MECON</span></div></div></div><div style="position:relative;height:180px"><canvas id="c-fmi"></canvas></div></div>
+    <div class="cc"><div class="cc-hd"><div><div class="cc-t">Vencimientos FMI <span class="breal">MECON</span></div></div></div><div style="position:relative;height:200px"><canvas id="c-fmi"></canvas></div></div>
   </div>
 </div>
 
@@ -905,7 +945,7 @@ function T(name,el){
   document.getElementById("pg-"+name).classList.add("on");
   if(el)el.classList.add("on");
   var nv=document.getElementById("nav-"+name);if(nv)nv.classList.add("on");
-  var b={actividad:buildActividad,precios:buildPrecios,laboral:buildLaboral,externo:buildExterno,fiscal:buildFiscal,financiero:buildFinanciero,sem:buildSem,industria:buildIndustria,externo_fin:buildExternoFin,mercados:buildMercados};
+  var b={actividad:buildActividad,precios:buildPrecios,laboral:buildLaboral,externo:buildExterno,fiscal:buildFiscal,financiero:buildFinanciero,sem:buildSem,industria:buildIndustria,externo_fin:buildExternoFin,mercados:buildMercados,turismo:buildTurismo,pbi:buildPBI};
   if(b[name]&&!CH["_b_"+name]){b[name]();CH["_b_"+name]=1;}
 }
 function tog(el,k){SM[k]=!SM[k];el.classList.toggle("on",SM[k]);rebuildDash();}
@@ -1373,40 +1413,63 @@ function buildExterno(){
     line("Saldo bienes",bcamR.map(function(r){return r.bienes;}),C.green,{fill:false}),
   ],{yf:function(v){return fmtN(v)+"M";},leg:true,xt:8});
 
-  // Turismo
+  // Tabla detalle reciente Comercio Exterior
+  renderTablaBC(bcR);
+}
+
+function renderTablaBC(bcR){
+  var t=document.getElementById("t-bc");if(!t)return;
+  var ult=bcR.slice(-12).reverse();
+  var html='<thead><tr><th>Mes</th><th style="text-align:right">Expo</th><th style="text-align:right">Impo</th><th style="text-align:right">Saldo</th><th style="text-align:right">Var i.a. expo</th><th style="text-align:right">Var i.a. impo</th></tr></thead><tbody>';
+  ult.forEach(function(r,i){
+    var prevY=bcR.find(function(x){return x.f===String(parseInt(r.f.substring(0,4))-1)+r.f.substring(4);});
+    var viaE=prevY&&prevY.expo?((r.expo/prevY.expo-1)*100).toFixed(1):"—";
+    var viaI=prevY&&prevY.impo_abs?((r.impo_abs/prevY.impo_abs-1)*100).toFixed(1):"—";
+    var sCls=r.saldo>=0?"dn":"up";
+    html+='<tr><td>'+r.f+'</td><td class="num">'+fmtN(r.expo)+'</td><td class="num">'+fmtN(r.impo_abs||Math.abs(r.impo||0))+'</td><td class="num '+sCls+'">'+(r.saldo>=0?"+":"")+fmtN(r.saldo)+'</td><td class="num">'+(viaE!=="—"?(viaE>0?"+":"")+viaE+"%":"—")+'</td><td class="num">'+(viaI!=="—"?(viaI>0?"+":"")+viaI+"%":"—")+'</td></tr>';
+  });
+  t.innerHTML=html+'</tbody>';
+}
+
+function buildTurismo(){
+  var desde=(document.getElementById("tur-desde")||{}).value||"2020-01";
   var tur=filt(D.turismo,desde);
   mk("c-tur",tur.map(function(r){return r.f;}),[
     line("Receptivo",tur.map(function(r){return r.rec;}),C.green,{fill:false}),
     line("Emisivo",tur.map(function(r){return r.em;}),C.red,{fill:false})
-  ],{yf:function(v){return(v/1000).toFixed(0)+"K";},leg:true});
-  // Saldo turístico
+  ],{yf:function(v){return(v/1000).toFixed(0)+"K";},leg:true,milestones:"emae"});
   mk("c-tur-sal",tur.map(function(r){return r.f;}),[
-    bar("Saldo turístico",tur.map(function(r){return r.sal;}),C.blue)
+    {label:"Saldo turístico",data:tur.map(function(r){return r.sal;}),backgroundColor:tur.map(function(r){return r.sal>=0?C.green+"cc":C.red+"cc";}),borderRadius:2}
   ],{type:"bar",yf:function(v){return(v/1000).toFixed(0)+"K";}});
+  // Tabla
+  var t=document.getElementById("t-tur");if(!t)return;
+  var ult=tur.slice(-12).reverse();
+  var html='<thead><tr><th>Mes</th><th style="text-align:right">Receptivo</th><th style="text-align:right">Emisivo</th><th style="text-align:right">Saldo</th><th style="text-align:right">Var i.a. recept.</th><th style="text-align:right">Var i.a. emis.</th></tr></thead><tbody>';
+  ult.forEach(function(r){
+    var prevY=tur.find(function(x){return x.f===String(parseInt(r.f.substring(0,4))-1)+r.f.substring(4);});
+    var viaR=prevY&&prevY.rec?((r.rec/prevY.rec-1)*100).toFixed(1):"—";
+    var viaE=prevY&&prevY.em?((r.em/prevY.em-1)*100).toFixed(1):"—";
+    var sCls=r.sal>=0?"dn":"up";
+    html+='<tr><td>'+r.f+'</td><td class="num">'+fmtN(r.rec)+'</td><td class="num">'+fmtN(r.em)+'</td><td class="num '+sCls+'">'+(r.sal>=0?"+":"")+fmtN(r.sal)+'</td><td class="num">'+(viaR!=="—"?(viaR>0?"+":"")+viaR+"%":"—")+'</td><td class="num">'+(viaE!=="—"?(viaE>0?"+":"")+viaE+"%":"—")+'</td></tr>';
+  });
+  t.innerHTML=html+'</tbody>';
 }
 
+function buildPBI(){
+  var desde=(document.getElementById("pbi-desde")||{}).value||"2020";
+  function filtTrim(arr){return arr.filter(function(r){var k=String(r.p||r.a||"");var m=k.match(/(\d{4})/);return m&&m[1]>=desde;});}
 
-function buildFiscal(){
-  var desde=document.getElementById("f-desde").value||"2020-01";
-  // Helper para filtrar trimestrales por año
-  function filtTrim(arr){return arr.filter(function(r){var k=String(r.p||r.a||"");var m=k.match(/(\d{4})/);return m&&m[1]+"-01">=desde;});}
-
-  // Recaudación
-  var rec=filt(D.rec,desde);
-  mk("c-rec",rec.map(function(r){return r.f;}),[
-    bar("Nominal (B$)",rec.map(function(r){return r.tot;}),C.blue),
-    line("VIA real %",rec.map(function(r){return r.via_r;}),C.orange,{fill:false,borderWidth:2,yAxisID:"y2",pointRadius:0})
-  ],{yf:function(v){return(v/1e6).toFixed(1)+"B";},leg:true,
-    extra:{scales:{y2:{type:"linear",display:true,position:"right",ticks:{color:DARK?"#fbbf24":"#d97706",font:{size:10},callback:function(v){return v+"%";}},grid:{drawOnChartArea:false}}}}});
-  mk("c-rec2",rec.map(function(r){return r.f;}),[bar("IVA",rec.map(function(r){return r.iva;}),C.blue,{stack:"s"}),bar("Ganancias",rec.map(function(r){return r.gan;}),C.green,{stack:"s"}),bar("DEX",rec.map(function(r){return r.dex;}),C.orange,{stack:"s"}),bar("Seg.Social",rec.map(function(r){return r.ss;}),C.purple,{stack:"s"})],{type:"bar",yf:function(v){return(v/1e6).toFixed(0)+"B";},leg:true,xt:8});
-
-  // PBI trimestral
   var pbi=filtTrim(D.pbi);
-  mk("c-pbi",pbi.map(function(r){return r.p;}),[line("Var. i.a.%",pbi.map(function(r){return r.via;}),C.teal,{fill:false,tension:.3,pointRadius:2})],{yf:function(v){return v+"%";}});
-  var pba=filtTrim(D.pbi_anual);
-  mk("c-pbia",pba.map(function(r){return r.a;}),[bar("Var. i.a.%",pba.map(function(r){return r.via;}),C.blue)],{type:"bar",yf:function(v){return v+"%";}});
+  mk("c-pbi",pbi.map(function(r){return r.p;}),[
+    line("Var. i.a.%",pbi.map(function(r){return r.via;}),C.teal,{fill:false,tension:.3,pointRadius:2})
+  ],{yf:function(v){return v+"%";}});
 
-  // PBI en USD y per cápita
+  var pba=filtTrim(D.pbi_anual);
+  var pbaCl=pba.map(function(r){return r.via>=0?C.green+"cc":C.red+"cc";});
+  mk("c-pbia",pba.map(function(r){return r.a;}),[
+    {label:"Var. i.a.%",data:pba.map(function(r){return r.via;}),backgroundColor:pbaCl,borderRadius:2}
+  ],{type:"bar",yf:function(v){return v+"%";}});
+
   var pbiU=filtTrim(D.pbi_usd||[]);
   if(pbiU.length){
     mk("c-pbi-usd",pbiU.map(function(r){return r.p;}),[
@@ -1416,9 +1479,8 @@ function buildFiscal(){
       extra:{scales:{y2:{type:"linear",display:true,position:"right",ticks:{color:DARK?"#fbbf24":"#d97706",font:{size:10},callback:function(v){return"$"+fmtN(v,0);}},grid:{drawOnChartArea:false}}}}});
   }
 
-  // PBI composición demanda
   var pbiC=D.pbi.filter(function(r){return r.comp;});
-  var pbiCF=pbiC.filter(function(r){var m=r.p&&r.p.match(/(\d{4})/);return m&&m[1]+"-01">=desde;});
+  var pbiCF=pbiC.filter(function(r){var m=r.p&&r.p.match(/(\d{4})/);return m&&m[1]>=desde;});
   if(pbiCF.length){
     mk("c-pbi-comp",pbiCF.map(function(r){return r.p;}),[
       bar("Consumo privado",pbiCF.map(function(r){return r.comp.c_priv;}),C.blue,{stack:"s"}),
@@ -1427,6 +1489,54 @@ function buildFiscal(){
       bar("Exportaciones",pbiCF.map(function(r){return r.comp.expo;}),C.orange,{stack:"s"}),
       bar("Importaciones (-)",pbiCF.map(function(r){return r.comp.impo?-r.comp.impo:null;}),C.red,{stack:"s"})
     ],{type:"bar",yf:function(v){return fmtN(v,0);},leg:true,xt:6});
+  }
+
+  // PBI por rama: usamos EMAE sectorial (último valor por sector, niveles 2004=100)
+  var emaeRecientes=D.emae.filter(function(r){return r.s&&r.f>="2024-01";});
+  if(emaeRecientes.length){
+    var sectores=["Industria","Comer","Const","Transp","Financ","Agro","Mineria","Hoteles","Salud_s","Ensen","AdmPub","EGA","Inmob","Pesca"];
+    var nombres={Industria:"Industria",Comer:"Comercio",Const:"Construcción",Transp:"Transporte",Financ:"Financiera",Agro:"Agro",Mineria:"Minería",Hoteles:"Hoteles y Rest.",Salud_s:"Salud",Ensen:"Enseñanza",AdmPub:"Adm. Pública",EGA:"Electric. Gas Agua",Inmob:"Inmobiliarias",Pesca:"Pesca"};
+    var cols=[C.blue,C.green,C.orange,C.red,C.purple,C.teal,C.gray,"#a85c1e","#1e4a8a","#15803d","#991b1b","#6d28d9","#0d9488","#525252"];
+    var sets=sectores.map(function(s,i){
+      return line(nombres[s],emaeRecientes.map(function(r){return r.s[s];}),cols[i],{fill:false,borderWidth:1.25,pointRadius:0});
+    });
+    mk("c-pbi-sect",emaeRecientes.map(function(r){return r.f;}),sets,{yf:function(v){return fmtN(v,0);},leg:true});
+  }
+
+  // Tabla PBI por trimestre
+  var t=document.getElementById("t-pbi");if(!t)return;
+  var ultPBI=pbi.slice(-8).reverse();
+  var html='<thead><tr><th>Trimestre</th><th style="text-align:right">PBI 2004</th><th style="text-align:right">PBI desest.</th><th style="text-align:right">Var i.a.%</th><th style="text-align:right">Var m/m%</th><th style="text-align:right">Consumo priv</th><th style="text-align:right">FBCF</th></tr></thead><tbody>';
+  ultPBI.forEach(function(r){
+    var viaCls=r.via>=0?"dn":"up";
+    var vmCls=r.vm>=0?"dn":"up";
+    html+='<tr><td>'+r.p+'</td><td class="num">'+fmtN(r.pbi)+'</td><td class="num">'+(r.dest?fmtN(r.dest):"—")+'</td><td class="num '+viaCls+'">'+(r.via!=null?(r.via>=0?"+":"")+r.via.toFixed(1)+"%":"—")+'</td><td class="num '+vmCls+'">'+(r.vm!=null?(r.vm>=0?"+":"")+r.vm.toFixed(1)+"%":"—")+'</td><td class="num">'+(r.comp&&r.comp.c_priv?fmtN(r.comp.c_priv):"—")+'</td><td class="num">'+(r.comp&&r.comp.fbcf?fmtN(r.comp.fbcf):"—")+'</td></tr>';
+  });
+  t.innerHTML=html+'</tbody>';
+}
+
+function buildFiscal(){
+  var desde=document.getElementById("f-desde").value||"2020-01";
+
+  // Recaudación total
+  var rec=filt(D.rec,desde);
+  mk("c-rec",rec.map(function(r){return r.f;}),[
+    bar("Nominal (B$)",rec.map(function(r){return r.tot;}),C.blue),
+    line("VIA real %",rec.map(function(r){return r.via_r;}),C.orange,{fill:false,borderWidth:2,yAxisID:"y2",pointRadius:0})
+  ],{yf:function(v){return(v/1e6).toFixed(1)+"B";},leg:true,
+    extra:{scales:{y2:{type:"linear",display:true,position:"right",ticks:{color:DARK?"#fbbf24":"#d97706",font:{size:10},callback:function(v){return v+"%";}},grid:{drawOnChartArea:false}}}}});
+  mk("c-rec2",rec.map(function(r){return r.f;}),[bar("IVA",rec.map(function(r){return r.iva;}),C.blue,{stack:"s"}),bar("Ganancias",rec.map(function(r){return r.gan;}),C.green,{stack:"s"}),bar("DEX",rec.map(function(r){return r.dex;}),C.orange,{stack:"s"}),bar("Seg.Social",rec.map(function(r){return r.ss;}),C.purple,{stack:"s"})],{type:"bar",yf:function(v){return(v/1e6).toFixed(0)+"B";},leg:true,xt:8});
+
+  // Tabla recaudación por tributo
+  var t=document.getElementById("t-rec");if(t){
+    var ultRec=rec.slice(-12).reverse();
+    var html='<thead><tr><th>Mes</th><th style="text-align:right">Total (B$)</th><th style="text-align:right">Var nominal i.a.%</th><th style="text-align:right">Var real i.a.%</th><th style="text-align:right">IVA</th><th style="text-align:right">Ganancias</th><th style="text-align:right">DEX</th><th style="text-align:right">Seg. Social</th></tr></thead><tbody>';
+    ultRec.forEach(function(r){
+      var viaCls=(r.via||0)>=0?"dn":"up";
+      var viaRCls=(r.via_r||0)>=0?"dn":"up";
+      html+='<tr><td>'+r.f+'</td><td class="num">'+(r.tot?(r.tot/1e6).toFixed(2):"—")+'</td><td class="num '+viaCls+'">'+(r.via!=null?(r.via>=0?"+":"")+r.via.toFixed(1)+"%":"—")+'</td><td class="num '+viaRCls+'">'+(r.via_r!=null?(r.via_r>=0?"+":"")+r.via_r.toFixed(1)+"%":"—")+'</td><td class="num">'+(r.iva?(r.iva/1e6).toFixed(2):"—")+'</td><td class="num">'+(r.gan?(r.gan/1e6).toFixed(2):"—")+'</td><td class="num">'+(r.dex?(r.dex/1e6).toFixed(2):"—")+'</td><td class="num">'+(r.ss?(r.ss/1e6).toFixed(2):"—")+'</td></tr>';
+    });
+    t.innerHTML=html+'</tbody>';
   }
 
   // Vencimientos FMI
