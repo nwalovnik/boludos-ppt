@@ -971,6 +971,151 @@ def find_uci_xls_url() -> str | None:
             continue
     return None
 
+# Mapeo EMAE actividad: cols del XLS → keys del schema bedrock D.emae[].s
+EMAE_S_COLS = {
+    2:  "Agro",      # A - Agricultura
+    3:  "Pesca",     # B - Pesca
+    4:  "Mineria",   # C - Minería
+    5:  "Industria", # D - Industria manufacturera
+    6:  "EGA",       # E - Electricidad/Gas/Agua
+    7:  "Const",     # F - Construcción
+    8:  "Comer",     # G - Comercio
+    9:  "Hoteles",   # H - Hoteles y restaurantes
+    10: "Transp",    # I - Transporte y comunicaciones
+    11: "Financ",    # J - Intermediación financiera
+    12: "Inmob",     # K - Actividades inmobiliarias
+    13: "AdmPub",    # L - Administración pública
+    14: "Ensen",     # M - Enseñanza
+    15: "Salud_s",   # N - Salud
+}
+
+def parse_emae_actividad_xls(wb: xlrd.book.Book) -> list[dict]:
+    """sh_emae_actividad_base2004.xls (hoja 'Tabla Letras') → [{f, s:{Agro,Pesca,...}}]"""
+    sh = wb.sheet_by_name("Tabla Letras")
+    out, current_year = [], None
+    for r in range(sh.nrows):
+        y_cell = sh.cell_value(r, 0)
+        m_cell = sh.cell_value(r, 1)
+        if isinstance(y_cell, float) and y_cell > 1990:
+            current_year = int(y_cell)
+        elif isinstance(y_cell, str):
+            s = y_cell.strip().rstrip("*").strip()
+            if s.isdigit() and 1990 < int(s) < 2100:
+                current_year = int(s)
+        if not current_year:
+            continue
+        month_num = _month_num(m_cell) if m_cell else None
+        if not month_num:
+            continue
+        sectores = {}
+        for col, name in EMAE_S_COLS.items():
+            v = _safe_float(sh.cell_value(r, col))
+            if v is not None:
+                sectores[name] = round(v, 2)
+        if sectores:
+            out.append({"f": f"{current_year:04d}-{month_num:02d}", "s": sectores})
+    return out
+
+# Mapeo IPI Cuadro 5: cols del XLS (impares = nivel del sector) → keys de D.ipi[].r
+IPI_R_COLS = {
+    5:  "Alimentos",
+    7:  "Tabaco",
+    9:  "Textiles",
+    11: "Vestim",
+    13: "Madera",
+    15: "Petroleo",
+    17: "Quimica",
+    19: "Caucho",
+    21: "Minerales",
+    23: "MetalBase",
+    25: "ProdMetal",
+    27: "Maquinaria",
+    29: "OtrosEq",
+    31: "Automotriz",
+    33: "OtroTransp",
+    35: "Muebles",
+}
+
+def parse_ipi_sectores_xls(wb: xlrd.book.Book) -> list[dict]:
+    """sh_ipi_manufacturero_YYYY.xls (Cuadro 5) → [{f, r:{Alimentos,Tabaco,...}}]"""
+    try:
+        sh = wb.sheet_by_name("Cuadro 5")
+    except xlrd.biffh.XLRDError:
+        return []
+    out, current_year = [], None
+    for r in range(sh.nrows):
+        y_cell = sh.cell_value(r, 1)
+        m_cell = sh.cell_value(r, 2)
+        if isinstance(y_cell, float) and y_cell > 1990:
+            current_year = int(y_cell)
+        elif isinstance(y_cell, str):
+            s = y_cell.strip().rstrip("*").strip()
+            if s.isdigit() and 1990 < int(s) < 2100:
+                current_year = int(s)
+        if not current_year:
+            continue
+        month_num = _month_num(m_cell) if m_cell else None
+        if not month_num:
+            continue
+        ramas = {}
+        for col, name in IPI_R_COLS.items():
+            v = _safe_float(sh.cell_value(r, col))
+            if v is not None:
+                ramas[name] = round(v, 2)
+        if ramas:
+            out.append({"f": f"{current_year:04d}-{month_num:02d}", "r": ramas})
+    return out
+
+def update_emae_sectores_xls(D: dict) -> int:
+    """Completa D.emae[].s desde el XLS de EMAE actividad."""
+    arr = D.setdefault("emae", [])
+    nuevos = 0
+    try:
+        wb = download_xls(f"{INDEC_XLS_BASE}/sh_emae_actividad_base2004.xls")
+        rows = parse_emae_actividad_xls(wb)
+        for new in rows:
+            rec = next((x for x in arr if x.get("f") == new["f"]), None)
+            if rec is None:
+                # No deberíamos llegar acá si update_emae_xls corrió antes, pero por las dudas
+                arr.append(new)
+                nuevos += 1
+            else:
+                rec["s"] = new["s"]
+        if rows:
+            log(f"EMAE sectores (XLS oficial): actualizado (último {rows[-1]['f']})", "ok")
+    except Exception as e:
+        log(f"EMAE sectores XLS falló: {e}", "warn")
+    return nuevos
+
+def update_ipi_sectores_xls(D: dict) -> int:
+    """Completa D.ipi[].r desde el Cuadro 5 del XLS de IPI."""
+    arr = D.setdefault("ipi", [])
+    nuevos = 0
+    today = datetime.now(timezone.utc)
+    wb = None
+    for year in (today.year, today.year - 1):
+        try:
+            wb = download_xls(f"{INDEC_XLS_BASE}/sh_ipi_manufacturero_{year}.xls")
+            break
+        except Exception:
+            continue
+    if wb is None:
+        return 0
+    try:
+        rows = parse_ipi_sectores_xls(wb)
+        for new in rows:
+            rec = next((x for x in arr if x.get("f") == new["f"]), None)
+            if rec is None:
+                arr.append(new)
+                nuevos += 1
+            else:
+                rec["r"] = new["r"]
+        if rows:
+            log(f"IPI sectores (XLS Cuadro 5): actualizado (último {rows[-1]['f']})", "ok")
+    except Exception as e:
+        log(f"IPI sectores XLS falló: {e}", "warn")
+    return nuevos
+
 def update_emae_xls(D: dict) -> int:
     """EMAE oficial desde el XLS de INDEC (más actualizado que la API series)."""
     arr = D.setdefault("emae", [])
@@ -1075,8 +1220,10 @@ def main() -> int:
     # EMAE / IPI / UCI: primero API series (rápido), después XLS oficial (más fresco — pisa la API)
     update_emae(D)
     update_emae_xls(D)
+    update_emae_sectores_xls(D)
     update_ipi_isac(D)
     update_ipi_xls(D)
+    update_ipi_sectores_xls(D)
     update_uci_xls(D)
     update_bcra_monthly(D)
     update_embi(D)
