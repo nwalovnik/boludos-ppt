@@ -66,7 +66,8 @@ INDEC_SERIES = {
     "sal_priv_reg":  "149.1_SOR_PRIADO_OCTU_0_25",   # Índice salarios privado registrado
     "sal_priv_no":   "149.1_SOR_PRIADO_OCTU_0_28",   # Índice salarios privado no registrado
     "sal_pub":       "149.1_SOR_PUBICO_OCTU_0_14",   # Índice salarios público
-    "empleo_sipa":   "151.1_TL_ESTADAD_2012_M_20",   # Total trabajadores SIPA (con est)
+    "empleo_sipa":   "151.1_TL_ESTADAD_2012_M_20",   # Total trabajadores SIPA (con est) — en miles
+    "empleo_priv":   "151.1_AARIADODAD_2012_M_31",   # Asalariados sector privado (con est) — en miles
     "turismo_rec":   "322.3_TURISMO_REIVO__17",      # Turismo receptivo (Ezeiza+Aeroparque)
     "turismo_em":    "322.3_TURISMO_EMIVO__15",      # Turismo emisivo
 }
@@ -599,27 +600,44 @@ def update_salarios(D: dict) -> int:
     return nuevos
 
 def update_empleo(D: dict) -> int:
-    """Empleo SIPA total trabajadores. Schema histórico: {f, tot}."""
+    """Empleo SIPA total + privado. Schema histórico: {f, tot, priv} (valores en unidades, no miles).
+
+    IMPORTANTE: INDEC devuelve estas series en MILES de trabajadores. El bedrock está en
+    UNIDADES (ej. tot=10982740 = 10.9M). Multiplicamos por 1000 para mantener consistencia.
+    """
     arr = D.setdefault("trabajo", [])
     nuevos = 0
     try:
-        data = fetch_indec(INDEC_SERIES["empleo_sipa"], last=36)
+        ids = [INDEC_SERIES["empleo_sipa"], INDEC_SERIES["empleo_priv"]]
+        data = fetch_indec(ids, last=48)
         for row in data:
-            if not row[0] or row[1] is None:
+            if not row[0]:
                 continue
             f = ym(row[0])
-            tot = round(float(row[1]))
+            tot_miles = row[1]
+            priv_miles = row[2]
+            if tot_miles is None and priv_miles is None:
+                continue
             rec = next((x for x in arr if x.get("f") == f), None)
+            new = {"f": f}
+            if tot_miles is not None:
+                new["tot"] = int(round(float(tot_miles) * 1000))  # miles → unidades
+            if priv_miles is not None:
+                new["priv"] = int(round(float(priv_miles) * 1000))
             if rec is None:
-                arr.append({"f": f, "tot": tot})
+                arr.append(new)
                 nuevos += 1
             else:
-                rec["tot"] = tot
+                rec.update({k: v for k, v in new.items() if k != "f"})
         arr.sort(key=lambda x: x["f"])
-        # Limpiar el registro corrupto histórico "2019-23" (era ruido del baked)
-        arr[:] = [r for r in arr if r.get("f", "").startswith("20") and "-" in r["f"] and len(r["f"]) == 7]
+        # Limpiar registro corrupto histórico "2019-23" (era ruido del baked) y outliers
+        arr[:] = [r for r in arr
+                  if r.get("f", "").startswith("20")
+                  and "-" in r["f"]
+                  and len(r["f"]) == 7
+                  and r.get("tot", 0) > 1000000]  # filtra el 2012-01 raro con tot=4.8M
         if data:
-            log(f"Empleo SIPA: actualizado (último {data[-1][0][:7]})", "ok")
+            log(f"Empleo SIPA: actualizado (último {data[-1][0][:7]}, tot+priv en unidades)", "ok")
     except Exception as e:
         log(f"Empleo SIPA falló: {e}", "warn")
     return nuevos
