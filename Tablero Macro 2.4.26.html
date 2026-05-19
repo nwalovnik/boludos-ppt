@@ -654,6 +654,7 @@ hr.d{border:none;border-top:.5px solid var(--bd);margin:16px 0}
 </div>
 <div id="toast"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 
@@ -687,9 +688,74 @@ if(typeof Chart!=="undefined"){
   Chart.defaults.color=TK;
   Chart.defaults.borderColor=GR;
   Chart.defaults.scale.grid.color=GR;
-  // Hover sin animación brusca
   Chart.defaults.animation.duration=400;
   Chart.defaults.transitions.active.animation.duration=200;
+  // Registrar plugin de annotations
+  if(typeof window.ChartAnnotation!=="undefined"){
+    Chart.register(window.ChartAnnotation);
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// MILESTONES — hitos macro argentinos para anotar charts en estilo editorial
+// Cada hito tiene fecha mensual, etiqueta corta, y "tags" para filtrar
+// según qué chart lo muestra. Ej: {tags:["ipc","tc"]} aparece en IPC y TC.
+// ════════════════════════════════════════════════════════════════════════
+const MILESTONES=[
+  {f:"2019-08", short:"PASO 2019",    long:"Crisis PASO: caída cartera + saltos cambiarios", tags:["ipc","tc","embi","merval","reservas"]},
+  {f:"2020-03", short:"COVID-19",     long:"Pandemia: cuarentena ASPO", tags:["emae","ipi","isac","tc","embi","empleo"]},
+  {f:"2022-07", short:"Crisis Guzmán",long:"Renuncia Guzmán → Batakis → Massa", tags:["tc","embi","reservas"]},
+  {f:"2023-08", short:"PASO 2023",    long:"Milei gana PASO. Devaluación 22%", tags:["ipc","tc","embi","reservas"]},
+  {f:"2023-12", short:"Devaluación",  long:"Asume Milei. Devaluación 54%, IPC +25.5%", tags:["ipc","tc","reservas","emae","ipi"]},
+  {f:"2024-04", short:"Pico inflación",long:"IPC desacelera tras pico de dic-23 a 8.8%", tags:["ipc"]},
+  {f:"2025-04", short:"Acuerdo FMI",  long:"Nuevo acuerdo $20B con FMI. Reservas recuperan", tags:["reservas","tc","embi"]},
+];
+
+function annotationsFor(tag, labels){
+  // Convierte MILESTONES filtrados por `tag` en config Chart.js annotations.
+  // labels es el array de labels del eje X (formato YYYY-MM o "1er t. 2020")
+  if(!window.ChartAnnotation)return {};
+  var annos={};
+  MILESTONES.filter(function(m){return m.tags.indexOf(tag)>=0;}).forEach(function(m,i){
+    // Buscar el índice exacto o más cercano
+    var idx=labels.indexOf(m.f);
+    if(idx<0){
+      // YYYY-MM-DD: primer día del mes objetivo
+      idx=labels.findIndex(function(l){return String(l).substring(0,7)===m.f;});
+    }
+    if(idx<0){
+      // Match por trimestre (ej: para EPH "1er t. 2020")
+      var year=m.f.substring(0,4);
+      var month=parseInt(m.f.substring(5,7));
+      var q=Math.ceil(month/3);
+      var qStr=["1er","2do","3er","4to"][q-1]+" t. "+year;
+      idx=labels.findIndex(function(l){return String(l).indexOf(qStr)>=0;});
+    }
+    if(idx<0)return;
+    annos["m"+i]={
+      type:"line",
+      xMin:idx,xMax:idx,
+      borderColor:DARK?"rgba(168,165,156,.35)":"rgba(60,60,60,.28)",
+      borderWidth:1,
+      borderDash:[3,3],
+      label:{
+        display:true,
+        content:m.short,
+        position:"start",
+        backgroundColor:"transparent",
+        color:DARK?"#a8a59c":"#525050",
+        font:{size:10,family:CHART_FONT_SANS.family,weight:"500",style:"italic"},
+        padding:{top:2,bottom:2,left:4,right:4},
+        yAdjust:8,
+        xAdjust:3,
+        rotation:0,
+        textAlign:"start"
+      },
+      enter:function(ctx){ctx.element.options.borderColor=DARK?"rgba(255,255,255,.55)":"rgba(0,0,0,.5)";return true;},
+      leave:function(ctx){ctx.element.options.borderColor=DARK?"rgba(168,165,156,.35)":"rgba(60,60,60,.28)";return true;}
+    };
+  });
+  return annos;
 }
 let TOK=localStorage.getItem("bcra_tok")||"";
 const CH={};
@@ -740,6 +806,7 @@ function mk(id,labels,sets,opts){
             padding:14
           }
         },
+        annotation:opts.milestones?{annotations:annotationsFor(opts.milestones,labels)}:undefined,
         tooltip:{
           enabled:true,
           mode:"index",
@@ -890,23 +957,25 @@ function buildDash(desde){
     if(ipcP.length)sets.push(line("VIA% proy(REM)",ipcP.map(function(r){return{x:r.f,y:r.via};}),C.gray,{borderDash:[5,4],fill:false,borderWidth:1.5}));
   }
   if(!sets.length)sets=[line("VIA%",ipc.map(function(r){return{x:r.f,y:r.via};}),C.orange)];
-  mk("c-ipc",null,sets,{yf:function(v){return v+"%";}});
+  // Para que annotations encuentre los labels, los pasamos explícitos (union de ipcR+ipcP)
+  var ipcAllLabels=Array.from(new Set([].concat(ipcR.map(function(r){return r.f;}),ipcP.map(function(r){return r.f;})))).sort();
+  mk("c-ipc",ipcAllLabels,sets,{yf:function(v){return v+"%";},milestones:"ipc"});
 
   var tc=filt(D.tc,desde);
   mk("c-tc",tc.map(function(r){return r.f;}),[
     line("Oficial",tc.map(function(r){return r.of;}),C.blue),
     line("Blue",tc.map(function(r){return r.bl;}),C.orange,{fill:false})
-  ],{yf:function(v){return"$"+fmtN(v);}});
+  ],{yf:function(v){return"$"+fmtN(v);},milestones:"tc"});
 
   var res=filt(D.reservas,desde,"f");
   mk("c-reservas",res.map(function(r){return r.f;}),[
     line("USD M",res.map(function(r){return r.v;}),C.green)
-  ],{yf:function(v){return fmtN(v)+"M";}});
+  ],{yf:function(v){return fmtN(v)+"M";},milestones:"reservas"});
 
   var embi=filt(D.embi,desde,"f");
   mk("c-embi",embi.map(function(r){return r.f;}),[
     line("bps",embi.map(function(r){return r.v;}),C.red)
-  ],{yf:function(v){return fmtN(v);}});
+  ],{yf:function(v){return fmtN(v);},milestones:"embi"});
 
   var emae=filt(D.emae,desde);
   var esets=[];
@@ -914,7 +983,7 @@ function buildDash(desde){
   if(SM.dest)esets.push(line("Desest.",emae.map(function(r){return r.dest;}),C.orange,{fill:false}));
   if(SM.ia)esets.push(line("Var i.a.%",emae.map(function(r){return r.via;}),C.teal,{fill:false}));
   if(!esets.length)esets=[line("Original",emae.map(function(r){return r.orig;}),C.blue)];
-  mk("c-emae",emae.map(function(r){return r.f;}),esets,{yf:function(v){return fmtN(v,1);}});
+  mk("c-emae",emae.map(function(r){return r.f;}),esets,{yf:function(v){return fmtN(v,1);},milestones:"emae"});
 
   var bc=filt(D.bc,desde);
   mk("c-bc",bc.map(function(r){return r.f;}),[
@@ -1119,7 +1188,8 @@ function drillIPC(el,k,l){
   document.getElementById("ipc-dt").textContent=(l||k)+" Var. mensual";
   var sets=[line(l+" real",ipcR.map(function(r){return{x:r.f,y:r[k]};}),C.orange)];
   if(ipcP.length)sets.push(line(l+" proy(REM)",ipcP.map(function(r){return{x:r.f,y:r[k]};}),C.gray,{borderDash:[5,4],fill:false}));
-  mk("c-ipc-d",null,sets,{yf:function(v){return v+"%";}});
+  var ipcDLabels=Array.from(new Set([].concat(ipcR.map(function(r){return r.f;}),ipcP.map(function(r){return r.f;})))).sort();
+  mk("c-ipc-d",ipcDLabels,sets,{yf:function(v){return v+"%";},milestones:"ipc"});
 }
 
 function buildMesesCb(){
@@ -1794,7 +1864,7 @@ function buildTCChart(){
   if(TC_VIS.mep)sets.push(line("MEP",tc.map(function(r){return r.mep;}),C.green,{fill:false,pointRadius:0,borderWidth:1.5}));
   if(TC_VIS.ccl)sets.push(line("CCL",tc.map(function(r){return r.ccl;}),C.purple,{fill:false,pointRadius:0,borderWidth:1.5}));
   if(!sets.length)return;
-  mk("c-tc-d",tc.map(function(r){return r.f;}),sets,{yf:function(v){return"$"+fmtN(v);},leg:true,xt:8});
+  mk("c-tc-d",tc.map(function(r){return r.f;}),sets,{yf:function(v){return"$"+fmtN(v);},leg:true,xt:8,milestones:"tc"});
 }
 function buildReservasNetas(){
   var brutas=(D.reservas.slice(-1)[0]||{}).v||0;
@@ -1812,9 +1882,9 @@ function buildReservasNetas(){
 function buildExternoFin(){
   buildTCChart();
   var res=getDaily(DD.rrii_d,FIN_DIAS);
-  if(res.length)mk("c-rrii-d",res.map(function(r){return r.f;}),[line("Reservas USD M",res.map(function(r){return r.v;}),C.green,{pointRadius:0,borderWidth:1.5})],{yf:function(v){return fmtN(v)+"M";}});
+  if(res.length)mk("c-rrii-d",res.map(function(r){return r.f;}),[line("Reservas USD M",res.map(function(r){return r.v;}),C.green,{pointRadius:0,borderWidth:1.5})],{yf:function(v){return fmtN(v)+"M";},milestones:"reservas"});
   var embi=getDaily(DD.embi_d,FIN_DIAS);
-  if(embi.length)mk("c-embi-d",embi.map(function(r){return r.f;}),[line("EMBI bps",embi.map(function(r){return r.v;}),C.red,{pointRadius:0,borderWidth:1.5,fill:true})],{yf:function(v){return fmtN(v)+" bps";}});
+  if(embi.length)mk("c-embi-d",embi.map(function(r){return r.f;}),[line("EMBI bps",embi.map(function(r){return r.v;}),C.red,{pointRadius:0,borderWidth:1.5,fill:true})],{yf:function(v){return fmtN(v)+" bps";},milestones:"embi"});
   var mv=getDaily(DD.merval_d,FIN_DIAS);
   if(mv.length)mk("c-merval-d",mv.map(function(r){return r.f;}),[line("MERVAL $",mv.map(function(r){return r.v;}),C.purple,{pointRadius:0,borderWidth:1.5})],{yf:function(v){return"$"+fmtN(v);}});
   buildReservasNetas();
