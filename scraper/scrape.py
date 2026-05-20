@@ -931,6 +931,122 @@ def update_empresas(D: dict) -> int:
         log(f"Empresas OEDE falló: {e}", "warn")
     return nuevos
 
+def update_fiscal_hacienda(D: dict) -> int:
+    """Resultado fiscal SPNF — XLSX directo de Hacienda (no IMIG INDEC).
+
+    Hacienda publica el dato fiscal antes que la API INDEC IMIG. Los archivos están en:
+      - argentina.gob.ar/sites/default/files/YYYY/MM/cuentas_publicasN.rar (RAR con XLSX adentro)
+      - argentina.gob.ar/sites/default/files/{mes_corto}_{aa}.xlsx
+
+    Esta función prueba URLs candidatas para los últimos 3 meses y, si encuentra un
+    RAR, lo descomprime y procesa el XLSX 'Abril 26.xlsx' / 'Mayo 26.xlsx' etc.
+
+    Schema: D.fiscal = [{f, sal_prim, sal_fin}] (compatible con update_fiscal_indec).
+    """
+    MESES_ES = ["enero","febrero","marzo","abril","mayo","junio",
+                "julio","agosto","septiembre","octubre","noviembre","diciembre"]
+    BASE = "https://www.argentina.gob.ar/sites/default/files"
+    arr = D.setdefault("fiscal", [])
+    nuevos = 0
+    today = datetime.now(timezone.utc)
+
+    def parse_y_mergear(content_xlsx, y, m):
+        nonlocal nuevos
+        parsed = _parse_fiscal_xlsx(content_xlsx)
+        if not parsed or all(v is None for v in parsed.values()):
+            return False
+        f = f"{y:04d}-{m:02d}"
+        rec_existing = next((x for x in arr if x.get("f") == f), None)
+        new = {"f": f}
+        for k, v in parsed.items():
+            if v is not None:
+                new[k] = round(v, 1)
+        if rec_existing is None:
+            arr.append(new)
+            nuevos += 1
+        else:
+            rec_existing.update({k: v for k, v in new.items() if k != "f"})
+        return True
+
+    # Para cada mes (data) probar URLs candidatas
+    for delta in range(0, 3):
+        y, m = today.year, today.month - 1 - delta
+        while m <= 0:
+            m += 12
+            y -= 1
+        mes_es = MESES_ES[m - 1]
+        pub_y, pub_m = y, m + 1
+        if pub_m > 12:
+            pub_m -= 12
+            pub_y += 1
+        # SOLO formato corto (mes_yy.xlsx) — el formato largo tiene #REF! rotos
+        # El formato corto tiene hojas 'Mes' y 'Acumulado' con valores limpios
+        bytes_xlsx = None
+        url = f"{BASE}/{mes_es}_{y % 100:02d}.xlsx"
+        try:
+            resp = requests.get(url, timeout=10, headers={**HEADERS, "User-Agent": "Mozilla/5.0"})
+            if resp.status_code == 200 and len(resp.content) > 5000 and resp.content[:2] == b"PK":
+                bytes_xlsx = resp.content
+        except Exception:
+            pass
+        if bytes_xlsx:
+            if parse_y_mergear(bytes_xlsx, y, m):
+                continue
+
+        # Si no hay XLSX directo, intentar RAR del mes de publicación
+        try:
+            import rarfile
+            for n in range(1, 10):
+                url_rar = f"{BASE}/{pub_y}/{pub_m:02d}/cuentas_publicas{'' if n == 1 else n}.rar"
+                try:
+                    resp = requests.get(url_rar, timeout=15, headers={**HEADERS, "User-Agent": "Mozilla/5.0"})
+                except Exception:
+                    continue
+                if resp.status_code != 200 or len(resp.content) < 5000:
+                    continue
+                # Es RAR válido?
+                if resp.content[:4] not in (b"Rar!", b"\x52\x61\x72\x21"):
+                    continue
+                # Extraer XLSX
+                tmp_path = SCRAPER_DIR / f"_tmp_fiscal_{y}_{m:02d}.rar"
+                tmp_path.write_bytes(resp.content)
+                try:
+                    rf = rarfile.RarFile(str(tmp_path))
+                    names = rf.namelist()
+                    # Buscar XLSX que matchea el mes (ej. "Abril 26.xlsx")
+                    target = None
+                    mes_cap = mes_es.capitalize()
+                    for n2 in names:
+                        if n2.lower().endswith(".xlsx") and "imig" not in n2.lower() and mes_cap.lower() in n2.lower():
+                            target = n2
+                            break
+                    if not target:
+                        # Cualquier XLSX que no sea IMIG
+                        for n2 in names:
+                            if n2.lower().endswith(".xlsx") and "imig" not in n2.lower():
+                                target = n2
+                                break
+                    if target:
+                        xlsx_bytes = rf.read(target)
+                        if parse_y_mergear(xlsx_bytes, y, m):
+                            log(f"Fiscal Hacienda: {mes_es} {y} extraído de {url_rar.split('/')[-1]}/{target}", "ok")
+                            break
+                finally:
+                    try:
+                        tmp_path.unlink()
+                    except Exception:
+                        pass
+        except ImportError:
+            log("rarfile no instalado; saltando fiscal Hacienda RAR", "warn")
+            break
+        except Exception as e:
+            log(f"Fiscal Hacienda RAR {mes_es} {y} falló: {e}", "warn")
+
+    arr.sort(key=lambda x: x["f"])
+    if nuevos > 0:
+        log(f"Fiscal Hacienda: {nuevos} mes(es) nuevo(s), último {arr[-1]['f']}", "ok")
+    return nuevos
+
 def update_fiscal_indec(D: dict) -> int:
     """Resultado fiscal SPNF mensual desde la API de INDEC (IMIG).
 
@@ -1834,9 +1950,9 @@ def _ultimo_real(arr: list, fecha_key: str) -> dict | None:
 # Basado en el calendario habitual de difusión INDEC/BCRA/Hacienda
 PUB_LAG_DIAS = {
     "ipc":      13,   # ~13 del mes siguiente al dato
-    "ipim":     17,   # ~17 del mes siguiente
-    "ipib":     17,
-    "ipp":      17,
+    "ipim":     19,   # ~19 del mes siguiente (confirmado por INDEC: IPIM abr-26 publicado 19-may-26)
+    "ipib":     19,
+    "ipp":      19,
     "ipi":      24,
     "isac":     24,
     "uci":      24,
@@ -1991,6 +2107,7 @@ def main() -> int:
     update_empleo(D)
     update_empresas(D)
     update_fiscal_indec(D)
+    update_fiscal_hacienda(D)  # complementa: fiscal Hacienda llega antes que IMIG INDEC
     update_mora(D)
     update_ica_xls(D)
     update_mayoristas(D)

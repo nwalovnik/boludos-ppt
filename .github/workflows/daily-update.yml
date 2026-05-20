@@ -24,6 +24,9 @@ jobs:
           cache: "pip"
           cache-dependency-path: scraper/requirements.txt
 
+      - name: Install system deps (unrar para fiscal Hacienda)
+        run: sudo apt-get update && sudo apt-get install -y unrar
+
       - name: Install deps
         run: pip install -r scraper/requirements.txt
 
