@@ -23,7 +23,7 @@ import io
 import json
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -1772,6 +1772,118 @@ def update_uci_xls(D: dict) -> int:
     return nuevos
 
 # ──────────────────────────────────────────────────────────────────────────────
+# Detección de publicaciones nuevas (para sección "Esta semana" del dashboard)
+# ──────────────────────────────────────────────────────────────────────────────
+SERIES_TRACK_PUB = {
+    # serie_key: (fuente_label, key del registro de fecha)
+    "ipc":      ("INDEC", "f"),
+    "ipim":     ("INDEC", "f"),
+    "ipib":     ("INDEC", "f"),
+    "ipp":      ("INDEC", "f"),
+    "emae":     ("INDEC", "f"),
+    "ipi":      ("INDEC", "f"),
+    "isac":     ("INDEC", "f"),
+    "uci":      ("INDEC", "f"),
+    "bc":       ("INDEC", "f"),
+    "turismo":  ("INDEC", "f"),
+    "salarios": ("INDEC", "f"),
+    "ripte":    ("INDEC", "f"),
+    "trabajo":  ("INDEC (SIPA)", "f"),
+    "empresas": ("OEDE", "a"),
+    "rec":      ("AFIP/ARCA", "f"),
+    "fiscal":   ("Hacienda (vía INDEC IMIG)", "f"),
+    "mora":     ("BCRA Informe sobre Bancos", "f"),
+    "eph":      ("INDEC EPH", "p"),
+    "pbi":      ("INDEC CCNN", "p"),
+}
+
+SERIE_LBL = {
+    "ipc":      "IPC inflación",
+    "ipim":     "IPIM mayorista",
+    "ipib":     "IPIB básicos",
+    "ipp":      "IPP productor",
+    "emae":     "EMAE actividad",
+    "ipi":      "IPI manufacturero",
+    "isac":     "ISAC construcción",
+    "uci":      "UCI capacidad instalada",
+    "bc":       "ICA balanza comercial",
+    "turismo":  "Turismo internacional",
+    "salarios": "Salarios IS",
+    "ripte":    "RIPTE",
+    "trabajo":  "Empleo SIPA",
+    "empresas": "Empresas activas",
+    "rec":      "Recaudación tributaria",
+    "fiscal":   "Resultado fiscal SPNF",
+    "mora":     "Irregularidad cartera",
+    "eph":      "Desocupación EPH",
+    "pbi":      "PBI trimestral",
+}
+
+def _ultimo_real(arr: list, fecha_key: str) -> dict | None:
+    """Último registro de una serie ignorando proyecciones."""
+    if not isinstance(arr, list):
+        return None
+    candidatos = [r for r in arr if not r.get("proj") and r.get(fecha_key) is not None]
+    if not candidatos:
+        return None
+    # Ordenar por el campo de fecha (string compare funciona para 'YYYY-MM' y años)
+    candidatos.sort(key=lambda r: str(r.get(fecha_key)))
+    return candidatos[-1]
+
+def detect_publicaciones(D_old: dict, D_new: dict) -> list[dict]:
+    """Detecta NUEVAS publicaciones comparando el último período de cada serie.
+
+    Una "publicación nueva" se registra cuando:
+      - El último período de la serie en D_new es POSTERIOR al último en D_old.
+      - D_old tenía la serie (si es serie nueva en el sistema, no marca pubs).
+
+    Mantiene la lista acumulada de los últimos 30 días para el dashboard.
+    """
+    now = datetime.now(timezone.utc)
+    cutoff = now - timedelta(days=30)
+    cutoff_iso = cutoff.isoformat()
+
+    # Recuperar lista existente del data.json viejo, filtrar las viejas (>30d)
+    pubs = (D_old.get("_meta") or {}).get("publicaciones") or []
+    pubs = [p for p in pubs if p.get("detectado_at", "") > cutoff_iso]
+
+    for serie_key, (fuente, fecha_key) in SERIES_TRACK_PUB.items():
+        new_arr = D_new.get(serie_key)
+        old_arr = D_old.get(serie_key) if D_old else None
+        if not isinstance(new_arr, list) or not new_arr:
+            continue
+        # Si serie no existía en D_old, NO marcar como publicación nueva (es addition al sistema)
+        if not isinstance(old_arr, list) or not old_arr:
+            continue
+        ult_new = _ultimo_real(new_arr, fecha_key)
+        ult_old = _ultimo_real(old_arr, fecha_key)
+        if ult_new is None:
+            continue
+        per_new = str(ult_new.get(fecha_key, ""))
+        per_old = str(ult_old.get(fecha_key, "")) if ult_old else ""
+        if per_old and per_new <= per_old:
+            continue  # Sin avance
+        # Evitar duplicado en runs sucesivos (mismo serie+periodo)
+        if any(p.get("serie") == serie_key and p.get("periodo") == per_new for p in pubs):
+            continue
+        # Construir el record
+        vals = {kk: vv for kk, vv in ult_new.items() if kk not in (fecha_key, "proj", "s", "r", "comp")}
+        datos = {kk: round(vv, 2) if isinstance(vv, float) else vv
+                 for kk, vv in vals.items() if isinstance(vv, (int, float)) and not isinstance(vv, bool)}
+        pubs.append({
+            "serie": serie_key,
+            "label": SERIE_LBL.get(serie_key, serie_key),
+            "fuente": fuente,
+            "periodo": per_new,
+            "detectado_at": now.isoformat(timespec="seconds"),
+            "datos": datos,
+        })
+
+    # Ordenar por más reciente primero
+    pubs.sort(key=lambda p: p.get("detectado_at", ""), reverse=True)
+    return pubs
+
+# ──────────────────────────────────────────────────────────────────────────────
 # Main
 # ──────────────────────────────────────────────────────────────────────────────
 def main() -> int:
@@ -1782,6 +1894,15 @@ def main() -> int:
     log(f"Cargando bedrock desde {HISTORICAL.name}")
     D = json.loads(HISTORICAL.read_text(encoding="utf-8"))
     log(f"Bedrock: {len(D)} series, {sum(len(v) for v in D.values() if isinstance(v, list))} registros")
+
+    # Cargar data.json previo (resultado del run anterior) para comparar publicaciones
+    D_prev = {}
+    if OUT_PATH.exists():
+        try:
+            D_prev = json.loads(OUT_PATH.read_text(encoding="utf-8"))
+            log(f"Cargado data.json previo para detección de publicaciones nuevas")
+        except Exception as e:
+            log(f"No se pudo leer data.json previo: {e}", "warn")
 
     # Actualizar cada bloque (cada uno maneja sus propios errores)
     update_ipc(D)
@@ -1809,11 +1930,18 @@ def main() -> int:
     update_merval(D)
     update_daily_series(D)
 
+    # Detectar nuevas publicaciones comparando contra el data.json previo
+    pubs = detect_publicaciones(D_prev, D)
+    nuevas_hoy = [p for p in pubs if p.get("detectado_at", "")[:10] == datetime.now(timezone.utc).strftime("%Y-%m-%d")]
+    if nuevas_hoy:
+        log(f"Publicaciones nuevas detectadas hoy: {len(nuevas_hoy)} ({', '.join(p['label']+' '+p['periodo'] for p in nuevas_hoy[:5])})", "ok")
+
     # Metadata
     D["_meta"] = {
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        "scraper_version": "1.0",
-        "sources": ["INDEC", "BCRA", "ArgentinaDatos", "Bluelytics"],
+        "scraper_version": "1.1",
+        "sources": ["INDEC", "BCRA", "OEDE", "Sec.Hacienda", "ArgentinaDatos", "Bluelytics", "Yahoo Finance"],
+        "publicaciones": pubs[:50],  # Últimas 50 publicaciones detectadas
     }
 
     if args.dry_run:

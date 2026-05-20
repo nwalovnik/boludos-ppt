@@ -153,6 +153,19 @@ hr.d{border:none;border-top:.5px solid var(--bd);margin:16px 0}
 .src-stat-val{font-family:var(--font-serif);font-size:30px;font-weight:500;letter-spacing:-.02em;line-height:1;font-feature-settings:"tnum"}
 .src-stat-val.mono{font-family:var(--font-mono);font-weight:500}
 .src-stat-lbl{font-size:9.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--tx3);margin-top:10px;font-weight:600}
+/* ESTA SEMANA — timeline editorial de publicaciones */
+.news-week{margin-bottom:32px;padding:24px 4px;border-bottom:.5px solid var(--bd)}
+.news-eyebrow{font-size:10.5px;text-transform:uppercase;letter-spacing:.18em;color:var(--tx3);font-weight:600;margin-bottom:18px}
+.news-list{display:flex;flex-direction:column;gap:0}
+.news-item{display:grid;grid-template-columns:84px 130px 1fr;gap:18px;padding:14px 0;border-top:.5px solid var(--bd);align-items:baseline}
+.news-item:last-child{border-bottom:.5px solid var(--bd)}
+.news-day{font-family:var(--font-mono);font-size:11px;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em}
+.news-source{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--tx2);font-weight:600;border:.5px solid var(--bd2);padding:3px 8px;border-radius:3px;display:inline-block;justify-self:start;background:var(--surf2)}
+.news-text{font-family:var(--font-serif);font-size:15px;line-height:1.5;color:var(--tx);font-feature-settings:"tnum","onum"}
+.news-text .em{font-weight:600}
+.news-text .up{color:var(--red);font-weight:600}
+.news-text .dn{color:var(--grn);font-weight:600}
+@media(max-width:640px){.news-item{grid-template-columns:1fr;gap:6px}.news-source{justify-self:start}}
 /* HERO NUMBER editorial */
 .hero{position:relative;padding:32px 4px 24px;border-bottom:.5px solid var(--bd);margin-bottom:32px}
 .hero-eyebrow{font-size:10.5px;text-transform:uppercase;letter-spacing:.18em;color:var(--tx3);font-weight:600;margin-bottom:14px}
@@ -297,6 +310,12 @@ hr.d{border:none;border-top:.5px solid var(--bd);margin:16px 0}
   </div>
 </nav>
 <div class="content-area"><div id="pg-dash" class="pg on">
+
+  <!-- ESTA SEMANA: noticias de las publicaciones recientes -->
+  <div class="news-week" id="news-week-block" style="display:none">
+    <div class="news-eyebrow" id="news-eyebrow">— esta semana en la macro —</div>
+    <div class="news-list" id="news-list"></div>
+  </div>
 
   <!-- HERO NUMBER: el dato más reciente publicado -->
   <div class="hero" id="hero-block">
@@ -1174,6 +1193,105 @@ function trendWord(delta, thresh){
 }
 
 // ════════════════════════════════════════════════════════════════════════
+// ESTA SEMANA — timeline editorial de publicaciones recientes
+// ════════════════════════════════════════════════════════════════════════
+var DIAS_SEM=["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
+
+function ultimoLunes(){
+  var d=new Date();
+  d.setHours(0,0,0,0);
+  var diaSemana=d.getDay(); // 0=domingo, 1=lunes...
+  var diff=diaSemana===0?6:diaSemana-1;  // si es domingo, ir 6 días atrás
+  d.setDate(d.getDate()-diff);
+  return d;
+}
+
+function lblDia(iso){
+  var d=new Date(iso);
+  return DIAS_SEM[d.getDay()].substring(0,3)+" "+d.getDate()+" "+MESES_LBL[d.getMonth()].substring(0,3);
+}
+
+function noticiaTexto(p){
+  // Genera texto narrativo según la serie y los datos publicados
+  var d=p.datos||{};
+  var label=p.label||p.serie;
+  var per=p.periodo||"";
+  var mesPer=per.length===7?lblMesYear(per):per;
+  switch(p.serie){
+    case "ipc":
+      return label+" de <span class='em'>"+mesPer+"</span>: <span class='"+((d.vm||0)>0?"up":"dn")+"'>+"+(d.vm||0).toFixed(1)+"%</span> mensual, "+(d.via||0).toFixed(1)+"% i.a.";
+    case "ipim":
+    case "ipib":
+    case "ipp":
+      return label+" de <span class='em'>"+mesPer+"</span>: <span class='"+((d.vm||0)>0?"up":"dn")+"'>+"+(d.vm||0).toFixed(2)+"%</span> mensual" + (d.via?", "+d.via.toFixed(1)+"% i.a.":"");
+    case "emae":
+    case "ipi":
+    case "isac":
+      var ia=d.via;
+      return label+" de <span class='em'>"+mesPer+"</span>: "+(ia!=null?"<span class='"+(ia>=0?"dn":"up")+"'>"+(ia>=0?"+":"")+ia.toFixed(1)+"%</span> i.a.":"actualizado");
+    case "uci":
+      return label+" de <span class='em'>"+mesPer+"</span>: nivel general <span class='em'>"+(d.tot||"?")+"%</span>";
+    case "bc":
+      var s=d.saldo;
+      return label+" de <span class='em'>"+mesPer+"</span>: saldo <span class='"+(s>=0?"dn":"up")+"'>USD "+(s>=0?"+":"")+fmtN(s)+"M</span> · expo USD "+fmtN(d.expo)+"M";
+    case "turismo":
+      var sal=d.sal;
+      return label+" de <span class='em'>"+mesPer+"</span>: saldo <span class='"+(sal>=0?"dn":"up")+"'>"+(sal>=0?"+":"")+fmtN(sal)+"</span> personas";
+    case "salarios":
+      return label+" de <span class='em'>"+mesPer+"</span>: índice registrado "+(d.is_r||"?");
+    case "ripte":
+      return label+" de <span class='em'>"+mesPer+"</span>: nominal $"+fmtN(d.nom);
+    case "trabajo":
+      return label+" de <span class='em'>"+mesPer+"</span>: <span class='em'>"+fmtN(d.tot)+"</span> trabajadores total, "+fmtN(d.priv)+" privado";
+    case "empresas":
+      return label+" "+mesPer+": <span class='em'>"+fmtN(d.n)+"</span> firmas, "+(d.via!=null?(d.via>=0?"+":"")+d.via.toFixed(1)+"%":"")+" vs año anterior";
+    case "rec":
+      return label+" de <span class='em'>"+mesPer+"</span>: <span class='em'>"+fmtN(d.tot/1e6,1)+" B$</span> nominal" + (d.via_r!=null?" · "+(d.via_r>=0?"+":"")+d.via_r.toFixed(1)+"% real i.a.":"");
+    case "fiscal":
+      var sp=d.sal_prim;
+      return label+" de <span class='em'>"+mesPer+"</span>: primario <span class='"+(sp>=0?"dn":"up")+"'>"+(sp>=0?"+":"")+fmtN(sp/1000)+"K M$</span>" + (d.sal_fin!=null?" · financiero "+(d.sal_fin>=0?"+":"")+fmtN(d.sal_fin/1000)+"K M$":"");
+    case "mora":
+      return label+" de <span class='em'>"+mesPer+"</span>: familias <span class='up'>"+(d.fam||"?")+"%</span>, empresas <span class='up'>"+(d.emp||"?")+"%</span>";
+    case "eph":
+      return label+" "+mesPer+": <span class='em'>"+(d.td||"?")+"%</span> tasa de desocupación";
+    case "pbi":
+      return label+" "+mesPer+": "+(d.via!=null?"<span class='"+(d.via>=0?"dn":"up")+"'>"+(d.via>=0?"+":"")+d.via.toFixed(1)+"%</span> i.a.":"actualizado");
+    default:
+      return label+" "+mesPer+": actualizado";
+  }
+}
+
+function buildNoticiasSemana(){
+  var block=document.getElementById("news-week-block");
+  var list=document.getElementById("news-list");
+  if(!block||!list)return;
+  var pubs=(D._meta&&D._meta.publicaciones)||[];
+  if(!pubs.length){
+    block.style.display="none";
+    return;
+  }
+  var lunes=ultimoLunes();
+  var lunesIso=lunes.toISOString();
+  var semana=pubs.filter(function(p){return p.detectado_at>=lunesIso;});
+  if(!semana.length){
+    block.style.display="none";
+    return;
+  }
+  // Ordenar por timestamp ascendente (lunes arriba)
+  semana.sort(function(a,b){return a.detectado_at<b.detectado_at?-1:1;});
+  block.style.display="block";
+  var fmtLunes=DIAS_SEM[lunes.getDay()]+" "+lunes.getDate()+" "+MESES_LBL[lunes.getMonth()];
+  document.getElementById("news-eyebrow").textContent="esta semana · desde "+fmtLunes+" · "+semana.length+" "+(semana.length===1?"publicación":"publicaciones");
+  list.innerHTML=semana.map(function(p){
+    return "<div class='news-item'>"+
+      "<div class='news-day'>"+lblDia(p.detectado_at)+"</div>"+
+      "<div><span class='news-source'>"+(p.fuente||"")+"</span></div>"+
+      "<div class='news-text'>"+noticiaTexto(p)+"</div>"+
+    "</div>";
+  }).join("");
+}
+
+// ════════════════════════════════════════════════════════════════════════
 // HERO + RESUMEN EJECUTIVO + KPIs (Dashboard editorial)
 // ════════════════════════════════════════════════════════════════════════
 function buildHero(){
@@ -1312,7 +1430,8 @@ function buildExecSummary(){
 }
 
 function buildKPIs(){
-  // Construye el hero + resumen ejecutivo PRIMERO
+  // Construye noticias de la semana + hero + resumen ejecutivo PRIMERO
+  try{buildNoticiasSemana();}catch(e){console.warn("Noticias semana error:",e);}
   try{buildHero();}catch(e){console.warn("Hero error:",e);}
   try{buildExecSummary();}catch(e){console.warn("Exec summary error:",e);}
 
