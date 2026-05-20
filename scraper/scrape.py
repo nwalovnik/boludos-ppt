@@ -1087,11 +1087,20 @@ def update_fiscal_indec(D: dict) -> int:
 def _parse_fiscal_xlsx(content: bytes) -> dict | None:
     """Extrae ingresos/gastos/sal_prim/sal_fin de un XLSX de Hacienda.
 
-    Soporta dos formatos:
-      - CORTO: hojas 'Mes' y 'Acumulado' (filename mes_aa.xlsx) - solo el más reciente
-      - LARGO: hojas 'VarMensual'/'AIF'/'SALIDA PRENSA MES' (formato histórico)
+    Soporta dos formatos distintos del Esquema Ahorro-Inversión SPNF:
 
-    Devuelve dict con valores en MILLONES de pesos, o None si no se pudo parsear.
+    Formato A — IMIG (preferido): hoja con nombre de mes en lowercase ('abril',
+        'mayo'). Estructura: col 2 = CONCEPTO, col 7 = Dato mensual SPNF total.
+
+    Formato B — Esquema Ahorro-Inversión clásico (filename mes_aa.xlsx):
+        cols 3-6 = componentes Admin Nacional, col 7 = TOTAL Admin Nacional,
+        col 8 = PAMI/Fdos Fiduciarios/Otros, col 9 = TOTAL SPNF.
+        ⚠️ El TOTAL SPNF correcto está en COL 9, no en col 7.
+
+    Formato C — VarMensual / SALIDA PRENSA: tiene #REF! por fórmulas rotas,
+        se ignoran.
+
+    Devuelve dict con valores en MILLONES de pesos, o None.
     """
     import openpyxl
     try:
@@ -1099,43 +1108,70 @@ def _parse_fiscal_xlsx(content: bytes) -> dict | None:
     except Exception:
         return None
 
-    # Patterns de búsqueda
     KEYS = {
         "ingresos":   ["INGRESOS DESPUES DE FIGURAT", "INGRESOS TOTALES"],
         "gastos":     ["GASTOS DESPUES DE FIGURAT", "GASTOS TOTALES"],
         "sal_prim":   ["RESULTADO PRIMARIO", "SUPERAVIT PRIMARIO", "DEFICIT PRIMARIO"],
         "sal_fin":    ["RESULTADO FINANCIERO", "SUPERAVIT FINANCIERO", "DEFICIT FINANCIERO"],
     }
+    MESES_LOW = {"enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"}
 
-    def num_de_row(ws, row_idx: int) -> float | None:
-        """Devuelve primer número finito de la fila buscando en cols 7-10 (excluye #REF y texto)."""
-        for c in (7, 8, 9, 10):
-            v = ws.cell(row_idx, c).value
-            if isinstance(v, (int, float)) and not isinstance(v, bool):
-                return float(v)
-        return None
-
-    out = {"ingresos": None, "gastos": None, "sal_prim": None, "sal_fin": None}
-    # Intentar hoja por hoja hasta encontrar valores
-    for sn in wb.sheetnames:
-        ws = wb[sn]
-        if ws.max_row < 5:
-            continue
+    def parse_hoja(ws, target_col):
+        """Lee conceptos de una hoja usando la columna target_col como dato SPNF."""
+        local = {"ingresos": None, "gastos": None, "sal_prim": None, "sal_fin": None}
         for r in range(1, ws.max_row + 1):
             concepto = ws.cell(r, 2).value
             if not concepto:
                 continue
             cnorm = str(concepto).upper().strip()
             for key, patterns in KEYS.items():
-                if out[key] is not None:
+                if local[key] is not None:
                     continue
                 if any(p in cnorm for p in patterns):
-                    v = num_de_row(ws, r)
-                    if v is not None:
-                        out[key] = v
-                        break
-        # Si encontramos al menos sal_prim y sal_fin, ya está
-        if out["sal_prim"] is not None and out["sal_fin"] is not None:
+                    v = ws.cell(r, target_col).value
+                    if isinstance(v, (int, float)) and not isinstance(v, bool):
+                        local[key] = float(v)
+                    break
+        return local
+
+    out = {"ingresos": None, "gastos": None, "sal_prim": None, "sal_fin": None}
+
+    # Estrategia: priorizar formato A (IMIG hoja "abril") sobre B (Esquema)
+    # Pero si solo está disponible Esquema, usar col 9 (no 7)
+    # Skip hojas con #REF! conocido (VarMensual, SALIDA PRENSA, AIF)
+    for sn in wb.sheetnames:
+        if sn.lower() in ("varmensual", "aif"):
+            continue
+        if sn.upper().startswith("SALIDA PRENSA"):
+            continue
+        ws = wb[sn]
+        if ws.max_row < 10:
+            continue
+
+        # Detectar formato
+        sn_low = sn.strip().lower()
+        is_imig_sheet = sn_low in MESES_LOW
+        # Detectar Esquema: R1 contiene "SECRETARIA" o R5 contiene "ESQUEMA"
+        r1 = str(ws.cell(1, 1).value or "")
+        r5 = str(ws.cell(5, 1).value or "")
+        is_esquema = ("SECRETARIA" in r1.upper()) or ("ESQUEMA" in r5.upper())
+
+        # PRIORIDAD: si el archivo es Esquema (tiene "SECRETARIA" en R1), usar col 9
+        # aunque la hoja se llame "Abril" (que confunde con formato IMIG).
+        # Esto evita leer col 7 (Admin Nacional) en archivos Esquema.
+        if is_esquema:
+            target_col = 9  # TOTAL SPNF
+        elif is_imig_sheet:
+            target_col = 7  # IMIG: col 7 ya es el SPNF total
+        else:
+            continue
+
+        local = parse_hoja(ws, target_col)
+        # Mergear: priorizar valores ya encontrados, completar lo que falta
+        for k, v in local.items():
+            if out[k] is None and v is not None:
+                out[k] = v
+        if all(out[k] is not None for k in out):
             break
 
     if all(v is None for v in out.values()):
