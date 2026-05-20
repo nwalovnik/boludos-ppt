@@ -74,7 +74,8 @@ body{font-family:var(--font-sans);background:var(--bg);color:var(--tx);font-size
 .kpi-lbl{font-size:9.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--tx3);margin-bottom:12px;font-weight:600}
 .kpi-val{font-family:var(--font-serif);font-size:clamp(22px,2.2vw,28px);font-weight:500;letter-spacing:-.022em;line-height:1.05;font-feature-settings:"tnum","onum";white-space:nowrap}
 .kpi-sub{font-size:11.5px;margin-top:8px;color:var(--tx2);font-feature-settings:"tnum"}
-.kpi-meta{font-size:10px;color:var(--tx3);margin-top:6px;font-family:var(--font-mono);letter-spacing:-.02em}
+.kpi-ctx{font-size:10.5px;margin-top:6px;color:var(--tx3);font-style:italic;font-family:var(--font-serif);font-feature-settings:"tnum"}
+.kpi-meta{font-size:10px;color:var(--tx3);margin-top:auto;padding-top:8px;font-family:var(--font-mono);letter-spacing:-.02em}
 .up{color:var(--red)}.dn{color:var(--grn)}.neu{color:var(--tx2)}
 .cgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px}
 @media(max-width:640px){.cgrid{grid-template-columns:1fr}.kpi-grid{grid-template-columns:repeat(2,1fr)}}
@@ -152,6 +153,24 @@ hr.d{border:none;border-top:.5px solid var(--bd);margin:16px 0}
 .src-stat-val{font-family:var(--font-serif);font-size:30px;font-weight:500;letter-spacing:-.02em;line-height:1;font-feature-settings:"tnum"}
 .src-stat-val.mono{font-family:var(--font-mono);font-weight:500}
 .src-stat-lbl{font-size:9.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--tx3);margin-top:10px;font-weight:600}
+/* HERO NUMBER editorial */
+.hero{position:relative;padding:32px 4px 24px;border-bottom:.5px solid var(--bd);margin-bottom:32px}
+.hero-eyebrow{font-size:10.5px;text-transform:uppercase;letter-spacing:.18em;color:var(--tx3);font-weight:600;margin-bottom:14px}
+.hero-headline{font-family:var(--font-serif);font-size:clamp(28px,3.8vw,46px);font-weight:600;letter-spacing:-.025em;line-height:1.1;color:var(--tx);max-width:780px;font-feature-settings:"tnum","onum"}
+.hero-context{font-family:var(--font-serif);font-size:17px;line-height:1.5;color:var(--tx2);margin-top:14px;max-width:680px;font-feature-settings:"tnum","onum"}
+.hero-context .em{color:var(--tx);font-weight:600}
+.hero-context .up{color:var(--red);font-weight:600}
+.hero-context .dn{color:var(--grn);font-weight:600}
+.hero-spark{position:relative;height:80px;max-width:760px;margin-top:18px;opacity:.85}
+/* Resumen ejecutivo */
+.exec-summary{margin-bottom:32px}
+.exec-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:0;border:.5px solid var(--bd);border-radius:var(--rl);overflow:hidden;background:var(--surf)}
+.exec-card{padding:18px 20px;border-right:.5px solid var(--bd);border-bottom:.5px solid var(--bd);margin-right:-.5px;margin-bottom:-.5px}
+.exec-card-h{font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--tx3);font-weight:600;margin-bottom:10px}
+.exec-card-body{font-family:var(--font-serif);font-size:14px;line-height:1.55;color:var(--tx2);font-feature-settings:"tnum"}
+.exec-card-body .em{color:var(--tx);font-weight:600}
+.exec-card-body .up{color:var(--red);font-weight:600}
+.exec-card-body .dn{color:var(--grn);font-weight:600}
 /* Freq tags */
 .freq-tag{font-size:9.5px;padding:2px 7px;border-radius:3px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;font-family:var(--font-sans);display:inline-block}
 .freq-diaria{background:var(--grn2);color:var(--grn);border:.5px solid color-mix(in srgb,var(--grn) 22%,transparent)}
@@ -278,8 +297,39 @@ hr.d{border:none;border-top:.5px solid var(--bd);margin:16px 0}
   </div>
 </nav>
 <div class="content-area"><div id="pg-dash" class="pg on">
-  <div class="info-box">Datos oficiales de <strong>INDEC</strong> y <strong>BCRA</strong>, actualizados automáticamente a primera hora de la mañana. Las proyecciones REM aparecen marcadas con línea punteada.</div>
-  <div class="slbl">Indicadores clave</div>
+
+  <!-- HERO NUMBER: el dato más reciente publicado -->
+  <div class="hero" id="hero-block">
+    <div class="hero-eyebrow" id="hero-eyebrow">— el número del momento —</div>
+    <h1 class="hero-headline" id="hero-headline">Cargando…</h1>
+    <div class="hero-context" id="hero-context"></div>
+    <div class="hero-spark"><canvas id="c-hero"></canvas></div>
+  </div>
+
+  <!-- RESUMEN EJECUTIVO -->
+  <div class="exec-summary">
+    <div class="slbl">Panorama macro · resumen</div>
+    <div class="exec-grid">
+      <div class="exec-card" id="exec-precios">
+        <div class="exec-card-h">Precios</div>
+        <div class="exec-card-body">—</div>
+      </div>
+      <div class="exec-card" id="exec-actividad">
+        <div class="exec-card-h">Actividad</div>
+        <div class="exec-card-body">—</div>
+      </div>
+      <div class="exec-card" id="exec-externo">
+        <div class="exec-card-h">Sector externo</div>
+        <div class="exec-card-body">—</div>
+      </div>
+      <div class="exec-card" id="exec-fiscal">
+        <div class="exec-card-h">Fiscal &amp; monetario</div>
+        <div class="exec-card-body">—</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="slbl">Indicadores clave · al día</div>
   <div class="kpi-grid" id="kpi-grid"></div>
   <hr class="d"/>
   <div class="ctrl-bar">
@@ -1080,31 +1130,263 @@ function togA(el,k){AM[k]=!AM[k];el.classList.toggle("on",AM[k]);buildActividad(
 function togP(el,k){PM[k]=!PM[k];el.classList.toggle("on",PM[k]);buildPrecios();}
 function togL(el,k){LM[k]=!LM[k];el.classList.toggle("on",LM[k]);buildLaboral();}
 
+// ════════════════════════════════════════════════════════════════════════
+// HELPERS para narrativa automática del Dashboard editorial
+// ════════════════════════════════════════════════════════════════════════
+var MESES_LBL=["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+function lblMes(ym){
+  if(!ym)return"—";
+  var p=ym.split("-");
+  if(p.length<2)return ym;
+  var m=parseInt(p[1])-1;
+  return MESES_LBL[m]||ym;
+}
+function lblMesYear(ym){
+  if(!ym)return"—";
+  var p=ym.split("-");
+  if(p.length<2)return ym;
+  return (MESES_LBL[parseInt(p[1])-1]||"")+" "+p[0];
+}
+function arrow(delta){
+  if(delta===null||delta===undefined)return"";
+  if(Math.abs(delta)<0.05)return"→";
+  return delta>0?"↑":"↓";
+}
+function trendWord(delta, thresh){
+  thresh=thresh||0.3;
+  if(delta===null||delta===undefined)return"";
+  if(Math.abs(delta)<thresh)return "estable";
+  return delta>0?"aceleró":"desaceleró";
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// HERO + RESUMEN EJECUTIVO + KPIs (Dashboard editorial)
+// ════════════════════════════════════════════════════════════════════════
+function buildHero(){
+  // Elegimos como hero el dato MÁS RECIENTE publicado (IPC, EMAE, IPI)
+  // Prioridad: IPC > EMAE > IPI > TC Oficial (siempre fresh)
+  var ipc=D.ipc.filter(function(r){return !r.proj&&r.vm!=null;}).slice(-1)[0];
+  var ipc_prev=D.ipc.filter(function(r){return !r.proj&&r.vm!=null&&r.f<ipc.f;}).slice(-1)[0];
+  if(!ipc)return;
+  // Trend: ¿cuántos meses consecutivos de desaceleración?
+  var hist=D.ipc.filter(function(r){return !r.proj&&r.vm!=null;}).slice(-6);
+  var consec=0;
+  for(var i=hist.length-1;i>0;i--){
+    if(hist[i].vm<hist[i-1].vm-0.1)consec++;
+    else break;
+  }
+
+  document.getElementById("hero-eyebrow").textContent="Inflación · publicación más reciente";
+  document.getElementById("hero-headline").innerHTML=
+    "La inflación de <span class='em'>"+lblMes(ipc.f)+"</span> fue <span class='"+(ipc.vm>=0?"up":"dn")+"'>+"+ipc.vm.toFixed(1)+"%</span>";
+
+  var ctxParts=[];
+  ctxParts.push("Acumulada interanual: <span class='em'>"+ipc.via.toFixed(1)+"%</span>.");
+  if(ipc_prev){
+    var delta=ipc.vm-ipc_prev.vm;
+    var trend=trendWord(delta);
+    if(trend==="desaceleró"&&consec>=2){
+      ctxParts.push("<span class='dn'>Tercer mes consecutivo</span> de desaceleración: ".replace("Tercer", consec===2?"Segundo":consec===3?"Tercer":consec+"º")+
+                    "venía de "+ipc_prev.vm.toFixed(1)+"% en "+lblMes(ipc_prev.f)+".");
+    } else if(trend==="aceleró"){
+      ctxParts.push("<span class='up'>Aceleración</span> vs "+ipc_prev.vm.toFixed(1)+"% en "+lblMes(ipc_prev.f)+".");
+    } else {
+      ctxParts.push("Vs "+ipc_prev.vm.toFixed(1)+"% en "+lblMes(ipc_prev.f)+", se mantiene "+trend+".");
+    }
+  }
+  document.getElementById("hero-context").innerHTML=ctxParts.join(" ");
+
+  // Sparkline del IPC últimos 24 meses (var mensual)
+  var last24=D.ipc.filter(function(r){return !r.proj&&r.vm!=null;}).slice(-24);
+  // Necesitamos un chart minimalista sin grids ni labels
+  if(CH["c-hero"]){CH["c-hero"].destroy();}
+  var cnv=document.getElementById("c-hero");if(!cnv)return;
+  CH["c-hero"]=new Chart(cnv,{
+    type:"line",
+    data:{
+      labels:last24.map(function(r){return r.f;}),
+      datasets:[{
+        label:"VM%",
+        data:last24.map(function(r){return r.vm;}),
+        borderColor:DARK?"#f87171":"#b91c1c",
+        backgroundColor:DARK?"rgba(248,113,113,.12)":"rgba(185,28,28,.08)",
+        fill:true,
+        tension:.3,
+        pointRadius:0,
+        pointHoverRadius:4,
+        borderWidth:1.75,
+        cubicInterpolationMode:"monotone"
+      }]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{enabled:true,callbacks:{label:function(ctx){return " "+ctx.parsed.y.toFixed(1)+"% en "+lblMes(ctx.label);}}}
+      },
+      scales:{
+        x:{display:false},
+        y:{display:false}
+      },
+      interaction:{mode:"index",intersect:false}
+    }
+  });
+}
+
+function buildExecSummary(){
+  // 4 párrafos automáticos, uno por dimensión
+  // 1) Precios
+  var ipc=D.ipc.filter(function(r){return !r.proj&&r.vm!=null;}).slice(-1)[0];
+  var ipc6m=D.ipc.filter(function(r){return !r.proj&&r.vm!=null;}).slice(-6);
+  var prom6=ipc6m.length?ipc6m.reduce(function(a,r){return a+r.vm;},0)/ipc6m.length:0;
+  var html="—";
+  if(ipc){
+    html="Inflación de "+lblMes(ipc.f)+": <span class='em'>+"+ipc.vm.toFixed(1)+"%</span> mensual, "+
+         "<span class='em'>"+ipc.via.toFixed(1)+"%</span> interanual. "+
+         "Promedio últimos 6 meses: "+prom6.toFixed(1)+"% mensual.";
+  }
+  document.getElementById("exec-precios").querySelector(".exec-card-body").innerHTML=html;
+
+  // 2) Actividad (EMAE + IPI)
+  var emae=D.emae.filter(function(r){return r.via!=null;}).slice(-1)[0];
+  var ipi=D.ipi.filter(function(r){return r.via!=null;}).slice(-1)[0];
+  html="—";
+  if(emae){
+    html="EMAE de "+lblMes(emae.f)+": <span class='"+(emae.via>=0?"dn":"up")+"'>"+(emae.via>=0?"+":"")+emae.via.toFixed(1)+"%</span> i.a. ";
+    if(ipi){
+      html+="IPI manufacturero "+lblMes(ipi.f)+": <span class='"+(ipi.via>=0?"dn":"up")+"'>"+(ipi.via>=0?"+":"")+ipi.via.toFixed(1)+"%</span> i.a.";
+    }
+  }
+  document.getElementById("exec-actividad").querySelector(".exec-card-body").innerHTML=html;
+
+  // 3) Sector externo
+  var resD=DD.rrii_d?DD.rrii_d.slice(-1)[0]:{};
+  var tcD=DD.tc_d?DD.tc_d.slice(-1)[0]:{};
+  var embiD=DD.embi_d?DD.embi_d.slice(-1)[0]:{};
+  var bc=D.bc.slice().reverse().find(function(r){return r.saldo!=null;})||{};
+  html="";
+  if(resD&&resD.v){
+    html+="Reservas brutas <span class='em'>USD "+fmtN(resD.v)+"M</span> al "+resD.f+". ";
+  }
+  if(tcD&&tcD.of){
+    html+="TC oficial <span class='em'>$"+fmtN(tcD.of)+"</span>";
+    if(tcD.blue)html+=" · Blue $"+fmtN(tcD.blue);
+    html+=". ";
+  }
+  if(embiD&&embiD.v){
+    html+="EMBI <span class='em'>"+fmtN(embiD.v)+" bps</span>. ";
+  }
+  if(bc&&bc.saldo!=null){
+    html+="Saldo comercial "+lblMes(bc.f)+": <span class='"+(bc.saldo>=0?"dn":"up")+"'>"+(bc.saldo>=0?"+":"")+"USD "+fmtN(bc.saldo)+"M</span>.";
+  }
+  document.getElementById("exec-externo").querySelector(".exec-card-body").innerHTML=html||"—";
+
+  // 4) Fiscal & monetario
+  var fis=(D.fiscal||[]).slice(-1)[0];
+  var bm=(D.bm||[]).slice(-1)[0];
+  html="";
+  if(fis&&fis.sal_prim!=null){
+    html+="Resultado primario "+lblMes(fis.f)+": <span class='"+(fis.sal_prim>=0?"dn":"up")+"'>"+(fis.sal_prim>=0?"+":"")+fmtN(fis.sal_prim/1000)+"K M$</span>";
+    if(fis.sal_fin!=null)html+=" · Financiero: <span class='"+(fis.sal_fin>=0?"dn":"up")+"'>"+(fis.sal_fin>=0?"+":"")+fmtN(fis.sal_fin/1000)+"K M$</span>";
+    html+=". ";
+  }
+  if(bm&&bm.tot){
+    html+="Base monetaria <span class='em'>"+fmtN(bm.tot/1e6,1)+" B$</span> al "+bm.f+".";
+  }
+  document.getElementById("exec-fiscal").querySelector(".exec-card-body").innerHTML=html||"—";
+}
+
 function buildKPIs(){
+  // Construye el hero + resumen ejecutivo PRIMERO
+  try{buildHero();}catch(e){console.warn("Hero error:",e);}
+  try{buildExecSummary();}catch(e){console.warn("Exec summary error:",e);}
+
   var ipc=D.ipc.filter(function(r){return !r.proj;}).slice(-1)[0]||{};
+  var ipcPrev=D.ipc.filter(function(r){return !r.proj&&r.f<ipc.f;}).slice(-1)[0]||{};
   // Daily data is more up-to-date than monthly for TC/Reservas/EMBI/Merval
   var tcD=DD.tc_d.slice(-1)[0]||{};
   var resD=DD.rrii_d.slice(-1)[0]||{};
   var embiD=DD.embi_d.slice(-1)[0]||{};
   var mvD=DD.merval_d.slice(-1)[0]||{};
   var emae=D.emae.slice(-1)[0]||{};
+  var emaePrev=D.emae.slice(-2)[0]||{};
   var eph=D.eph.slice(-1)[0]||{};
   var bc=D.bc.slice().reverse().find(function(r){return r.saldo!=null;})||D.bc.slice(-1)[0]||{};
+  var bcPrev=D.bc.slice().reverse().filter(function(r){return r.saldo!=null;})[1]||{};
+
+  // Cada KPI ahora con narrativa contextual
   var ks=[
-    {l:"Inflación mensual",v:fmtP(ipc.vm),sub:"I.A.: "+fmtP(ipc.via),dir:"up",meta:"INDEC "+ipc.f},
-    {l:"TC Oficial",v:"$"+fmtN(tcD.of),sub:"Blue: $"+fmtN(tcD.blue),dir:"up",meta:tcD.f||""},
-    {l:"Reservas brutas",v:"USD "+fmtN(resD.v)+"M",sub:"BCRA",dir:"neu",meta:resD.f||""},
-    {l:"Riesgo pais EMBI",v:fmtN(embiD.v)+" bps",sub:(embiD.v||0)<800?"Nivel reducido":"Elevado",dir:(embiD.v||0)<800?"dn":"up",meta:embiD.f||""},
-    {l:"EMAE",v:fmtP(emae.via),sub:"Var. interanual",dir:(emae.via||0)>=0?"dn":"up",meta:"INDEC "+(emae.f||"")},
-    {l:"Desocupación",v:(eph.td||"--")+"%",sub:"Actividad: "+(eph.act||"--")+"%",dir:"neu",meta:"INDEC "+(eph.p||"")},
-    {l:"MERVAL",v:"$"+fmtN(mvD.v),sub:"Bolsa de Comercio",dir:"dn",meta:mvD.f||""},
-    {l:"Saldo comercial",v:"USD "+fmtN(bc.saldo)+"M",sub:"Expo: "+fmtN(bc.expo),dir:(bc.saldo||0)>=0?"dn":"up",meta:"INDEC "+(bc.f||"")}
+    {
+      l:"Inflación mensual",
+      v:fmtP(ipc.vm),
+      sub:"I.A.: "+fmtP(ipc.via),
+      dir:(ipc.vm||0)>5?"up":"neu",
+      meta:"INDEC "+lblMesYear(ipc.f),
+      ctx:ipcPrev.vm!=null?(ipc.vm>ipcPrev.vm?"↑ vs "+fmtP(ipcPrev.vm):ipc.vm<ipcPrev.vm-0.1?"↓ vs "+fmtP(ipcPrev.vm):"→ estable"):""
+    },
+    {
+      l:"TC Oficial",
+      v:"$"+fmtN(tcD.of),
+      sub:"Blue: $"+fmtN(tcD.blue),
+      dir:"neu",
+      meta:tcD.f||"",
+      ctx:tcD.blue&&tcD.of?"Brecha: "+(((tcD.blue/tcD.of-1)*100)).toFixed(1)+"%":""
+    },
+    {
+      l:"Reservas brutas",
+      v:"USD "+fmtN(resD.v)+"M",
+      sub:"BCRA",
+      dir:"neu",
+      meta:resD.f||"",
+      ctx:""
+    },
+    {
+      l:"Riesgo país EMBI",
+      v:fmtN(embiD.v)+" bps",
+      sub:(embiD.v||0)<600?"Reducido":(embiD.v||0)<1000?"Moderado":"Elevado",
+      dir:(embiD.v||0)<800?"dn":"up",
+      meta:embiD.f||"",
+      ctx:""
+    },
+    {
+      l:"EMAE actividad",
+      v:fmtP(emae.via),
+      sub:"Var. interanual",
+      dir:(emae.via||0)>=0?"dn":"up",
+      meta:"INDEC "+lblMesYear(emae.f||""),
+      ctx:emaePrev.via!=null?"Mes ant.: "+fmtP(emaePrev.via):""
+    },
+    {
+      l:"Desocupación",
+      v:(eph.td||"--")+"%",
+      sub:"Actividad: "+(eph.act||"--")+"%",
+      dir:(eph.td||0)>8?"up":"neu",
+      meta:"INDEC "+(eph.p||""),
+      ctx:""
+    },
+    {
+      l:"MERVAL",
+      v:"$"+fmtN(mvD.v),
+      sub:"Bolsa",
+      dir:"neu",
+      meta:mvD.f||"",
+      ctx:""
+    },
+    {
+      l:"Saldo comercial",
+      v:"USD "+fmtN(bc.saldo)+"M",
+      sub:"Expo: "+fmtN(bc.expo),
+      dir:(bc.saldo||0)>=0?"dn":"up",
+      meta:"INDEC "+lblMesYear(bc.f||""),
+      ctx:bcPrev.saldo!=null?"Mes ant.: USD "+fmtN(bcPrev.saldo)+"M":""
+    }
   ];
   var g=document.getElementById("kpi-grid");
   g.innerHTML="";
   ks.forEach(function(k){
     var d=document.createElement("div");d.className="kpi";
-    d.innerHTML="<div class='kpi-lbl'>"+k.l+"</div><div class='kpi-val'>"+k.v+"</div><div class='kpi-sub "+k.dir+"'>"+k.sub+"</div><div class='kpi-meta'>"+k.meta+"</div>";
+    var ctxHtml=k.ctx?"<div class='kpi-ctx'>"+k.ctx+"</div>":"";
+    d.innerHTML="<div class='kpi-lbl'>"+k.l+"</div><div class='kpi-val'>"+k.v+"</div><div class='kpi-sub "+k.dir+"'>"+k.sub+"</div>"+ctxHtml+"<div class='kpi-meta'>"+k.meta+"</div>";
     g.appendChild(d);
   });
 }
