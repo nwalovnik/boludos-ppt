@@ -1976,6 +1976,7 @@ const SOURCES = [
   {serie:"Vencimientos FMI",         fuente:"MECON",                via:"Bedrock baked",                                                       freq:"mensual", clave:"venc_fmi", sec:"Fiscal y monetario"},
   // Bursátil
   {serie:"MERVAL mensual",           fuente:"Yahoo Finance",        via:"query1.finance.yahoo.com/v8/finance/chart/^MERV",                    freq:"diaria",  clave:"merval",   sec:"Mercados"},
+  {serie:"Irregularidad de cartera (familias + empresas)", fuente:"BCRA Informe sobre Bancos", via:"XLSX InfBanc_Anexo.xlsx · hoja 'Calidad de Cartera (por líneas)' R59/R103", freq:"mensual", clave:"mora", sec:"Fiscal y monetario"},
   {serie:"Balance cambiario BCRA",   fuente:"BCRA",                 via:"Bedrock baked (metodología propia)",                                  freq:"mensual", clave:"bal_cam",  sec:"Sector externo"},
 ];
 
@@ -2751,10 +2752,14 @@ async function fetchMonetarios(){
   if(res[4])MON_CACHE.dep=res[4];
   if(res[5]){MON_CACHE.prest_fam=res[5];log("Préstamos familias: "+res[5].length+" registros","ok");}
   if(res[6]){MON_CACHE.prest_emp=res[6];log("Préstamos empresas: "+res[6].length+" registros","ok");}
-  // Mora: BCRA no publica en API publica — serie del Informe sobre Bancos BCRA
-  var moraRaw=[{"f":"2022-01","fam":5.8,"emp":4.1},{"f":"2022-06","fam":4.5,"emp":3.2},{"f":"2022-12","fam":3.5,"emp":2.8},{"f":"2023-06","fam":3.0,"emp":2.2},{"f":"2023-12","fam":2.5,"emp":1.6},{"f":"2024-01","fam":2.5,"emp":1.5},{"f":"2024-03","fam":2.4,"emp":1.2},{"f":"2024-06","fam":2.8,"emp":0.9},{"f":"2024-09","fam":3.5,"emp":1.0},{"f":"2024-12","fam":3.5,"emp":0.7},{"f":"2025-01","fam":2.67,"emp":0.77},{"f":"2025-02","fam":2.94,"emp":0.8},{"f":"2025-03","fam":3.2,"emp":0.9},{"f":"2025-04","fam":3.8,"emp":1.0},{"f":"2025-05","fam":4.5,"emp":1.0},{"f":"2025-06","fam":5.0,"emp":1.2},{"f":"2025-07","fam":5.8,"emp":1.4},{"f":"2025-08","fam":6.5,"emp":1.6},{"f":"2025-09","fam":7.2,"emp":1.7},{"f":"2025-10","fam":7.8,"emp":1.9},{"f":"2025-11","fam":8.5,"emp":2.2},{"f":"2025-12","fam":9.3,"emp":2.5},{"f":"2026-01","fam":10.6,"emp":2.8}];
-  MON_CACHE.mora_fam=moraRaw.map(function(r){return{f:r.f,v:r.fam};});
-  MON_CACHE.mora_emp=moraRaw.map(function(r){return{f:r.f,v:r.emp};});
+  // Mora: usa D.mora del scraper (XLSX Anexo BCRA "Informe sobre Bancos")
+  // Si no está disponible aún, fallback al histórico hardcoded para mantener visualización
+  var moraRaw = (D.mora && D.mora.length) ? D.mora : [
+    {"f":"2025-01","fam":2.67,"emp":0.77},{"f":"2025-06","fam":5.0,"emp":1.2},
+    {"f":"2025-12","fam":9.33,"emp":2.53},{"f":"2026-01","fam":10.61,"emp":2.85}
+  ];
+  MON_CACHE.mora_fam=moraRaw.filter(function(r){return r.fam!=null;}).map(function(r){return{f:r.f,v:r.fam};});
+  MON_CACHE.mora_emp=moraRaw.filter(function(r){return r.emp!=null;}).map(function(r){return{f:r.f,v:r.emp};});
   var ms=document.getElementById("mora-status");
   if(ms)ms.textContent="Fuente: Informe sobre Bancos BCRA";
   MON_CACHE.loaded=true;

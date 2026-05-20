@@ -1107,6 +1107,78 @@ def update_fiscal(D: dict) -> int:
         log(f"Fiscal SPNF: {len(encontrados)} meses procesados, total serie: {len(arr)}, último {arr[-1]['f']}", "ok")
     return nuevos
 
+def update_mora(D: dict) -> int:
+    """Mora del sistema financiero (irregularidad de cartera) mensual.
+
+    Fuente: BCRA Informe sobre Bancos · Anexo XLSX (InfBanc_Anexo.xlsx)
+    Hoja: 'Calidad de Cartera (por líneas)'
+    Filas: R59 = Familias - Cartera irregular total %
+           R103 = Empresas - Cartera irregular total %
+
+    Schema: D.mora = [{f, fam, emp}] en porcentaje.
+    """
+    arr = D.setdefault("mora", [])
+    nuevos = 0
+    url = "https://www.bcra.gob.ar/archivos/Pdfs/PublicacionesEstadisticas/informes/InfBanc_Anexo.xlsx"
+    try:
+        import openpyxl
+        r = requests.get(url, timeout=TIMEOUT, headers={**HEADERS, "User-Agent": "Mozilla/5.0"})
+        r.raise_for_status()
+        wb = openpyxl.load_workbook(io.BytesIO(r.content), data_only=True)
+        # Buscar hoja con tilde o sin tilde
+        sheet_name = None
+        for sn in wb.sheetnames:
+            if "Calidad de Cartera" in sn and "líneas" in sn.lower():
+                sheet_name = sn
+                break
+            if "Calidad de Cartera" in sn and "lineas" in sn.lower():
+                sheet_name = sn
+                break
+        if sheet_name is None:
+            # Tomar la segunda hoja que contiene "Calidad" (por defecto)
+            cands = [sn for sn in wb.sheetnames if "Calidad" in sn]
+            sheet_name = cands[1] if len(cands) > 1 else (cands[0] if cands else None)
+        if sheet_name is None:
+            log("Mora BCRA: no encontré hoja Calidad de Cartera", "warn")
+            return 0
+        ws = wb[sheet_name]
+
+        # Recorrer columnas desde col 2 (col 1 son labels)
+        # R6 = fechas. R59 = familias %. R103 = empresas %.
+        for c in range(2, ws.max_column + 1):
+            fecha_cell = ws.cell(6, c).value
+            fam_v = ws.cell(59, c).value
+            emp_v = ws.cell(103, c).value
+            if fecha_cell is None:
+                continue
+            if hasattr(fecha_cell, "strftime"):
+                f = fecha_cell.strftime("%Y-%m")
+            else:
+                f = str(fecha_cell)[:7]
+            if not f or not f.startswith("20"):
+                continue
+            fam_f = float(fam_v) if isinstance(fam_v, (int, float)) else None
+            emp_f = float(emp_v) if isinstance(emp_v, (int, float)) else None
+            if fam_f is None and emp_f is None:
+                continue
+            rec = next((x for x in arr if x.get("f") == f), None)
+            new = {"f": f}
+            if fam_f is not None:
+                new["fam"] = round(fam_f, 2)
+            if emp_f is not None:
+                new["emp"] = round(emp_f, 2)
+            if rec is None:
+                arr.append(new)
+                nuevos += 1
+            else:
+                rec.update({k: v for k, v in new.items() if k != "f"})
+        arr.sort(key=lambda x: x["f"])
+        if arr:
+            log(f"Mora BCRA: actualizado (último {arr[-1]['f']}, fam={arr[-1].get('fam','—')}% emp={arr[-1].get('emp','—')}%)", "ok")
+    except Exception as e:
+        log(f"Mora BCRA falló: {e}", "warn")
+    return nuevos
+
 def update_merval(D: dict) -> int:
     """MERVAL via Yahoo Finance directo (sin proxy CORS porque corremos en GitHub Actions)."""
     arr = D.setdefault("merval", [])
@@ -1556,6 +1628,7 @@ def main() -> int:
     update_empleo(D)
     update_empresas(D)
     update_fiscal_indec(D)
+    update_mora(D)
     update_turismo(D)
     update_merval(D)
     update_daily_series(D)
