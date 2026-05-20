@@ -1830,14 +1830,80 @@ def _ultimo_real(arr: list, fecha_key: str) -> dict | None:
     candidatos.sort(key=lambda r: str(r.get(fecha_key)))
     return candidatos[-1]
 
+# Heurística: días después del FIN de período en que se publica oficialmente la serie
+# Basado en el calendario habitual de difusión INDEC/BCRA/Hacienda
+PUB_LAG_DIAS = {
+    "ipc":      13,   # ~13 del mes siguiente al dato
+    "ipim":     17,   # ~17 del mes siguiente
+    "ipib":     17,
+    "ipp":      17,
+    "ipi":      24,
+    "isac":     24,
+    "uci":      24,
+    "bc":       21,   # ICA: 17-21 del mes siguiente
+    "emae":     55,   # EMAE con lag de ~2 meses post-cierre
+    "turismo":  45,
+    "salarios": 50,
+    "ripte":    35,
+    "trabajo":  60,   # SIPA con ~2 meses lag
+    "empresas": 70,   # OEDE anual, datos definitivos en feb/mar año siguiente
+    "rec":      2,    # AFIP publica al día siguiente
+    "fiscal":   22,   # Hacienda IMIG
+    "mora":     28,   # BCRA Informe sobre Bancos
+    "eph":      80,   # EPH trimestral, ~3 meses después del cierre
+    "pbi":      90,   # CCNN trimestral
+}
+
+def calcular_fecha_publicacion(serie: str, periodo: str) -> datetime:
+    """Estima cuándo se publicó oficialmente un período de una serie.
+
+    Aplica una heurística basada en PUB_LAG_DIAS por serie.
+    Si la estimación cae en el futuro (porque el lag es chico y aún no llegó),
+    clamp a hoy (significa: lo vimos al momento de detección).
+    """
+    from calendar import monthrange
+    import re
+    lag = PUB_LAG_DIAS.get(serie, 30)
+    today = datetime.now(timezone.utc)
+    try:
+        if len(periodo) == 4 and periodo.isdigit():
+            # Anual: fin = 31 dic
+            fin = datetime(int(periodo), 12, 31, tzinfo=timezone.utc)
+        elif "-" in periodo and len(periodo) >= 7:
+            # YYYY-MM
+            y, m = int(periodo[:4]), int(periodo[5:7])
+            last_day = monthrange(y, m)[1]
+            fin = datetime(y, m, last_day, tzinfo=timezone.utc)
+        elif "trim" in periodo.lower() or "t." in periodo.lower():
+            # "1er trimestre 2025" o "1er t. 2025"
+            qm = re.search(r"(\d+)(?:er|do|to|°|º)?\s*t", periodo.lower())
+            ym = re.search(r"(\d{4})", periodo)
+            if qm and ym:
+                trimestre = int(qm.group(1))
+                year = int(ym.group(1))
+                mes_fin = min(trimestre * 3, 12)
+                last_day = monthrange(year, mes_fin)[1]
+                fin = datetime(year, mes_fin, last_day, tzinfo=timezone.utc)
+            else:
+                return today
+        else:
+            return today
+    except Exception:
+        return today
+    publicacion = fin + timedelta(days=lag)
+    if publicacion > today:
+        publicacion = today
+    return publicacion
+
 def detect_publicaciones(D_old: dict, D_new: dict) -> list[dict]:
-    """Detecta NUEVAS publicaciones comparando el último período de cada serie.
+    """Detecta publicaciones recientes con fecha estimada según calendario INDEC/BCRA.
 
-    Una "publicación nueva" se registra cuando:
-      - El último período de la serie en D_new es POSTERIOR al último en D_old.
-      - D_old tenía la serie (si es serie nueva en el sistema, no marca pubs).
-
-    Mantiene la lista acumulada de los últimos 30 días para el dashboard.
+    Reglas:
+      - Para cada serie, toma su último período real (no proyección).
+      - Calcula `publicado_at` aplicando PUB_LAG_DIAS al fin del período.
+      - Si `publicado_at` cae en el futuro, clamp a hoy.
+      - Si `publicado_at` está dentro de los últimos 30 días → registra.
+      - Sin duplicar: una pub por (serie, periodo) única en la lista acumulada.
     """
     now = datetime.now(timezone.utc)
     cutoff = now - timedelta(days=30)
@@ -1845,28 +1911,29 @@ def detect_publicaciones(D_old: dict, D_new: dict) -> list[dict]:
 
     # Recuperar lista existente del data.json viejo, filtrar las viejas (>30d)
     pubs = (D_old.get("_meta") or {}).get("publicaciones") or []
-    pubs = [p for p in pubs if p.get("detectado_at", "") > cutoff_iso]
+    pubs = [p for p in pubs if p.get("publicado_at", p.get("detectado_at", "")) > cutoff_iso]
 
     for serie_key, (fuente, fecha_key) in SERIES_TRACK_PUB.items():
         new_arr = D_new.get(serie_key)
-        old_arr = D_old.get(serie_key) if D_old else None
         if not isinstance(new_arr, list) or not new_arr:
             continue
-        # Si serie no existía en D_old, NO marcar como publicación nueva (es addition al sistema)
-        if not isinstance(old_arr, list) or not old_arr:
-            continue
         ult_new = _ultimo_real(new_arr, fecha_key)
-        ult_old = _ultimo_real(old_arr, fecha_key)
         if ult_new is None:
             continue
         per_new = str(ult_new.get(fecha_key, ""))
-        per_old = str(ult_old.get(fecha_key, "")) if ult_old else ""
-        if per_old and per_new <= per_old:
-            continue  # Sin avance
-        # Evitar duplicado en runs sucesivos (mismo serie+periodo)
+        if not per_new:
+            continue
+
+        # Calcular fecha de publicación estimada según heurística
+        fecha_pub = calcular_fecha_publicacion(serie_key, per_new)
+        # Solo registrar si publicado_at está dentro de los últimos 30 días
+        if fecha_pub < cutoff:
+            continue
+
+        # No duplicar la misma (serie, periodo) ya en pubs
         if any(p.get("serie") == serie_key and p.get("periodo") == per_new for p in pubs):
             continue
-        # Construir el record
+
         vals = {kk: vv for kk, vv in ult_new.items() if kk not in (fecha_key, "proj", "s", "r", "comp")}
         datos = {kk: round(vv, 2) if isinstance(vv, float) else vv
                  for kk, vv in vals.items() if isinstance(vv, (int, float)) and not isinstance(vv, bool)}
@@ -1875,12 +1942,13 @@ def detect_publicaciones(D_old: dict, D_new: dict) -> list[dict]:
             "label": SERIE_LBL.get(serie_key, serie_key),
             "fuente": fuente,
             "periodo": per_new,
+            "publicado_at": fecha_pub.isoformat(timespec="seconds"),
             "detectado_at": now.isoformat(timespec="seconds"),
             "datos": datos,
         })
 
-    # Ordenar por más reciente primero
-    pubs.sort(key=lambda p: p.get("detectado_at", ""), reverse=True)
+    # Ordenar por publicado_at más reciente primero
+    pubs.sort(key=lambda p: p.get("publicado_at", p.get("detectado_at", "")), reverse=True)
     return pubs
 
 # ──────────────────────────────────────────────────────────────────────────────

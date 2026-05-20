@@ -1270,21 +1270,22 @@ function buildNoticiasSemana(){
     block.style.display="none";
     return;
   }
+  // Usamos publicado_at (fecha estimada según calendario INDEC/BCRA), no detectado_at (scraper)
+  function pubDate(p){return p.publicado_at||p.detectado_at||"";}
   var lunes=ultimoLunes();
   var lunesIso=lunes.toISOString();
-  var semana=pubs.filter(function(p){return p.detectado_at>=lunesIso;});
+  var semana=pubs.filter(function(p){return pubDate(p)>=lunesIso;});
   if(!semana.length){
     block.style.display="none";
     return;
   }
-  // Ordenar por timestamp ascendente (lunes arriba)
-  semana.sort(function(a,b){return a.detectado_at<b.detectado_at?-1:1;});
+  semana.sort(function(a,b){return pubDate(a)<pubDate(b)?-1:1;});
   block.style.display="block";
   var fmtLunes=DIAS_SEM[lunes.getDay()]+" "+lunes.getDate()+" "+MESES_LBL[lunes.getMonth()];
   document.getElementById("news-eyebrow").textContent="esta semana · desde "+fmtLunes+" · "+semana.length+" "+(semana.length===1?"publicación":"publicaciones");
   list.innerHTML=semana.map(function(p){
     return "<div class='news-item'>"+
-      "<div class='news-day'>"+lblDia(p.detectado_at)+"</div>"+
+      "<div class='news-day'>"+lblDia(pubDate(p))+"</div>"+
       "<div><span class='news-source'>"+(p.fuente||"")+"</span></div>"+
       "<div class='news-text'>"+noticiaTexto(p)+"</div>"+
     "</div>";
