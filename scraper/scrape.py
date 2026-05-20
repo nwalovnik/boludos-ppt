@@ -2025,8 +2025,18 @@ def detect_publicaciones(D_old: dict, D_new: dict) -> list[dict]:
     cutoff = now - timedelta(days=30)
     cutoff_iso = cutoff.isoformat()
 
-    # Recuperar lista existente del data.json viejo, filtrar las viejas (>30d)
+    # Recuperar lista existente del data.json viejo
     pubs = (D_old.get("_meta") or {}).get("publicaciones") or []
+    # Re-calcular publicado_at de las pubs existentes con la heurística actual
+    # (importante cuando ajustamos PUB_LAG_DIAS y queremos que las pubs viejas se actualicen)
+    for p in pubs:
+        if p.get("serie") and p.get("periodo"):
+            try:
+                fecha_pub = calcular_fecha_publicacion(p["serie"], str(p["periodo"]))
+                p["publicado_at"] = fecha_pub.isoformat(timespec="seconds")
+            except Exception:
+                pass
+    # Filtrar las viejas (>30d) tras el recálculo
     pubs = [p for p in pubs if p.get("publicado_at", p.get("detectado_at", "")) > cutoff_iso]
 
     for serie_key, (fuente, fecha_key) in SERIES_TRACK_PUB.items():
