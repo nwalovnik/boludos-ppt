@@ -2063,15 +2063,34 @@ def detect_publicaciones(D_old: dict, D_new: dict) -> list[dict]:
 
     # Recuperar lista existente del data.json viejo
     pubs = (D_old.get("_meta") or {}).get("publicaciones") or []
-    # Re-calcular publicado_at de las pubs existentes con la heurística actual
-    # (importante cuando ajustamos PUB_LAG_DIAS y queremos que las pubs viejas se actualicen)
+    # Re-calcular publicado_at Y refrescar datos de las pubs existentes en cada run.
+    # publicado_at: importante si ajustamos PUB_LAG_DIAS.
+    # datos: importante si el parser corrigió valores (ej. fiscal SPNF col 9 vs col 7).
     for p in pubs:
-        if p.get("serie") and p.get("periodo"):
-            try:
-                fecha_pub = calcular_fecha_publicacion(p["serie"], str(p["periodo"]))
-                p["publicado_at"] = fecha_pub.isoformat(timespec="seconds")
-            except Exception:
-                pass
+        serie_key = p.get("serie")
+        periodo = str(p.get("periodo", ""))
+        if not serie_key or not periodo:
+            continue
+        # Recalcular fecha de publicación
+        try:
+            fecha_pub = calcular_fecha_publicacion(serie_key, periodo)
+            p["publicado_at"] = fecha_pub.isoformat(timespec="seconds")
+        except Exception:
+            pass
+        # Refrescar datos desde D_new[serie][periodo] (snapshot actualizado)
+        fecha_key = SERIES_TRACK_PUB.get(serie_key, (None, None))[1]
+        if not fecha_key:
+            continue
+        new_arr = D_new.get(serie_key)
+        if not isinstance(new_arr, list):
+            continue
+        rec = next((r for r in new_arr if str(r.get(fecha_key, "")) == periodo), None)
+        if rec:
+            vals = {k: v for k, v in rec.items() if k not in (fecha_key, "proj", "s", "r", "comp")}
+            datos = {k: round(v, 2) if isinstance(v, float) else v
+                     for k, v in vals.items() if isinstance(v, (int, float)) and not isinstance(v, bool)}
+            if datos:
+                p["datos"] = datos
     # Filtrar las viejas (>30d) tras el recálculo
     pubs = [p for p in pubs if p.get("publicado_at", p.get("detectado_at", "")) > cutoff_iso]
 
