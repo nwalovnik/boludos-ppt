@@ -1204,6 +1204,83 @@ def update_ica_xls(D: dict) -> int:
         log(f"ICA XLS falló: {e}", "warn")
     return nuevos
 
+def update_mayoristas(D: dict) -> int:
+    """Inflación mayorista — IPIM, IPIB e IPP nivel general + breakdowns clave.
+
+    Fuente: INDEC CSV oficial (indec.gob.ar/ftp/cuadros/economia/indice_*.csv)
+      - IPIM: Índice de Precios Internos al por Mayor
+      - IPIB: Índice de Precios Internos Básicos al por Mayor
+      - IPP:  Índice de Precios Básicos del Productor
+
+    Schema: D.ipim, D.ipib, D.ipp = [{f, n, vm, via}]. Cada serie tiene también
+    breakdown por categoría guardado en .nac (nacionales), .imp (importados),
+    .prim (primarios), .manuf (manufactura) cuando aplica.
+    """
+    BASE = "https://www.indec.gob.ar/ftp/cuadros/economia"
+    fuentes = {"ipim": "indice_ipim.csv", "ipib": "indice_ipib.csv", "ipp": "indice_ipp.csv"}
+    # Categorías que queremos extraer (la principal es ng_nivel_general)
+    SUB_KEYS = {
+        "ng_nivel_general":     "n",       # Nivel general
+        "n_productos_nacionales": "nac",   # Productos nacionales
+        "i_productos_importados": "imp",   # Productos importados
+        "1_primarios":          "prim",    # Productos primarios
+        "2_industria_manufacturera_ y_energia_electrica": "manuf",  # Manufactura+energía
+    }
+
+    total_nuevos = 0
+    for clave, fn in fuentes.items():
+        try:
+            url = f"{BASE}/{fn}"
+            r = requests.get(url, timeout=TIMEOUT, headers={**HEADERS, "User-Agent": "Mozilla/5.0"})
+            r.raise_for_status()
+            text = r.content.decode("utf-8", errors="replace")
+            lines = text.strip().split("\n")
+            # Header: periodo;nivel_general_aperturas;indice_<clave>
+            # Agrupar por mes
+            por_mes = {}
+            for line in lines[1:]:
+                parts = line.strip().split(";")
+                if len(parts) < 3:
+                    continue
+                periodo, categoria, valor_str = parts[0], parts[1].strip(), parts[2]
+                if categoria not in SUB_KEYS:
+                    continue
+                try:
+                    valor = float(valor_str.replace(",", "."))
+                except ValueError:
+                    continue
+                f = periodo[:7]
+                key_local = SUB_KEYS[categoria]
+                por_mes.setdefault(f, {})[key_local] = round(valor, 2)
+
+            arr = D.setdefault(clave, [])
+            for f, vals in por_mes.items():
+                rec = next((x for x in arr if x.get("f") == f), None)
+                new = {"f": f, **vals}
+                if rec is None:
+                    arr.append(new)
+                    total_nuevos += 1
+                else:
+                    rec.update({k: v for k, v in new.items() if k != "f"})
+            arr.sort(key=lambda x: x["f"])
+            # Calcular vm (mensual) y via (interanual) sobre n
+            idx = {r["f"]: i for i, r in enumerate(arr)}
+            for r in arr:
+                if r.get("n") is None:
+                    continue
+                f = r["f"]
+                prev_f = prev_month(f)
+                py_f = prev_year(f)
+                if prev_f in idx and arr[idx[prev_f]].get("n"):
+                    r["vm"] = round((r["n"] / arr[idx[prev_f]]["n"] - 1) * 100, 2)
+                if py_f in idx and arr[idx[py_f]].get("n"):
+                    r["via"] = round((r["n"] / arr[idx[py_f]]["n"] - 1) * 100, 2)
+            if arr:
+                log(f"{clave.upper()}: actualizado (último {arr[-1]['f']}, n={arr[-1].get('n','—')} vm={arr[-1].get('vm','—')}%)", "ok")
+        except Exception as e:
+            log(f"{clave.upper()} CSV falló: {e}", "warn")
+    return total_nuevos
+
 def update_mora(D: dict) -> int:
     """Mora del sistema financiero (irregularidad de cartera) mensual.
 
@@ -1727,6 +1804,7 @@ def main() -> int:
     update_fiscal_indec(D)
     update_mora(D)
     update_ica_xls(D)
+    update_mayoristas(D)
     update_turismo(D)
     update_merval(D)
     update_daily_series(D)

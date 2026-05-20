@@ -423,6 +423,20 @@ hr.d{border:none;border-top:.5px solid var(--bd);margin:16px 0}
     <div id="ac-val" style="font-size:28px;font-weight:600;color:var(--red);padding:10px 0"></div>
     <div id="ac-det" style="font-size:11px;color:var(--tx2);margin-top:4px"></div>
   </div>
+
+  <hr class="d"/>
+  <div class="slbl">Inflación mayorista &#183; IPIM / IPIB / IPP &#183; INDEC</div>
+  <div class="info-box"><strong>IPIM</strong>: Índice de Precios Internos al por Mayor. Mide precios de productos vendidos en el mercado mayorista. Suele <em>anticipar</em> al IPC minorista. <strong>IPIB</strong>: Precios básicos (excluye impuestos). <strong>IPP</strong>: Productor (sólo nacionales). Base diciembre 2015 = 100. Fuente: INDEC.</div>
+  <div class="cgrid">
+    <div class="cc"><div class="cc-hd"><div><div class="cc-t">Mayoristas · variación mensual <span class="breal">INDEC</span></div><div class="cc-s">IPIM vs IPC (minorista) · indica si la mayorista se traslada</div></div><button class="dl-btn" onclick="dlCSV('ipim')">&#8595; CSV</button></div><div style="position:relative;height:220px"><canvas id="c-ipim-vm"></canvas></div></div>
+    <div class="cc"><div class="cc-hd"><div><div class="cc-t">Mayoristas · variación interanual <span class="breal">INDEC</span></div><div class="cc-s">IPIM / IPIB / IPP comparados</div></div></div><div style="position:relative;height:220px"><canvas id="c-ipim-via"></canvas></div></div>
+  </div>
+  <div class="cgrid">
+    <div class="cc"><div class="cc-hd"><div><div class="cc-t">IPIM por origen · variación mensual <span class="breal">INDEC</span></div><div class="cc-s">Productos nacionales · importados · primarios · manufactura</div></div></div><div style="position:relative;height:220px"><canvas id="c-ipim-cat"></canvas></div></div>
+    <div class="cc"><div class="cc-hd"><div><div class="cc-t">Brecha mayorista vs minorista <span class="breal">INDEC</span></div><div class="cc-s">IPIM − IPC mensual · positivo = mayorista corre por encima</div></div></div><div style="position:relative;height:220px"><canvas id="c-ipim-brecha"></canvas></div></div>
+  </div>
+  <div class="slbl">Detalle reciente</div>
+  <div style="position:relative;overflow-x:auto"><table id="t-ipim" class="data-table"></table></div>
 </div>
 
 <div id="pg-laboral" class="pg">
@@ -1651,6 +1665,92 @@ function buildPrecios(){
   }
   buildAcum();
   buildMesesCb();
+  buildMayoristas();
+}
+
+function buildMayoristas(){
+  var desde=(document.getElementById("p-desde")||{}).value||"2020-01";
+  var ipim=(D.ipim||[]).filter(function(r){return r.f>=desde&&r.vm!=null;});
+  var ipib=(D.ipib||[]).filter(function(r){return r.f>=desde&&r.vm!=null;});
+  var ipp =(D.ipp ||[]).filter(function(r){return r.f>=desde&&r.vm!=null;});
+  if(!ipim.length)return;
+
+  // 1) IPIM vm vs IPC vm
+  var ipcLk={};D.ipc.forEach(function(r){if(!r.proj&&r.vm!=null)ipcLk[r.f]=r.vm;});
+  mk("c-ipim-vm",ipim.map(function(r){return r.f;}),[
+    line("IPIM (mayorista)",ipim.map(function(r){return r.vm;}),C.red,{fill:false,borderWidth:1.75}),
+    line("IPC (minorista)",ipim.map(function(r){return ipcLk[r.f]!=null?ipcLk[r.f]:null;}),C.blue,{fill:false,borderWidth:1.5,borderDash:[4,3]})
+  ],{yf:function(v){return v+"%";},leg:true,milestones:"ipc"});
+
+  // 2) IPIM / IPIB / IPP via
+  var ipim_v=ipim.filter(function(r){return r.via!=null;});
+  var ipib_v=ipib.filter(function(r){return r.via!=null;});
+  var ipp_v =ipp .filter(function(r){return r.via!=null;});
+  // alinear labels (sólo donde haya datos)
+  var allF=Array.from(new Set([].concat(ipim_v.map(function(r){return r.f;}),ipib_v.map(function(r){return r.f;}),ipp_v.map(function(r){return r.f;})))).sort();
+  var ipim_m={};ipim_v.forEach(function(r){ipim_m[r.f]=r.via;});
+  var ipib_m={};ipib_v.forEach(function(r){ipib_m[r.f]=r.via;});
+  var ipp_m ={};ipp_v .forEach(function(r){ipp_m[r.f]=r.via;});
+  mk("c-ipim-via",allF,[
+    line("IPIM",allF.map(function(f){return ipim_m[f];}),C.red,{fill:false}),
+    line("IPIB",allF.map(function(f){return ipib_m[f];}),C.orange,{fill:false}),
+    line("IPP",allF.map(function(f){return ipp_m[f];}),C.teal,{fill:false}),
+  ],{yf:function(v){return v+"%";},leg:true});
+
+  // 3) IPIM por categoría (vm calculado a partir de n)
+  function vmFromN(arr, key){
+    var out=arr.map(function(r,i){
+      if(i===0||!r[key]||!arr[i-1][key])return null;
+      return Math.round((r[key]/arr[i-1][key]-1)*10000)/100;
+    });
+    return out;
+  }
+  var ipim_full=(D.ipim||[]).slice().sort(function(a,b){return a.f<b.f?-1:1;});
+  var ipim_f=ipim_full.filter(function(r){return r.f>=desde;});
+  // Necesitamos cálculo de vm sobre cada categoria desde la serie completa
+  var idxFull={};ipim_full.forEach(function(r,i){idxFull[r.f]=i;});
+  function vmCat(rec, key){
+    var prev=ipim_full[idxFull[rec.f]-1];
+    if(!prev||!prev[key]||!rec[key])return null;
+    return Math.round((rec[key]/prev[key]-1)*10000)/100;
+  }
+  mk("c-ipim-cat",ipim_f.map(function(r){return r.f;}),[
+    line("Nacionales",ipim_f.map(function(r){return vmCat(r,"nac");}),C.blue,{fill:false,borderWidth:1.5}),
+    line("Importados",ipim_f.map(function(r){return vmCat(r,"imp");}),C.orange,{fill:false,borderWidth:1.5}),
+    line("Primarios",ipim_f.map(function(r){return vmCat(r,"prim");}),C.green,{fill:false,borderWidth:1.5}),
+    line("Manuf+Energía",ipim_f.map(function(r){return vmCat(r,"manuf");}),C.purple,{fill:false,borderWidth:1.5}),
+  ],{yf:function(v){return v+"%";},leg:true});
+
+  // 4) Brecha IPIM - IPC
+  var brecha=ipim.map(function(r){
+    return ipcLk[r.f]!=null?Math.round((r.vm-ipcLk[r.f])*100)/100:null;
+  });
+  var brechaCl=brecha.map(function(v){return v==null?C.gray+"cc":(v>=0?C.red+"cc":C.green+"cc");});
+  mk("c-ipim-brecha",ipim.map(function(r){return r.f;}),[
+    {label:"IPIM − IPC (pp)",data:brecha,backgroundColor:brechaCl,borderRadius:2}
+  ],{type:"bar",yf:function(v){return (v>0?"+":"")+v.toFixed(1)+" pp";}});
+
+  // 5) Tabla detalle últimos 12 meses
+  var t=document.getElementById("t-ipim");if(!t)return;
+  var ult12=ipim.slice(-12).reverse();
+  var html='<thead><tr><th>Mes</th><th style="text-align:right">IPIM vm</th><th style="text-align:right">IPIM i.a.</th><th style="text-align:right">IPC vm</th><th style="text-align:right">Brecha (pp)</th><th style="text-align:right">Nac. vm</th><th style="text-align:right">Imp. vm</th></tr></thead><tbody>';
+  ult12.forEach(function(r){
+    var ipcVm=ipcLk[r.f];
+    var br=ipcVm!=null?(r.vm-ipcVm):null;
+    var brCls=br==null?"":(br>=0?"up":"dn");
+    var nac_vm=vmCat(r,"nac");
+    var imp_vm=vmCat(r,"imp");
+    html+='<tr>'
+      +'<td>'+r.f+'</td>'
+      +'<td class="num '+(r.vm>=0?"up":"dn")+'">'+(r.vm>=0?"+":"")+r.vm.toFixed(2)+"%"+'</td>'
+      +'<td class="num">'+(r.via!=null?(r.via>=0?"+":"")+r.via.toFixed(1)+"%":"—")+'</td>'
+      +'<td class="num">'+(ipcVm!=null?(ipcVm>=0?"+":"")+ipcVm.toFixed(2)+"%":"—")+'</td>'
+      +'<td class="num '+brCls+'">'+(br!=null?(br>=0?"+":"")+br.toFixed(2)+" pp":"—")+'</td>'
+      +'<td class="num">'+(nac_vm!=null?(nac_vm>=0?"+":"")+nac_vm.toFixed(2)+"%":"—")+'</td>'
+      +'<td class="num">'+(imp_vm!=null?(imp_vm>=0?"+":"")+imp_vm.toFixed(2)+"%":"—")+'</td>'
+      +'</tr>';
+  });
+  t.innerHTML=html+'</tbody>';
 }
 
 function drillIPC(el,k,l){
@@ -1944,6 +2044,9 @@ function buildPBI(){
 const SOURCES = [
   // Precios
   {serie:"IPC nivel general",       fuente:"INDEC",                via:"datos.gob.ar/series · ID 148.3_INIVELNAL_DICI_M_26 + BCRA 27/28",  freq:"mensual", clave:"ipc",      sec:"Precios"},
+  {serie:"IPIM mayorista nivel general + categorías", fuente:"INDEC", via:"CSV indice_ipim.csv · 138 aperturas, base dic-2015=100",         freq:"mensual", clave:"ipim",     sec:"Precios"},
+  {serie:"IPIB básicos al por mayor", fuente:"INDEC",               via:"CSV indice_ipib.csv",                                              freq:"mensual", clave:"ipib",     sec:"Precios"},
+  {serie:"IPP precios productor",    fuente:"INDEC",                via:"CSV indice_ipp.csv",                                               freq:"mensual", clave:"ipp",      sec:"Precios"},
   // Actividad
   {serie:"EMAE (general + 14 sectores)", fuente:"INDEC",            via:"XLS sh_emae_mensual_base2004.xls + sh_emae_actividad_base2004.xls",  freq:"mensual", clave:"emae",     sec:"Actividad"},
   {serie:"IPI manufacturero (general + 16 ramas)", fuente:"INDEC",   via:"XLS sh_ipi_manufacturero_YYYY.xls (Cuadros 1 + 5)",                  freq:"mensual", clave:"ipi",      sec:"Actividad"},
@@ -2137,6 +2240,7 @@ var CSV_MAP={
   pbi_anual:{g:function(){return D.pbi_anual;},n:"pbi_anual",f:["a","pbi","via"],h:["Anio","PBI_2004","VIA_pct"]},
   empresas:{g:function(){return D.empresas;},n:"empresas_oede",f:["a","n","via"],h:["Anio","Empresas_activas","Var_pct"]},
   fiscal:{g:function(){return D.fiscal;},n:"fiscal_spnf",f:["f","sal_prim","sal_fin"],h:["Mes","Resultado_primario_Mpesos","Resultado_financiero_Mpesos"]},
+  ipim:{g:function(){return D.ipim;},n:"ipim_indec",f:["f","n","vm","via","nac","imp","prim","manuf"],h:["Mes","Nivel","VM_pct","VIA_pct","Nacionales","Importados","Primarios","Manufactura"]},
   jubi:{g:function(){return D.jubi;},n:"jubilaciones",f:["f","hm","bo","tot"],h:["Fecha","Haber_min","Bonos","Total"]},
   turismo:{g:function(){return D.turismo;},n:"turismo",f:["f","rec","em","sal"],h:["Fecha","Receptivo","Emisivo","Saldo"]},
   bal_cam:{g:function(){return D.bal_cam||[];},n:"balance_cambiario_bcra",f:["f","total","cta_cte","bienes","cta_fin","var_rrii"],h:["Fecha","Total_BC","Cta_Corriente","Saldo_Bienes","Cta_Financiera","Var_RRII"]}
