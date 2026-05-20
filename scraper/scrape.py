@@ -1107,6 +1107,103 @@ def update_fiscal(D: dict) -> int:
         log(f"Fiscal SPNF: {len(encontrados)} meses procesados, total serie: {len(arr)}, último {arr[-1]['f']}", "ok")
     return nuevos
 
+def find_ica_xls_url() -> str | None:
+    """ICA publica `ica_cuadros_DD_MM_YY.xls` mensualmente. Buscar el más reciente."""
+    today = datetime.now(timezone.utc)
+    for delta in range(0, 5):
+        y, m = today.year, today.month - delta
+        while m <= 0:
+            m += 12
+            y -= 1
+        for d in [20, 21, 22, 23, 19, 18, 17, 24, 25, 26, 27]:
+            url = f"{INDEC_XLS_BASE}/ica_cuadros_{d:02d}_{m:02d}_{y % 100:02d}.xls"
+            try:
+                r = requests.head(url, timeout=8, headers={**HEADERS, "User-Agent": "Mozilla/5.0"})
+                if r.status_code == 200 and "excel" in r.headers.get("Content-Type", "").lower():
+                    return url
+            except Exception:
+                continue
+    return None
+
+def update_ica_xls(D: dict) -> int:
+    """Intercambio Comercial Argentino — XLS oficial INDEC.
+
+    Fuente: ica_cuadros_DD_MM_YY.xls Cuadro 1 (intercambio mensual del año en curso + anterior).
+    Schema D.bc[i]: {f, expo, impo, impo_abs, saldo, pp, moa, moi, cye}.
+    Esta función actualiza expo/impo/saldo. pp/moa/moi/cye vienen de la API series.
+    """
+    arr = D.setdefault("bc", [])
+    nuevos = 0
+    url = find_ica_xls_url()
+    if not url:
+        log("ICA XLS no encontrado (probados últimos 5 meses)", "warn")
+        return 0
+    try:
+        wb = download_xls(url)
+        sh = wb.sheet_by_name("c1")
+        meses_idx = {"enero":1,"febrero":2,"marzo":3,"abril":4,"mayo":5,"junio":6,
+                     "julio":7,"agosto":8,"septiembre":9,"octubre":10,"noviembre":11,"diciembre":12}
+        # Detectar año actual del header (R5 col 2 → "2026e" o similar)
+        anio_actual = None
+        anio_prev = None
+        for c in range(2, sh.ncols):
+            v = sh.cell_value(5, c)
+            if isinstance(v, str):
+                digits = "".join(ch for ch in v if ch.isdigit())
+                if len(digits) == 4 and digits.startswith("20"):
+                    if anio_actual is None:
+                        anio_actual = int(digits)
+                    elif anio_prev is None:
+                        anio_prev = int(digits)
+                        break
+        if anio_actual is None:
+            log("ICA XLS: no detecté año actual en header", "warn")
+            return 0
+
+        # Cuadro 1 layout:
+        # Col 2 = Expo año actual, col 3 = Expo año prev
+        # Col 6 = Impo año actual, col 7 = Impo año prev
+        # Col 10 = Saldo año actual, col 11 = Saldo año prev
+        # Filas 12-23 = meses Enero-Diciembre
+        for row_idx in range(12, 24):
+            mes_label = str(sh.cell_value(row_idx, 1)).strip().lower()
+            if mes_label not in meses_idx:
+                continue
+            m = meses_idx[mes_label]
+            for anio, col_expo, col_impo, col_saldo in [(anio_actual, 2, 6, 10), (anio_prev, 3, 7, 11)]:
+                if anio is None:
+                    continue
+                expo = _safe_float(sh.cell_value(row_idx, col_expo))
+                impo = _safe_float(sh.cell_value(row_idx, col_impo))
+                saldo = _safe_float(sh.cell_value(row_idx, col_saldo))
+                if expo is None and impo is None and saldo is None:
+                    continue
+                f = f"{anio:04d}-{m:02d}"
+                rec = next((x for x in arr if x.get("f") == f), None)
+                new = {"f": f}
+                if expo is not None:
+                    new["expo"] = round(expo, 1)
+                if impo is not None:
+                    new["impo_abs"] = round(impo, 1)
+                    new["impo"] = -round(impo, 1)
+                if saldo is not None:
+                    new["saldo"] = round(saldo, 1)
+                if rec is None:
+                    arr.append(new)
+                    nuevos += 1
+                else:
+                    for k, v in new.items():
+                        if k != "f" and v is not None:
+                            rec[k] = v
+        arr.sort(key=lambda x: x["f"])
+        # Último mes con expo válido
+        ult_real = [r for r in arr if r.get("expo")]
+        if ult_real:
+            log(f"ICA (XLS oficial {url.split('/')[-1]}): actualizado, último {ult_real[-1]['f']}", "ok")
+    except Exception as e:
+        log(f"ICA XLS falló: {e}", "warn")
+    return nuevos
+
 def update_mora(D: dict) -> int:
     """Mora del sistema financiero (irregularidad de cartera) mensual.
 
@@ -1629,6 +1726,7 @@ def main() -> int:
     update_empresas(D)
     update_fiscal_indec(D)
     update_mora(D)
+    update_ica_xls(D)
     update_turismo(D)
     update_merval(D)
     update_daily_series(D)
