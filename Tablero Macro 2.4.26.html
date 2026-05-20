@@ -1295,59 +1295,185 @@ function buildNoticiasSemana(){
 // ════════════════════════════════════════════════════════════════════════
 // HERO + RESUMEN EJECUTIVO + KPIs (Dashboard editorial)
 // ════════════════════════════════════════════════════════════════════════
-function buildHero(){
-  // Elegimos como hero el dato MÁS RECIENTE publicado (IPC, EMAE, IPI)
-  // Prioridad: IPC > EMAE > IPI > TC Oficial (siempre fresh)
+
+// Templates editoriales por tipo de serie — eyebrow, headline, contexto, sparkline
+var HERO_TPL = {
+  ipc: {
+    eyebrow: "Inflación · publicación más reciente",
+    headline: function(per, d){
+      return "La inflación de <span class='em'>"+lblMes(per)+"</span> fue <span class='"+(d.vm>=0?"up":"dn")+"'>+"+d.vm.toFixed(1)+"%</span>";
+    },
+    context: function(per, d){
+      var ipc_prev=D.ipc.filter(function(r){return !r.proj&&r.vm!=null&&r.f<per;}).slice(-1)[0];
+      var hist=D.ipc.filter(function(r){return !r.proj&&r.vm!=null&&r.f<=per;}).slice(-6);
+      var consec=0;for(var i=hist.length-1;i>0;i--){if(hist[i].vm<hist[i-1].vm-0.1)consec++;else break;}
+      var parts=["Acumulada interanual: <span class='em'>"+d.via.toFixed(1)+"%</span>."];
+      if(ipc_prev){
+        var delta=d.vm-ipc_prev.vm;
+        var ord=consec===2?"Segundo":consec===3?"Tercer":consec===4?"Cuarto":(consec+"º");
+        if(delta<-0.3&&consec>=2)parts.push("<span class='dn'>"+ord+" mes consecutivo</span> de desaceleración: venía de "+ipc_prev.vm.toFixed(1)+"% en "+lblMes(ipc_prev.f)+".");
+        else if(delta<-0.3)parts.push("<span class='dn'>Desaceleró</span> vs "+ipc_prev.vm.toFixed(1)+"% en "+lblMes(ipc_prev.f)+".");
+        else if(delta>0.3)parts.push("<span class='up'>Aceleró</span> vs "+ipc_prev.vm.toFixed(1)+"% en "+lblMes(ipc_prev.f)+".");
+        else parts.push("Se mantiene <span class='em'>estable</span> vs "+ipc_prev.vm.toFixed(1)+"% en "+lblMes(ipc_prev.f)+".");
+      }
+      return parts.join(" ");
+    },
+    spark: function(){return {arr:D.ipc.filter(function(r){return !r.proj&&r.vm!=null;}).slice(-24),key:"vm",unit:"%",fill:true,color:"red"};}
+  },
+  ipim: {
+    eyebrow: "Inflación mayorista · publicación más reciente",
+    headline: function(per, d){
+      return "La inflación mayorista de <span class='em'>"+lblMes(per)+"</span> fue <span class='"+(d.vm>=0?"up":"dn")+"'>+"+d.vm.toFixed(2)+"%</span>";
+    },
+    context: function(per, d){
+      var parts=[];
+      if(d.via!=null)parts.push("Acumulada interanual: <span class='em'>"+d.via.toFixed(1)+"%</span>.");
+      // Comparar con IPC del mismo mes
+      var ipc=D.ipc.find(function(r){return r.f===per&&!r.proj;});
+      if(ipc&&ipc.vm!=null){
+        var br=d.vm-ipc.vm;
+        if(br>0.5)parts.push("Corrió <span class='up'>+"+br.toFixed(1)+" pp por encima del IPC minorista</span> ("+ipc.vm.toFixed(1)+"%) — suele anticipar aceleración del IPC.");
+        else if(br<-0.5)parts.push("Quedó <span class='dn'>"+br.toFixed(1)+" pp por debajo del IPC</span> ("+ipc.vm.toFixed(1)+"%).");
+        else parts.push("Alineada con el IPC minorista ("+ipc.vm.toFixed(1)+"%).");
+      }
+      return parts.join(" ");
+    },
+    spark: function(){return {arr:(D.ipim||[]).filter(function(r){return r.vm!=null;}).slice(-24),key:"vm",unit:"%",fill:true,color:"red"};}
+  },
+  fiscal: {
+    eyebrow: "Resultado fiscal SPNF · publicación más reciente",
+    headline: function(per, d){
+      var sp=d.sal_prim;
+      return "El resultado primario de <span class='em'>"+lblMes(per)+"</span> fue <span class='"+(sp>=0?"dn":"up")+"'>"+(sp>=0?"+":"")+fmtN(sp/1000)+"K M$</span>";
+    },
+    context: function(per, d){
+      var parts=[];
+      if(d.sal_fin!=null)parts.push("Financiero: <span class='"+(d.sal_fin>=0?"dn":"up")+"'>"+(d.sal_fin>=0?"+":"")+fmtN(d.sal_fin/1000)+"K M$</span>.");
+      var prev=(D.fiscal||[]).filter(function(r){return r.f<per&&r.sal_prim!=null;}).slice(-1)[0];
+      if(prev){
+        var deltaPct=prev.sal_prim?((d.sal_prim/prev.sal_prim-1)*100):null;
+        if(d.sal_prim>=0&&prev.sal_prim>=0)parts.push("Vs "+lblMes(prev.f)+" ("+fmtN(prev.sal_prim/1000)+"K M$), "+(d.sal_prim>prev.sal_prim?"<span class='dn'>mejoró</span>":"<span class='up'>cayó</span>")+".");
+        else if(d.sal_prim>=0&&prev.sal_prim<0)parts.push("<span class='dn'>Pasó de déficit a superávit</span> vs "+lblMes(prev.f)+".");
+        else if(d.sal_prim<0&&prev.sal_prim>=0)parts.push("<span class='up'>Pasó de superávit a déficit</span> vs "+lblMes(prev.f)+".");
+      }
+      return parts.join(" ");
+    },
+    spark: function(){return {arr:(D.fiscal||[]).filter(function(r){return r.sal_prim!=null;}).slice(-24),key:"sal_prim",unit:" M$",fill:false,color:"mixed"};}
+  },
+  bc: {
+    eyebrow: "Comercio exterior · publicación más reciente",
+    headline: function(per, d){
+      var s=d.saldo;
+      return "El saldo comercial de <span class='em'>"+lblMes(per)+"</span> fue <span class='"+(s>=0?"dn":"up")+"'>"+(s>=0?"+":"")+"USD "+fmtN(s)+"M</span>";
+    },
+    context: function(per, d){
+      var parts=[];
+      parts.push("Exportaciones: <span class='em'>USD "+fmtN(d.expo)+"M</span>. Importaciones: USD "+fmtN(d.impo_abs||Math.abs(d.impo||0))+"M.");
+      var prevY=(D.bc||[]).find(function(r){return r.f===String(parseInt(per.substring(0,4))-1)+per.substring(4)&&r.expo!=null;});
+      if(prevY&&prevY.expo){
+        var viaE=(d.expo/prevY.expo-1)*100;
+        var viaI=(d.impo_abs&&prevY.impo_abs)?((d.impo_abs/prevY.impo_abs-1)*100):null;
+        var p="Expo <span class='"+(viaE>=0?"dn":"up")+"'>"+(viaE>=0?"+":"")+viaE.toFixed(1)+"%</span> i.a.";
+        if(viaI!=null)p+=", Impo <span class='"+(viaI>=0?"up":"dn")+"'>"+(viaI>=0?"+":"")+viaI.toFixed(1)+"%</span> i.a.";
+        parts.push(p+".");
+      }
+      return parts.join(" ");
+    },
+    spark: function(){return {arr:(D.bc||[]).filter(function(r){return r.saldo!=null;}).slice(-24),key:"saldo",unit:"M$",fill:false,color:"mixed"};}
+  },
+  emae: {
+    eyebrow: "Actividad económica · publicación más reciente",
+    headline: function(per, d){
+      var v=d.via;
+      return "El EMAE de <span class='em'>"+lblMes(per)+"</span> "+(v>=0?"creció":"cayó")+" <span class='"+(v>=0?"dn":"up")+"'>"+(v>=0?"+":"")+v.toFixed(1)+"%</span> i.a.";
+    },
+    context: function(per, d){
+      var parts=[];
+      if(d.vm!=null)parts.push("Mensual desestacionalizada: <span class='"+(d.vm>=0?"dn":"up")+"'>"+(d.vm>=0?"+":"")+d.vm.toFixed(1)+"%</span>.");
+      return parts.join(" ");
+    },
+    spark: function(){return {arr:D.emae.filter(function(r){return r.via!=null;}).slice(-24),key:"via",unit:"%",fill:false,color:"mixed"};}
+  },
+  ipi: {
+    eyebrow: "Industria manufacturera · publicación más reciente",
+    headline: function(per, d){
+      var v=d.via;
+      return "La industria de <span class='em'>"+lblMes(per)+"</span> "+(v>=0?"creció":"cayó")+" <span class='"+(v>=0?"dn":"up")+"'>"+(v>=0?"+":"")+v.toFixed(1)+"%</span> i.a.";
+    },
+    context: function(){return "Índice de Producción Industrial Manufacturero (IPI) INDEC, base 2004.";},
+    spark: function(){return {arr:D.ipi.filter(function(r){return r.via!=null;}).slice(-24),key:"via",unit:"%",fill:false,color:"mixed"};}
+  },
+  mora: {
+    eyebrow: "Irregularidad bancaria · publicación más reciente",
+    headline: function(per, d){
+      return "La mora en familias de <span class='em'>"+lblMes(per)+"</span> subió a <span class='up'>"+(d.fam||0).toFixed(2)+"%</span>";
+    },
+    context: function(per, d){
+      var prev=(D.mora||[]).filter(function(r){return r.f<per&&r.fam!=null;}).slice(-1)[0];
+      var parts=["Empresas: <span class='em'>"+(d.emp||0).toFixed(2)+"%</span>."];
+      if(prev)parts.push("Familias venía de "+prev.fam.toFixed(2)+"% en "+lblMes(prev.f)+".");
+      return parts.join(" ");
+    },
+    spark: function(){return {arr:(D.mora||[]).filter(function(r){return r.fam!=null;}).slice(-24),key:"fam",unit:"%",fill:true,color:"red"};}
+  },
+  turismo: {
+    eyebrow: "Turismo internacional · publicación más reciente",
+    headline: function(per, d){
+      var sal=d.sal;
+      return "El saldo turístico de <span class='em'>"+lblMes(per)+"</span> fue <span class='"+(sal>=0?"dn":"up")+"'>"+(sal>=0?"+":"")+fmtN(sal)+"</span> personas";
+    },
+    context: function(per, d){
+      return "Receptivo: <span class='em'>"+fmtN(d.rec)+"</span> personas. Emisivo: "+fmtN(d.em)+".";
+    },
+    spark: function(){return {arr:(D.turismo||[]).filter(function(r){return r.sal!=null;}).slice(-24),key:"sal",unit:"",fill:false,color:"mixed"};}
+  }
+};
+
+function elegirHero(){
+  // 1) Si hay _meta.publicaciones, tomar la más reciente por publicado_at de las series con template
+  var pubs=(D._meta&&D._meta.publicaciones)||[];
+  var candidatos=pubs.filter(function(p){return HERO_TPL[p.serie];});
+  if(candidatos.length){
+    candidatos.sort(function(a,b){
+      var pa=a.publicado_at||a.detectado_at||"";
+      var pb=b.publicado_at||b.detectado_at||"";
+      return pa<pb?1:-1;
+    });
+    return candidatos[0];
+  }
+  // 2) Fallback: el último IPC real
   var ipc=D.ipc.filter(function(r){return !r.proj&&r.vm!=null;}).slice(-1)[0];
-  var ipc_prev=D.ipc.filter(function(r){return !r.proj&&r.vm!=null&&r.f<ipc.f;}).slice(-1)[0];
-  if(!ipc)return;
-  // Trend: ¿cuántos meses consecutivos de desaceleración?
-  var hist=D.ipc.filter(function(r){return !r.proj&&r.vm!=null;}).slice(-6);
-  var consec=0;
-  for(var i=hist.length-1;i>0;i--){
-    if(hist[i].vm<hist[i-1].vm-0.1)consec++;
-    else break;
-  }
+  if(ipc)return {serie:"ipc", periodo:ipc.f, datos:ipc};
+  return null;
+}
 
-  document.getElementById("hero-eyebrow").textContent="Inflación · publicación más reciente";
-  document.getElementById("hero-headline").innerHTML=
-    "La inflación de <span class='em'>"+lblMes(ipc.f)+"</span> fue <span class='"+(ipc.vm>=0?"up":"dn")+"'>+"+ipc.vm.toFixed(1)+"%</span>";
-
-  var ctxParts=[];
-  ctxParts.push("Acumulada interanual: <span class='em'>"+ipc.via.toFixed(1)+"%</span>.");
-  if(ipc_prev){
-    var delta=ipc.vm-ipc_prev.vm;
-    var ordinal=consec===2?"Segundo":consec===3?"Tercer":consec===4?"Cuarto":consec===5?"Quinto":(consec+"º");
-    if(delta<-0.3&&consec>=2){
-      ctxParts.push("<span class='dn'>"+ordinal+" mes consecutivo</span> de desaceleración: venía de "+ipc_prev.vm.toFixed(1)+"% en "+lblMes(ipc_prev.f)+".");
-    } else if(delta<-0.3){
-      ctxParts.push("<span class='dn'>Desaceleró</span> vs "+ipc_prev.vm.toFixed(1)+"% en "+lblMes(ipc_prev.f)+".");
-    } else if(delta>0.3){
-      ctxParts.push("<span class='up'>Aceleró</span> vs "+ipc_prev.vm.toFixed(1)+"% en "+lblMes(ipc_prev.f)+".");
-    } else {
-      ctxParts.push("Se mantiene <span class='em'>estable</span> vs "+ipc_prev.vm.toFixed(1)+"% en "+lblMes(ipc_prev.f)+".");
-    }
-  }
-  document.getElementById("hero-context").innerHTML=ctxParts.join(" ");
-
-  // Sparkline del IPC últimos 24 meses (var mensual)
-  var last24=D.ipc.filter(function(r){return !r.proj&&r.vm!=null;}).slice(-24);
-  // Necesitamos un chart minimalista sin grids ni labels
+function drawSparkHero(spark){
   if(CH["c-hero"]){CH["c-hero"].destroy();}
-  var cnv=document.getElementById("c-hero");if(!cnv)return;
+  var cnv=document.getElementById("c-hero");if(!cnv||!spark.arr.length)return;
+  var values=spark.arr.map(function(r){return r[spark.key];});
+  var col=spark.color==="red"?(DARK?"#f87171":"#b91c1c"):(DARK?"#a8a59c":"#525050");
+  var bg=spark.color==="red"?(DARK?"rgba(248,113,113,.12)":"rgba(185,28,28,.08)"):"transparent";
+  var pointColors,pointBgs;
+  if(spark.color==="mixed"){
+    pointColors=values.map(function(v){return (v||0)>=0?(DARK?"#4ade80":"#15803d"):(DARK?"#f87171":"#b91c1c");});
+    col=DARK?"#a8a59c":"#525050";
+  }
   CH["c-hero"]=new Chart(cnv,{
     type:"line",
     data:{
-      labels:last24.map(function(r){return r.f;}),
+      labels:spark.arr.map(function(r){return r.f;}),
       datasets:[{
-        label:"VM%",
-        data:last24.map(function(r){return r.vm;}),
-        borderColor:DARK?"#f87171":"#b91c1c",
-        backgroundColor:DARK?"rgba(248,113,113,.12)":"rgba(185,28,28,.08)",
-        fill:true,
+        label:spark.unit,
+        data:values,
+        borderColor:col,
+        backgroundColor:bg,
+        fill:spark.fill,
         tension:.3,
-        pointRadius:0,
-        pointHoverRadius:4,
+        pointRadius:spark.color==="mixed"?2.5:0,
+        pointHoverRadius:5,
+        pointBackgroundColor:pointColors||col,
+        pointBorderColor:DARK?"#161614":"#ffffff",
+        pointBorderWidth:1,
         borderWidth:1.75,
         cubicInterpolationMode:"monotone"
       }]
@@ -1356,15 +1482,27 @@ function buildHero(){
       responsive:true,maintainAspectRatio:false,
       plugins:{
         legend:{display:false},
-        tooltip:{enabled:true,callbacks:{label:function(ctx){return " "+ctx.parsed.y.toFixed(1)+"% en "+lblMes(ctx.label);}}}
+        tooltip:{enabled:true,callbacks:{label:function(ctx){return " "+(typeof ctx.parsed.y==="number"?ctx.parsed.y.toLocaleString("es-AR",{maximumFractionDigits:2}):ctx.parsed.y)+spark.unit+" en "+lblMes(ctx.label);}}}
       },
-      scales:{
-        x:{display:false},
-        y:{display:false}
-      },
+      scales:{x:{display:false},y:{display:false}},
       interaction:{mode:"index",intersect:false}
     }
   });
+}
+
+function buildHero(){
+  var hero=elegirHero();
+  if(!hero)return;
+  var tpl=HERO_TPL[hero.serie];
+  if(!tpl){
+    document.getElementById("hero-block").style.display="none";
+    return;
+  }
+  document.getElementById("hero-block").style.display="block";
+  document.getElementById("hero-eyebrow").textContent=tpl.eyebrow;
+  document.getElementById("hero-headline").innerHTML=tpl.headline(hero.periodo, hero.datos);
+  document.getElementById("hero-context").innerHTML=tpl.context(hero.periodo, hero.datos);
+  drawSparkHero(tpl.spark());
 }
 
 function buildExecSummary(){
