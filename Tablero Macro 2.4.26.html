@@ -1184,14 +1184,15 @@ function buildHero(){
   ctxParts.push("Acumulada interanual: <span class='em'>"+ipc.via.toFixed(1)+"%</span>.");
   if(ipc_prev){
     var delta=ipc.vm-ipc_prev.vm;
-    var trend=trendWord(delta);
-    if(trend==="desaceleró"&&consec>=2){
-      ctxParts.push("<span class='dn'>Tercer mes consecutivo</span> de desaceleración: ".replace("Tercer", consec===2?"Segundo":consec===3?"Tercer":consec+"º")+
-                    "venía de "+ipc_prev.vm.toFixed(1)+"% en "+lblMes(ipc_prev.f)+".");
-    } else if(trend==="aceleró"){
-      ctxParts.push("<span class='up'>Aceleración</span> vs "+ipc_prev.vm.toFixed(1)+"% en "+lblMes(ipc_prev.f)+".");
+    var ordinal=consec===2?"Segundo":consec===3?"Tercer":consec===4?"Cuarto":consec===5?"Quinto":(consec+"º");
+    if(delta<-0.3&&consec>=2){
+      ctxParts.push("<span class='dn'>"+ordinal+" mes consecutivo</span> de desaceleración: venía de "+ipc_prev.vm.toFixed(1)+"% en "+lblMes(ipc_prev.f)+".");
+    } else if(delta<-0.3){
+      ctxParts.push("<span class='dn'>Desaceleró</span> vs "+ipc_prev.vm.toFixed(1)+"% en "+lblMes(ipc_prev.f)+".");
+    } else if(delta>0.3){
+      ctxParts.push("<span class='up'>Aceleró</span> vs "+ipc_prev.vm.toFixed(1)+"% en "+lblMes(ipc_prev.f)+".");
     } else {
-      ctxParts.push("Vs "+ipc_prev.vm.toFixed(1)+"% en "+lblMes(ipc_prev.f)+", se mantiene "+trend+".");
+      ctxParts.push("Se mantiene <span class='em'>estable</span> vs "+ipc_prev.vm.toFixed(1)+"% en "+lblMes(ipc_prev.f)+".");
     }
   }
   document.getElementById("hero-context").innerHTML=ctxParts.join(" ");
