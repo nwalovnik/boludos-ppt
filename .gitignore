@@ -6,3 +6,6 @@ venv/
 Thumbs.db
 Screenshots/
 *.swp
+scraper/_test_*
+scraper/_extract_*
+scraper/_tmp_*
