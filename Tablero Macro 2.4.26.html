@@ -3647,6 +3647,8 @@ function parseGenericXls(wb, filename) {
 // Recargar data.json (lo que actualiza el GitHub Action diariamente)
 function _applyDataJson(dj){
   var changed = 0;
+  // Copiar _meta SEPARADAMENTE en D para que hero/news puedan leerlo
+  if (dj._meta) { D._meta = dj._meta; }
   Object.keys(dj).forEach(function(k){
     if (k === "_meta") return;
     if (!Array.isArray(dj[k])) return;
