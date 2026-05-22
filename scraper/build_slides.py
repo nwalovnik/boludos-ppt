@@ -1,26 +1,36 @@
 """
-Generador de PPTX con las publicaciones de la semana.
+Generador de PPTX con las publicaciones de la semana, estilo editorial Comex.
 
-Lee data.json (campo _meta.publicaciones) y genera un slide por publicación
-con el estilo del ejemplo "Comex" del usuario:
-  - Título grande arriba en mayúsculas, color cyan #00B2C9
-  - Texto principal en gris #3F3F3F, font Encode Sans
-  - Bullets editoriales con narrativa
-  - Footer "Fuente: elaboración propia en base a INDEC/..."
+Cada slide incluye:
+  - Banner cyan top
+  - Título grande en cyan (mayúsculas)
+  - Lede editorial (párrafo principal)
+  - Bullets con narrativa específica por serie
+  - Gráfico matplotlib (línea o barras) con últimos 24 meses
+  - Tabla con detalle de los últimos 6 meses
+  - Footer "Fuente: elaboración propia en base a..."
 
-Output: site/publicaciones_semana.pptx
+Output: publicaciones_semana.pptx en la raíz del repo.
 """
 from __future__ import annotations
 
+import io
 import json
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
+
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+from matplotlib.ticker import FuncFormatter
 
 from pptx import Presentation
 from pptx.util import Inches, Pt, Emu
 from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
 from pptx.enum.shapes import MSO_SHAPE
+from pptx.oxml.ns import qn
+from lxml import etree
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA_PATH = ROOT / "data.json"
@@ -28,152 +38,324 @@ OUT_PATH = ROOT / "publicaciones_semana.pptx"
 
 # Paleta editorial Comex
 GRIS_TX = RGBColor(0x3F, 0x3F, 0x3F)
+GRIS_LX = RGBColor(0x6A, 0x67, 0x60)
+GRIS_BG = RGBColor(0xF2, 0xF2, 0xF0)
 CYAN    = RGBColor(0x00, 0xB2, 0xC9)
+CYAN_HX = "#00B2C9"
 ROJO    = RGBColor(0xB9, 0x1C, 0x1C)
+ROJO_HX = "#B91C1C"
 VERDE   = RGBColor(0x15, 0x80, 0x3D)
+VERDE_HX= "#15803D"
+NEGRO   = RGBColor(0x1A, 0x1A, 0x1A)
 BLANCO  = RGBColor(0xFF, 0xFF, 0xFF)
 FONT    = "Encode Sans"
 
 MESES_ES = ["enero","febrero","marzo","abril","mayo","junio",
             "julio","agosto","septiembre","octubre","noviembre","diciembre"]
 
+# ──────────────────────────────────────────────────────────────────────────────
+# Helpers
+# ──────────────────────────────────────────────────────────────────────────────
 def lbl_mes(periodo: str) -> str:
     if not periodo or len(periodo) < 7 or "-" not in periodo:
-        return periodo
+        return str(periodo)
     y, m = periodo[:4], int(periodo[5:7])
-    return f"{MESES_ES[m-1]} de {y}"
+    return f"{MESES_ES[m-1]} {y}"
 
 def fmt_n(v, decimals=0) -> str:
-    if v is None:
+    if v is None or v == "":
         return "—"
     if isinstance(v, (int, float)):
         s = f"{v:,.{decimals}f}"
         return s.replace(",", "X").replace(".", ",").replace("X", ".")
     return str(v)
 
+def fmt_pct(v, decimals=1) -> str:
+    if v is None: return "—"
+    sign = "+" if v >= 0 else ""
+    return f"{sign}{v:.{decimals}f}%"
+
+def fmt_money(v, scale=1, unit="M$") -> str:
+    if v is None: return "—"
+    return f"{fmt_n(v/scale, 1)} {unit}"
+
 def ultimo_lunes() -> datetime:
-    """Lunes 00:00 UTC de la semana en curso."""
     d = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
-    diff = d.weekday()  # 0 = lunes
-    return d - timedelta(days=diff)
+    return d - timedelta(days=d.weekday())
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Templates por serie — generan título + 3-4 bullets de narrativa
+# Matplotlib chart builder con estilo editorial Comex
 # ──────────────────────────────────────────────────────────────────────────────
-def gen_ipc(p):
+def style_axes(ax, title=None):
+    """Aplica el estilo editorial Comex a un Axes matplotlib."""
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["left"].set_color("#9A9990")
+    ax.spines["bottom"].set_color("#9A9990")
+    ax.spines["left"].set_linewidth(0.7)
+    ax.spines["bottom"].set_linewidth(0.7)
+    ax.tick_params(axis="x", rotation=45, labelsize=8.5, colors="#525050", length=2.5)
+    ax.tick_params(axis="y", labelsize=8.5, colors="#525050", length=2.5)
+    ax.grid(True, axis="y", alpha=0.18, linewidth=0.5)
+    if title:
+        ax.set_title(title, fontsize=11, color="#1A1A1A", loc="left",
+                     pad=10, fontweight="bold")
+
+def line_chart(arr, x_key, y_keys, labels, colors, title=None, y_fmt=None, n_meses=24):
+    """Chart de líneas con últimos N meses. Devuelve BytesIO con PNG."""
+    if not arr:
+        return None
+    data = arr[-n_meses:]
+    x = [r.get(x_key, "") for r in data]
+    fig, ax = plt.subplots(figsize=(6.5, 3.4), dpi=140)
+    fig.patch.set_facecolor("white")
+    ax.set_facecolor("white")
+    for y_key, lbl, col in zip(y_keys, labels, colors):
+        y = [r.get(y_key) for r in data]
+        ax.plot(x, y, color=col, linewidth=2.0, marker="o", markersize=3.2,
+                label=lbl, markerfacecolor=col, markeredgecolor="white", markeredgewidth=0.6)
+    style_axes(ax, title)
+    if y_fmt:
+        ax.yaxis.set_major_formatter(FuncFormatter(y_fmt))
+    if len(labels) > 1:
+        ax.legend(loc="best", fontsize=8.5, frameon=False, labelcolor="#525050")
+    # Reducir cantidad de ticks X
+    n = len(x)
+    if n > 12:
+        step = max(1, n // 8)
+        for i, lbl_t in enumerate(ax.get_xticklabels()):
+            if i % step != 0:
+                lbl_t.set_visible(False)
+    plt.tight_layout()
+    buf = io.BytesIO()
+    plt.savefig(buf, format="png", bbox_inches="tight", facecolor="white", dpi=140)
+    plt.close(fig)
+    buf.seek(0)
+    return buf
+
+def bar_chart(arr, x_key, y_key, title=None, y_fmt=None, n_meses=24, semantic=True):
+    """Chart de barras con colores semánticos (verde positivo / rojo negativo)."""
+    if not arr:
+        return None
+    data = arr[-n_meses:]
+    x = [r.get(x_key, "") for r in data]
+    y = [r.get(y_key) or 0 for r in data]
+    colors = [VERDE_HX if v >= 0 else ROJO_HX for v in y] if semantic else [CYAN_HX] * len(y)
+    fig, ax = plt.subplots(figsize=(6.5, 3.4), dpi=140)
+    fig.patch.set_facecolor("white")
+    ax.set_facecolor("white")
+    ax.bar(x, y, color=colors, width=0.7, edgecolor="none")
+    ax.axhline(0, color="#9A9990", linewidth=0.5)
+    style_axes(ax, title)
+    if y_fmt:
+        ax.yaxis.set_major_formatter(FuncFormatter(y_fmt))
+    n = len(x)
+    if n > 12:
+        step = max(1, n // 8)
+        for i, lbl_t in enumerate(ax.get_xticklabels()):
+            if i % step != 0:
+                lbl_t.set_visible(False)
+    plt.tight_layout()
+    buf = io.BytesIO()
+    plt.savefig(buf, format="png", bbox_inches="tight", facecolor="white", dpi=140)
+    plt.close(fig)
+    buf.seek(0)
+    return buf
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Templates por serie — generan: título, lede, bullets, chart, tabla
+# ──────────────────────────────────────────────────────────────────────────────
+def tpl_ipc(p, D):
     d = p["datos"]
-    titulo = f"INFLACIÓN DE {lbl_mes(p['periodo']).upper()}: {('+' if d.get('vm',0)>=0 else '')}{d.get('vm','—')}%"
-    lede = (f"El IPC nivel general aumentó {('+' if d.get('vm',0)>=0 else '')}{d.get('vm','—')}% mensual en "
+    arr = D.get("ipc", [])
+    arr_real = [r for r in arr if not r.get("proj") and r.get("vm") is not None]
+    titulo = f"INFLACIÓN {lbl_mes(p['periodo']).upper()}: {fmt_pct(d.get('vm'))}"
+    lede = (f"El IPC nivel general aumentó {fmt_pct(d.get('vm'))} mensual en {lbl_mes(p['periodo'])}, "
+            f"acumulando {d.get('via','—')}% interanual. INDEC publicó el indicador "
+            f"con la metodología vigente.")
+    bullets = [
+        f"Variación mensual: {fmt_pct(d.get('vm'))}",
+        f"Variación interanual: {d.get('via','—')}%",
+        f"Acumulado últimos 6 meses: {sum((r.get('vm') or 0) for r in arr_real[-6:]):.1f}% (suma simple)",
+    ]
+    chart = bar_chart(arr_real, "f", "vm",
+                     title="Inflación mensual %",
+                     y_fmt=lambda x, p: f"{x:.0f}%",
+                     n_meses=24)
+    # Tabla últimos 6 meses
+    tabla = [["Mes", "VM %", "VIA %"]]
+    for r in arr_real[-6:][::-1]:
+        tabla.append([lbl_mes(r["f"]).capitalize(), fmt_pct(r.get("vm")), fmt_pct(r.get("via"))])
+    return titulo, lede, bullets, chart, tabla
+
+def tpl_ipim(p, D):
+    d = p["datos"]
+    arr = D.get(p["serie"], [])
+    arr_v = [r for r in arr if r.get("vm") is not None]
+    nombre = {"ipim":"IPIM mayorista", "ipib":"IPIB básicos", "ipp":"IPP productor"}.get(p["serie"], "IPIM")
+    titulo = f"{nombre.upper()} {lbl_mes(p['periodo']).upper()}: +{d.get('vm','—')}%"
+    lede = (f"El {nombre} registró un aumento de +{d.get('vm','—')}% mensual en "
             f"{lbl_mes(p['periodo'])}, acumulando {d.get('via','—')}% interanual. "
-            f"INDEC publicó el indicador con la metodología vigente.")
+            f"Suele anticipar el IPC minorista.")
     bullets = [
-        f"Variación mensual: {('+' if d.get('vm',0)>=0 else '')}{d.get('vm','—')}% — IPC nivel general INDEC.",
-        f"Variación interanual: {d.get('via','—')}% — acumulado últimos 12 meses.",
+        f"Nivel general: +{d.get('vm','—')}% mensual",
+        f"Interanual: {d.get('via','—')}%",
     ]
-    return titulo, lede, bullets
+    # Comparación con IPC del mismo mes
+    ipc = next((r for r in D.get("ipc", []) if r.get("f") == p["periodo"] and not r.get("proj")), None)
+    if ipc and ipc.get("vm") is not None:
+        br = d.get("vm", 0) - ipc["vm"]
+        bullets.append(f"Brecha vs IPC minorista: {fmt_pct(br)} pp (IPC {fmt_pct(ipc['vm'])})")
+    chart = bar_chart(arr_v, "f", "vm",
+                     title=f"{nombre} mensual %",
+                     y_fmt=lambda x, p: f"{x:.0f}%", n_meses=24)
+    tabla = [["Mes", "VM %", "VIA %"]]
+    for r in arr_v[-6:][::-1]:
+        tabla.append([lbl_mes(r["f"]).capitalize(), fmt_pct(r.get("vm"), 2), fmt_pct(r.get("via"))])
+    return titulo, lede, bullets, chart, tabla
 
-def gen_ipim(p):
+def tpl_bc(p, D):
     d = p["datos"]
-    titulo = f"INFLACIÓN MAYORISTA {lbl_mes(p['periodo']).upper()}: +{d.get('vm','—')}%"
-    lede = (f"El IPIM (Índice de Precios Internos al por Mayor) registró un aumento "
-            f"de +{d.get('vm','—')}% mensual en {lbl_mes(p['periodo'])}, "
-            f"acumulando {d.get('via','—')}% interanual.")
-    bullets = [
-        f"Nivel general IPIM: +{d.get('vm','—')}% mensual — INDEC.",
-        f"Interanual: {d.get('via','—')}%.",
-        "El IPIM suele anticipar el IPC minorista: brechas positivas indican presión sobre góndolas en meses siguientes.",
-    ]
-    return titulo, lede, bullets
-
-def gen_bc(p):
-    d = p["datos"]
+    arr = D.get("bc", [])
+    arr_v = [r for r in arr if r.get("saldo") is not None]
     saldo = d.get("saldo", 0)
     expo = d.get("expo", 0)
     impo = d.get("impo_abs") or abs(d.get("impo", 0))
     signo = "SUPERÁVIT" if saldo >= 0 else "DÉFICIT"
     titulo = f"BALANZA COMERCIAL {lbl_mes(p['periodo']).upper()}: {signo} USD {fmt_n(abs(saldo))}M"
+    # Var i.a. de expo/impo
+    prev_y_period = f"{int(p['periodo'][:4]) - 1}{p['periodo'][4:]}"
+    prev_y = next((r for r in arr if r.get("f") == prev_y_period), None)
+    via_e = f"{((expo / prev_y['expo'] - 1) * 100):+.1f}%" if prev_y and prev_y.get("expo") else "—"
+    via_i = f"{((impo / prev_y['impo_abs'] - 1) * 100):+.1f}%" if prev_y and prev_y.get("impo_abs") else "—"
     lede = (f"El intercambio comercial argentino en {lbl_mes(p['periodo'])} arrojó un "
             f"{signo.lower()} de USD {fmt_n(abs(saldo))} millones. "
-            f"Las exportaciones alcanzaron USD {fmt_n(expo)} millones y "
-            f"las importaciones USD {fmt_n(impo)} millones.")
+            f"Exportaciones: USD {fmt_n(expo)} M ({via_e} i.a.). "
+            f"Importaciones: USD {fmt_n(impo)} M ({via_i} i.a.).")
     bullets = [
-        f"Exportaciones: USD {fmt_n(expo)} millones.",
-        f"Importaciones: USD {fmt_n(impo)} millones.",
-        f"Saldo comercial: USD {('+' if saldo>=0 else '')}{fmt_n(saldo)} millones.",
+        f"Exportaciones: USD {fmt_n(expo)} millones ({via_e} i.a.)",
+        f"Importaciones: USD {fmt_n(impo)} millones ({via_i} i.a.)",
+        f"Saldo comercial: USD {('+' if saldo>=0 else '')}{fmt_n(saldo)} M",
     ]
-    return titulo, lede, bullets
+    chart = bar_chart(arr_v, "f", "saldo",
+                     title="Saldo comercial mensual (USD millones)",
+                     y_fmt=lambda x, p: f"{x:,.0f}".replace(",", "."), n_meses=24)
+    tabla = [["Mes", "Expo USD M", "Impo USD M", "Saldo USD M"]]
+    for r in arr_v[-6:][::-1]:
+        tabla.append([lbl_mes(r["f"]).capitalize(), fmt_n(r.get("expo")),
+                     fmt_n(r.get("impo_abs") or abs(r.get("impo", 0))), fmt_n(r.get("saldo"))])
+    return titulo, lede, bullets, chart, tabla
 
-def gen_fiscal(p):
+def tpl_fiscal(p, D):
     d = p["datos"]
+    arr = D.get("fiscal", [])
+    arr_v = [r for r in arr if r.get("sal_prim") is not None]
     sp = d.get("sal_prim", 0)
     sf = d.get("sal_fin", 0)
     signo = "SUPERÁVIT" if sp >= 0 else "DÉFICIT"
-    titulo = f"RESULTADO FISCAL {lbl_mes(p['periodo']).upper()}: {signo} PRIMARIO ${fmt_n(abs(sp/1000))} MIL MILLONES"
-    lede = (f"El Sector Público Nacional No Financiero registró un resultado primario "
-            f"de {('+' if sp>=0 else '')}{fmt_n(sp/1000)} mil millones de pesos en "
-            f"{lbl_mes(p['periodo'])}. El resultado financiero (neto de intereses) "
-            f"alcanzó {('+' if sf>=0 else '')}{fmt_n(sf/1000)} mil millones.")
+    titulo = f"FISCAL {lbl_mes(p['periodo']).upper()}: {signo} PRIMARIO ${fmt_n(abs(sp/1000))}K M$"
+    lede = (f"El Sector Público Nacional No Financiero registró un resultado primario de "
+            f"{('+' if sp>=0 else '')}{fmt_n(sp/1000)} mil millones de pesos en {lbl_mes(p['periodo'])}. "
+            f"El resultado financiero alcanzó {('+' if sf>=0 else '')}{fmt_n(sf/1000)}K M$.")
     bullets = [
-        f"Resultado primario: {('+' if sp>=0 else '')}{fmt_n(sp/1000)} mil millones de pesos.",
-        f"Resultado financiero: {('+' if sf>=0 else '')}{fmt_n(sf/1000)} mil millones de pesos (neto de intereses).",
-        f"Fuente: Secretaría de Hacienda, base caja (Metodología 2017).",
+        f"Resultado primario: {('+' if sp>=0 else '')}{fmt_n(sp/1000)} mil millones de pesos",
+        f"Resultado financiero: {('+' if sf>=0 else '')}{fmt_n(sf/1000)} mil millones",
+        f"Fuente: Secretaría de Hacienda, base caja (Metodología 2017)",
     ]
-    return titulo, lede, bullets
+    chart = bar_chart(arr_v, "f", "sal_prim",
+                     title="Resultado primario SPNF (millones de pesos)",
+                     y_fmt=lambda x, p: f"{x/1000:,.0f}K".replace(",", "."), n_meses=24)
+    tabla = [["Mes", "Primario M$", "Financiero M$"]]
+    for r in arr_v[-6:][::-1]:
+        tabla.append([lbl_mes(r["f"]).capitalize(),
+                     fmt_n(r.get("sal_prim")), fmt_n(r.get("sal_fin"))])
+    return titulo, lede, bullets, chart, tabla
 
-def gen_emae(p):
+def tpl_emae(p, D):
     d = p["datos"]
+    arr = D.get("emae", [])
+    arr_v = [r for r in arr if r.get("via") is not None]
     via = d.get("via", 0)
     vm = d.get("vm")
     verbo = "CRECIÓ" if via >= 0 else "CAYÓ"
-    titulo = f"EMAE {lbl_mes(p['periodo']).upper()}: ACTIVIDAD {verbo} {('+' if via>=0 else '')}{via}% I.A."
-    lede = (f"El Estimador Mensual de Actividad Económica (EMAE) registró una variación "
-            f"interanual de {('+' if via>=0 else '')}{via}% en {lbl_mes(p['periodo'])}. "
-            + (f"En la medición desestacionalizada, el indicador se movió {('+' if vm>=0 else '')}{vm}% respecto al mes anterior." if vm is not None else ""))
+    titulo = f"EMAE {lbl_mes(p['periodo']).upper()}: ACTIVIDAD {verbo} {fmt_pct(via)} I.A."
+    lede = (f"El Estimador Mensual de Actividad Económica (EMAE) registró una variación interanual "
+            f"de {fmt_pct(via)} en {lbl_mes(p['periodo'])}."
+            + (f" En la medición desestacionalizada, el indicador se movió {fmt_pct(vm)} respecto al mes anterior." if vm is not None else ""))
     bullets = [
-        f"Variación interanual: {('+' if via>=0 else '')}{via}%.",
+        f"Variación interanual: {fmt_pct(via)}",
     ]
     if vm is not None:
-        bullets.append(f"Variación mensual desestacionalizada: {('+' if vm>=0 else '')}{vm}%.")
-    bullets.append("Serie INDEC, base 2004=100. Mide el nivel general de actividad económica argentina.")
-    return titulo, lede, bullets
+        bullets.append(f"Variación mensual desestacionalizada: {fmt_pct(vm)}")
+    bullets.append("Serie INDEC, base 2004=100. Mide el nivel general de actividad.")
+    chart = bar_chart(arr_v, "f", "via",
+                     title="EMAE variación interanual %",
+                     y_fmt=lambda x, p: f"{x:.0f}%", n_meses=24)
+    tabla = [["Mes", "Original", "VIA %", "Desest."]]
+    for r in arr_v[-6:][::-1]:
+        tabla.append([lbl_mes(r["f"]).capitalize(),
+                     fmt_n(r.get("orig"), 1), fmt_pct(r.get("via")),
+                     fmt_n(r.get("dest"), 1) if r.get("dest") else "—"])
+    return titulo, lede, bullets, chart, tabla
 
-def gen_ipi(p):
+def tpl_ipi(p, D):
     d = p["datos"]
+    arr = D.get("ipi", [])
+    arr_v = [r for r in arr if r.get("via") is not None]
     via = d.get("via", 0)
     verbo = "CRECIÓ" if via >= 0 else "CAYÓ"
-    titulo = f"INDUSTRIA {lbl_mes(p['periodo']).upper()}: IPI {verbo} {('+' if via>=0 else '')}{via}% I.A."
-    lede = (f"El Índice de Producción Industrial Manufacturero (IPI) registró una "
-            f"variación interanual de {('+' if via>=0 else '')}{via}% en {lbl_mes(p['periodo'])}.")
+    titulo = f"INDUSTRIA {lbl_mes(p['periodo']).upper()}: IPI {verbo} {fmt_pct(via)} I.A."
+    lede = (f"El Índice de Producción Industrial Manufacturero (IPI) registró una variación "
+            f"interanual de {fmt_pct(via)} en {lbl_mes(p['periodo'])}.")
     bullets = [
-        f"Variación interanual: {('+' if via>=0 else '')}{via}%.",
+        f"Variación interanual: {fmt_pct(via)}",
         "Serie INDEC, base 2004=100. Mide la producción manufacturera (16 ramas).",
     ]
-    return titulo, lede, bullets
+    chart = bar_chart(arr_v, "f", "via",
+                     title="IPI variación interanual %",
+                     y_fmt=lambda x, p: f"{x:.0f}%", n_meses=24)
+    tabla = [["Mes", "Original", "VIA %"]]
+    for r in arr_v[-6:][::-1]:
+        tabla.append([lbl_mes(r["f"]).capitalize(),
+                     fmt_n(r.get("orig"), 1), fmt_pct(r.get("via"))])
+    return titulo, lede, bullets, chart, tabla
 
-def gen_super(p):
+def tpl_super(p, D):
     d = p["datos"]
+    arr = D.get("super", [])
+    arr_v = [r for r in arr if r.get("via_real") is not None]
     via = d.get("via_real", 0)
     vm = d.get("vm_dest")
     verbo = "CRECIERON" if via >= 0 else "CAYERON"
-    titulo = f"SUPERMERCADOS {lbl_mes(p['periodo']).upper()}: VENTAS {verbo} {('+' if via>=0 else '')}{via}% I.A. REAL"
-    lede = (f"Las ventas de supermercados a precios constantes registraron una variación "
-            f"interanual real de {('+' if via>=0 else '')}{via}% en {lbl_mes(p['periodo'])}. "
-            + (f"En la serie desestacionalizada, se movieron {('+' if vm>=0 else '')}{vm}% respecto al mes anterior." if vm is not None else ""))
+    titulo = f"SUPERMERCADOS {lbl_mes(p['periodo']).upper()}: VENTAS REALES {verbo} {fmt_pct(via)}"
+    lede = (f"Las ventas de supermercados a precios constantes registraron una variación interanual real "
+            f"de {fmt_pct(via)} en {lbl_mes(p['periodo'])}."
+            + (f" Desestacionalizada: {fmt_pct(vm)} m/m." if vm is not None else ""))
     bullets = [
-        f"Variación interanual real: {('+' if via>=0 else '')}{via}%.",
+        f"Variación interanual real: {fmt_pct(via)}",
     ]
     if vm is not None:
-        bullets.append(f"Variación mensual desestacionalizada: {('+' if vm>=0 else '')}{vm}%.")
+        bullets.append(f"Variación mensual desestacionalizada: {fmt_pct(vm)}")
     if d.get("acum_real") is not None:
-        bullets.append(f"Variación acumulada del año: {('+' if d['acum_real']>=0 else '')}{d['acum_real']}%.")
-    return titulo, lede, bullets
+        bullets.append(f"Acumulado del año: {fmt_pct(d['acum_real'])}")
+    chart = bar_chart(arr_v, "f", "via_real",
+                     title="Ventas supermercados — variación i.a. real %",
+                     y_fmt=lambda x, p: f"{x:.0f}%", n_meses=24)
+    tabla = [["Mes", "Índice real", "VIA real %", "Acumulado %"]]
+    for r in arr_v[-6:][::-1]:
+        tabla.append([lbl_mes(r["f"]).capitalize(),
+                     fmt_n(r.get("n_real"), 1), fmt_pct(r.get("via_real")),
+                     fmt_pct(r.get("acum_real"))])
+    return titulo, lede, bullets, chart, tabla
 
-def gen_salarios(p):
+def tpl_salarios(p, D):
     d = p["datos"]
+    arr = D.get("salarios", [])
+    arr_v = [r for r in arr if r.get("is_r") is not None]
     titulo = f"SALARIOS {lbl_mes(p['periodo']).upper()}: ÍNDICE TOTAL REGISTRADO {fmt_n(d.get('is_r',0))}"
-    lede = (f"El Índice de Salarios INDEC alcanzó un nivel total de {fmt_n(d.get('is_r',0))} "
-            f"para el sector registrado en {lbl_mes(p['periodo'])}. "
-            f"El privado registrado llegó a {fmt_n(d.get('real_priv',0))} y el público a {fmt_n(d.get('real_pub',0))}.")
+    lede = (f"El Índice de Salarios INDEC alcanzó {fmt_n(d.get('is_r',0))} para el sector registrado en "
+            f"{lbl_mes(p['periodo'])}. Privado registrado: {fmt_n(d.get('real_priv',0))}. "
+            f"Público: {fmt_n(d.get('real_pub',0))}.")
     bullets = [
         f"Total registrado: {fmt_n(d.get('is_r','—'))}",
         f"Privado registrado: {fmt_n(d.get('real_priv','—'))}",
@@ -181,173 +363,223 @@ def gen_salarios(p):
     ]
     if d.get("no_reg") is not None:
         bullets.append(f"No registrado: {fmt_n(d['no_reg'])}")
-    return titulo, lede, bullets
+    chart = line_chart(arr_v, "f", ["is_r", "real_priv", "real_pub"],
+                       ["Total registrado", "Privado", "Público"],
+                       [CYAN_HX, "#1E4A8A", "#A85C1E"],
+                       title="Índice de salarios (base oct 2016=100)",
+                       n_meses=24)
+    tabla = [["Mes", "Total reg.", "Privado", "Público"]]
+    for r in arr_v[-6:][::-1]:
+        tabla.append([lbl_mes(r["f"]).capitalize(),
+                     fmt_n(r.get("is_r")), fmt_n(r.get("real_priv")), fmt_n(r.get("real_pub"))])
+    return titulo, lede, bullets, chart, tabla
 
-def gen_mora(p):
+def tpl_mora(p, D):
     d = p["datos"]
+    arr = D.get("mora", [])
+    arr_v = [r for r in arr if r.get("fam") is not None]
     fam = d.get("fam", 0)
     emp = d.get("emp", 0)
     titulo = f"MORA BANCARIA {lbl_mes(p['periodo']).upper()}: FAMILIAS {fam}% · EMPRESAS {emp}%"
-    lede = (f"La irregularidad de cartera del sistema financiero alcanzó {fam}% en familias "
-            f"y {emp}% en empresas en {lbl_mes(p['periodo'])} (BCRA Informe sobre Bancos).")
+    lede = (f"La irregularidad de cartera del sistema financiero alcanzó {fam}% en familias y "
+            f"{emp}% en empresas en {lbl_mes(p['periodo'])} (BCRA Informe sobre Bancos).")
     bullets = [
-        f"Familias: {fam}% del total de préstamos en situación irregular.",
-        f"Empresas: {emp}%.",
-        "Fuente: BCRA Informe sobre Bancos, Anexo Cuadro 'Calidad de Cartera'.",
+        f"Familias: {fam}% del total de préstamos en situación irregular",
+        f"Empresas: {emp}%",
+        "Fuente: BCRA Informe sobre Bancos, Anexo 'Calidad de Cartera por líneas'",
     ]
-    return titulo, lede, bullets
+    chart = line_chart(arr_v, "f", ["fam", "emp"],
+                       ["Familias", "Empresas"],
+                       [ROJO_HX, "#A85C1E"],
+                       title="Irregularidad de cartera %",
+                       y_fmt=lambda x, p: f"{x:.0f}%", n_meses=24)
+    tabla = [["Mes", "Familias %", "Empresas %"]]
+    for r in arr_v[-6:][::-1]:
+        tabla.append([lbl_mes(r["f"]).capitalize(), f"{r.get('fam')}%", f"{r.get('emp')}%"])
+    return titulo, lede, bullets, chart, tabla
 
-def gen_default(p):
+def tpl_default(p, D):
     d = p["datos"]
     titulo = f"{p['label'].upper()} {lbl_mes(p['periodo']).upper()}"
-    lede = f"Se publicó la actualización mensual de {p['label']} para {lbl_mes(p['periodo'])}. Fuente: {p.get('fuente','INDEC')}."
+    lede = f"Se publicó la actualización de {p['label']} para {lbl_mes(p['periodo'])}. Fuente: {p.get('fuente','INDEC')}."
     bullets = [f"{k}: {fmt_n(v, 2)}" for k, v in list(d.items())[:5]]
-    return titulo, lede, bullets
+    return titulo, lede, bullets, None, None
 
 TEMPLATES = {
-    "ipc": gen_ipc, "ipim": gen_ipim, "ipib": gen_ipim, "ipp": gen_ipim,
-    "bc": gen_bc, "fiscal": gen_fiscal, "emae": gen_emae,
-    "ipi": gen_ipi, "isac": gen_ipi, "uci": gen_ipi,
-    "super": gen_super, "mayor": gen_super,
-    "salarios": gen_salarios, "mora": gen_mora,
+    "ipc": tpl_ipc,
+    "ipim": tpl_ipim, "ipib": tpl_ipim, "ipp": tpl_ipim,
+    "bc": tpl_bc,
+    "fiscal": tpl_fiscal,
+    "emae": tpl_emae,
+    "ipi": tpl_ipi, "isac": tpl_ipi, "uci": tpl_ipi,
+    "super": tpl_super, "mayor": tpl_super,
+    "salarios": tpl_salarios,
+    "mora": tpl_mora,
 }
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Construcción de cada slide
+# Construcción del slide
 # ──────────────────────────────────────────────────────────────────────────────
-def build_slide(prs, pub):
-    """Genera un slide con título cyan + lede + bullets, footer fuente."""
+def add_text_run(paragraph, text, *, bold=False, italic=False, size=14, color=None, font=FONT):
+    r = paragraph.add_run()
+    r.text = text
+    r.font.name = font
+    r.font.size = Pt(size)
+    r.font.bold = bold
+    r.font.italic = italic
+    if color is not None:
+        r.font.color.rgb = color
+    return r
+
+def style_table(table, header_rows=1):
+    """Aplica estilo Comex a una tabla PPTX."""
+    n_cols = len(table.columns)
+    n_rows = len(table.rows)
+    for r in range(n_rows):
+        for c in range(n_cols):
+            cell = table.cell(r, c)
+            cell.margin_left = Inches(0.04)
+            cell.margin_right = Inches(0.04)
+            cell.margin_top = Inches(0.02)
+            cell.margin_bottom = Inches(0.02)
+            tf = cell.text_frame
+            for p in tf.paragraphs:
+                p.alignment = PP_ALIGN.LEFT if c == 0 else PP_ALIGN.RIGHT
+                for run in p.runs:
+                    run.font.name = FONT
+                    run.font.size = Pt(10)
+                    if r < header_rows:
+                        run.font.bold = True
+                        run.font.color.rgb = BLANCO
+                    else:
+                        run.font.color.rgb = GRIS_TX
+            # Background
+            from pptx.oxml.ns import qn as _qn
+            tcPr = cell._tc.get_or_add_tcPr()
+            for fill_old in tcPr.findall(_qn("a:solidFill")):
+                tcPr.remove(fill_old)
+            solid = etree.SubElement(tcPr, _qn("a:solidFill"))
+            clr = etree.SubElement(solid, _qn("a:srgbClr"))
+            if r < header_rows:
+                clr.set("val", "00B2C9")
+            else:
+                clr.set("val", "FFFFFF" if r % 2 == 1 else "F8F8F6")
+
+def build_slide(prs, pub, D):
     serie = pub.get("serie", "")
-    gen = TEMPLATES.get(serie, gen_default)
-    titulo, lede, bullets = gen(pub)
+    tpl = TEMPLATES.get(serie, tpl_default)
+    titulo, lede, bullets, chart_buf, tabla = tpl(pub, D)
 
-    slide_layout = prs.slide_layouts[6]  # blank
-    slide = prs.slides.add_slide(slide_layout)
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
 
-    # Fondo blanco implícito. Banner superior cyan sutil.
+    # Banner cyan
     banner = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, 0, 0, prs.slide_width, Inches(0.3))
     banner.fill.solid()
     banner.fill.fore_color.rgb = CYAN
     banner.line.fill.background()
 
     # Título
-    tit_left = Inches(0.4)
-    tit_top = Inches(0.55)
-    tit_w = prs.slide_width - Inches(0.8)
-    tit_h = Inches(1.4)
-    tit_box = slide.shapes.add_textbox(tit_left, tit_top, tit_w, tit_h)
+    tit_l, tit_t, tit_w = Inches(0.45), Inches(0.5), prs.slide_width - Inches(0.9)
+    tit_box = slide.shapes.add_textbox(tit_l, tit_t, tit_w, Inches(1.0))
     tf = tit_box.text_frame
     tf.word_wrap = True
     tf.margin_left = tf.margin_right = Emu(0)
-    p_tit = tf.paragraphs[0]
-    p_tit.alignment = PP_ALIGN.LEFT
-    r_tit = p_tit.add_run()
-    r_tit.text = titulo
-    r_tit.font.name = FONT
-    r_tit.font.size = Pt(28)
-    r_tit.font.bold = True
-    r_tit.font.color.rgb = CYAN
+    add_text_run(tf.paragraphs[0], titulo, bold=True, size=26, color=CYAN)
+    tf.paragraphs[0].alignment = PP_ALIGN.LEFT
 
-    # Periodo + fuente bajo el título
-    sub_top = tit_top + tit_h + Inches(0.05)
-    sub_box = slide.shapes.add_textbox(tit_left, sub_top, tit_w, Inches(0.3))
-    sp = sub_box.text_frame.paragraphs[0]
-    sp.alignment = PP_ALIGN.LEFT
-    sr = sp.add_run()
-    sr.text = f"{pub.get('fuente','INDEC')} · período {pub.get('periodo','')}"
-    sr.font.name = FONT
-    sr.font.size = Pt(11)
-    sr.font.italic = True
-    sr.font.color.rgb = GRIS_TX
+    # Sub: fuente + periodo
+    sub_box = slide.shapes.add_textbox(tit_l, Inches(1.4), tit_w, Inches(0.3))
+    add_text_run(sub_box.text_frame.paragraphs[0],
+                 f"{pub.get('fuente','INDEC')} · período {pub.get('periodo','')}",
+                 italic=True, size=11, color=GRIS_LX)
 
-    # Lede (párrafo principal)
-    lede_top = sub_top + Inches(0.4)
-    lede_box = slide.shapes.add_textbox(tit_left, lede_top, tit_w, Inches(1.5))
+    # Layout:
+    # Columna izquierda (lede + bullets): x=0.45, w=6.0
+    # Columna derecha (chart + tabla):    x=6.65, w=6.2
+    col_l_w = Inches(6.0)
+    col_r_x = Inches(6.65)
+    col_r_w = Inches(6.2)
+
+    # Lede izquierda
+    lede_box = slide.shapes.add_textbox(tit_l, Inches(1.85), col_l_w, Inches(1.8))
     ltf = lede_box.text_frame
     ltf.word_wrap = True
     ltf.margin_left = ltf.margin_right = Emu(0)
     lp = ltf.paragraphs[0]
     lp.alignment = PP_ALIGN.JUSTIFY
-    lr = lp.add_run()
-    lr.text = lede
-    lr.font.name = FONT
-    lr.font.size = Pt(14)
-    lr.font.color.rgb = GRIS_TX
+    add_text_run(lp, lede, size=13, color=GRIS_TX)
 
-    # Bullets
-    bul_top = lede_top + Inches(1.7)
-    bul_box = slide.shapes.add_textbox(tit_left, bul_top, tit_w, Inches(3.5))
+    # Bullets izquierda
+    bul_box = slide.shapes.add_textbox(tit_l, Inches(3.85), col_l_w, Inches(3.0))
     btf = bul_box.text_frame
     btf.word_wrap = True
-    btf.margin_left = ltf.margin_right = Emu(0)
+    btf.margin_left = btf.margin_right = Emu(0)
     for i, b in enumerate(bullets):
         p = btf.paragraphs[0] if i == 0 else btf.add_paragraph()
         p.alignment = PP_ALIGN.LEFT
-        p.level = 0
-        r = p.add_run()
-        r.text = "●  " + b
-        r.font.name = FONT
-        r.font.size = Pt(14)
-        r.font.color.rgb = GRIS_TX
         p.space_after = Pt(8)
+        # Bullet en cyan, texto en gris
+        add_text_run(p, "●  ", size=13, color=CYAN, bold=True)
+        add_text_run(p, b, size=13, color=GRIS_TX)
 
-    # Footer "Fuente"
-    footer_box = slide.shapes.add_textbox(
-        tit_left, prs.slide_height - Inches(0.5), tit_w, Inches(0.3)
-    )
-    fp = footer_box.text_frame.paragraphs[0]
-    fp.alignment = PP_ALIGN.LEFT
-    fr = fp.add_run()
-    fr.text = f"Fuente: elaboración propia en base a {pub.get('fuente','INDEC')}"
-    fr.font.name = FONT
-    fr.font.size = Pt(10)
-    fr.font.italic = True
-    fr.font.color.rgb = GRIS_TX
+    # Chart derecha (matplotlib PNG)
+    if chart_buf is not None:
+        slide.shapes.add_picture(chart_buf, col_r_x, Inches(1.85),
+                                 width=col_r_w, height=Inches(2.8))
+
+    # Tabla derecha abajo
+    if tabla and len(tabla) > 1:
+        n_rows = len(tabla)
+        n_cols = len(tabla[0])
+        tbl_top = Inches(4.85)
+        tbl_h = Inches(0.32 * n_rows)
+        tbl_shape = slide.shapes.add_table(n_rows, n_cols, col_r_x, tbl_top, col_r_w, tbl_h)
+        tbl = tbl_shape.table
+        for r_idx, row in enumerate(tabla):
+            for c_idx, val in enumerate(row):
+                cell = tbl.cell(r_idx, c_idx)
+                cell.text = str(val)
+        style_table(tbl, header_rows=1)
+
+    # Footer
+    foot_box = slide.shapes.add_textbox(tit_l, prs.slide_height - Inches(0.4),
+                                        prs.slide_width - Inches(0.9), Inches(0.3))
+    add_text_run(foot_box.text_frame.paragraphs[0],
+                 f"Fuente: elaboración propia en base a {pub.get('fuente','INDEC')}",
+                 italic=True, size=10, color=GRIS_LX)
 
 def build_cover(prs, n_pubs, lunes):
-    """Slide portada."""
     slide = prs.slides.add_slide(prs.slide_layouts[6])
-    # Fondo cyan
     fondo = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, 0, 0, prs.slide_width, prs.slide_height)
     fondo.fill.solid()
     fondo.fill.fore_color.rgb = CYAN
     fondo.line.fill.background()
 
-    # Título grande
-    titulo = slide.shapes.add_textbox(Inches(0.6), Inches(2.0), prs.slide_width - Inches(1.2), Inches(1.5))
-    tf = titulo.text_frame
-    tf.word_wrap = True
-    p = tf.paragraphs[0]
-    p.alignment = PP_ALIGN.LEFT
-    r = p.add_run()
-    r.text = "PANORAMA MACRO"
-    r.font.name = FONT
-    r.font.size = Pt(54)
-    r.font.bold = True
-    r.font.color.rgb = BLANCO
+    # Decoración: línea blanca a la izquierda
+    deco = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0.6), Inches(2.6), Inches(0.06), Inches(3.0))
+    deco.fill.solid()
+    deco.fill.fore_color.rgb = BLANCO
+    deco.line.fill.background()
 
-    sub = slide.shapes.add_textbox(Inches(0.6), Inches(3.4), prs.slide_width - Inches(1.2), Inches(1.0))
+    tit = slide.shapes.add_textbox(Inches(0.95), Inches(2.5), prs.slide_width - Inches(1.5), Inches(1.4))
+    p = tit.text_frame.paragraphs[0]
+    add_text_run(p, "PANORAMA MACRO", bold=True, size=54, color=BLANCO)
+
+    sub = slide.shapes.add_textbox(Inches(0.95), Inches(3.8), prs.slide_width - Inches(1.5), Inches(0.8))
     p2 = sub.text_frame.paragraphs[0]
-    r2 = p2.add_run()
-    r2.text = f"Publicaciones de la semana del {lunes.strftime('%d de ')}" + MESES_ES[lunes.month - 1] + lunes.strftime(' de %Y')
-    r2.font.name = FONT
-    r2.font.size = Pt(20)
-    r2.font.color.rgb = BLANCO
+    add_text_run(p2, f"Publicaciones de la semana del {lunes.strftime('%d de ')}{MESES_ES[lunes.month - 1]}{lunes.strftime(' de %Y')}",
+                 size=22, color=BLANCO)
 
-    sub2 = slide.shapes.add_textbox(Inches(0.6), Inches(4.0), prs.slide_width - Inches(1.2), Inches(0.5))
-    p3 = sub2.text_frame.paragraphs[0]
-    r3 = p3.add_run()
-    r3.text = f"{n_pubs} publicaciones · datos oficiales INDEC / BCRA / Hacienda"
-    r3.font.name = FONT
-    r3.font.size = Pt(14)
-    r3.font.italic = True
-    r3.font.color.rgb = BLANCO
+    sub2 = slide.shapes.add_textbox(Inches(0.95), Inches(4.6), prs.slide_width - Inches(1.5), Inches(0.5))
+    add_text_run(sub2.text_frame.paragraphs[0],
+                 f"{n_pubs} publicaciones · datos oficiales INDEC / BCRA / Hacienda",
+                 size=14, italic=True, color=BLANCO)
 
 def main():
     data = json.loads(DATA_PATH.read_text(encoding="utf-8"))
     pubs = (data.get("_meta") or {}).get("publicaciones") or []
     if not pubs:
-        print("Sin publicaciones tracked en _meta.publicaciones. No genero PPTX.")
+        print("Sin publicaciones tracked. No genero PPTX.")
         return 1
     lunes = ultimo_lunes()
     lunes_iso = lunes.isoformat()
@@ -355,17 +587,20 @@ def main():
     if not semana:
         print("Sin publicaciones esta semana. No genero PPTX.")
         return 1
-    # Ordenar por publicado_at ascendente (lunes arriba)
     semana.sort(key=lambda p: p.get("publicado_at") or p.get("detectado_at",""))
 
-    # 16:9 widescreen
     prs = Presentation()
     prs.slide_width = Inches(13.333)
     prs.slide_height = Inches(7.5)
 
     build_cover(prs, len(semana), lunes)
     for pub in semana:
-        build_slide(prs, pub)
+        try:
+            build_slide(prs, pub, data)
+        except Exception as e:
+            print(f"Error en slide {pub.get('serie')} {pub.get('periodo')}: {e}")
+            import traceback
+            traceback.print_exc()
 
     prs.save(str(OUT_PATH))
     print(f"OK — {OUT_PATH} ({OUT_PATH.stat().st_size/1024:.1f} KB, {len(semana)+1} slides)")
