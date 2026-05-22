@@ -643,6 +643,82 @@ def update_salarios(D: dict) -> int:
         log(f"Salarios falló: {e}", "warn")
     return nuevos
 
+def update_salarios_csv(D: dict) -> int:
+    """Índice de Salarios desde el CSV oficial INDEC (más fresco que la API series).
+
+    Fuente: indec.gob.ar/ftp/cuadros/sociedad/indice_salarios.csv
+    Columnas:
+      - periodo (DD/MM/YYYY)
+      - IS_sector_privado_registrado
+      - IS_sector_publico
+      - IS_total_registrado
+      - IS_sector_no_registrado
+      - IS_indice_total
+
+    Schema D.salarios (mantener compatibilidad):
+      is_r       ← IS_total_registrado
+      real_priv  ← IS_sector_privado_registrado (nominal, se deflacta en HTML)
+      real_pub   ← IS_sector_publico (nominal)
+      no_reg     ← IS_sector_no_registrado (nuevo)
+      ind_tot    ← IS_indice_total (nuevo)
+    """
+    arr = D.setdefault("salarios", [])
+    nuevos = 0
+    url = "https://www.indec.gob.ar/ftp/cuadros/sociedad/indice_salarios.csv"
+    try:
+        r = requests.get(url, timeout=TIMEOUT, headers={**HEADERS, "User-Agent": "Mozilla/5.0"})
+        r.raise_for_status()
+        text = r.content.decode("utf-8", errors="replace")
+        lines = text.strip().split("\n")
+        # Parsear header
+        header = [h.strip() for h in lines[0].split(";")]
+        # Mapear nombres de columnas a claves del schema
+        COL_MAP = {
+            "IS_sector_privado_registrado": "real_priv",
+            "IS_sector_publico":            "real_pub",
+            "IS_total_registrado":          "is_r",
+            "IS_sector_no_registrado":      "no_reg",
+            "IS_indice_total":              "ind_tot",
+        }
+        col_idx = {COL_MAP[h]: i for i, h in enumerate(header) if h in COL_MAP}
+        if "is_r" not in col_idx:
+            log("Salarios CSV: header inesperado", "warn")
+            return 0
+        for line in lines[1:]:
+            parts = [p.strip() for p in line.strip().split(";")]
+            if len(parts) < 6:
+                continue
+            # Parsear fecha DD/MM/YYYY → YYYY-MM
+            try:
+                d, m, y = parts[0].split("/")
+                f = f"{int(y):04d}-{int(m):02d}"
+            except Exception:
+                continue
+            new = {"f": f}
+            for key, idx in col_idx.items():
+                raw = parts[idx]
+                if raw in ("NA", "", "N/A"):
+                    continue
+                try:
+                    val = float(raw.replace(",", "."))
+                    new[key] = round(val, 2)
+                except ValueError:
+                    pass
+            rec = next((x for x in arr if x.get("f") == f), None)
+            if rec is None:
+                arr.append(new)
+                nuevos += 1
+            else:
+                for k, v in new.items():
+                    if k != "f":
+                        rec[k] = v
+        arr.sort(key=lambda x: x["f"])
+        if arr:
+            log(f"Salarios (CSV oficial): actualizado (último {arr[-1]['f']}, is_r={arr[-1].get('is_r','—')})", "ok")
+    except Exception as e:
+        log(f"Salarios CSV falló: {e}", "warn")
+    return nuevos
+
 def update_empleo(D: dict) -> int:
     """Empleo SIPA total + privado. Schema histórico: {f, tot, priv} (valores en unidades, no miles).
 
@@ -1566,8 +1642,20 @@ def _safe_float(v) -> float | None:
         return None
 
 def parse_emae_xls(wb: xlrd.book.Book) -> list[dict]:
-    """sh_emae_mensual_base2004.xls → [{f, orig, via, dest, vm}]"""
-    sh = wb.sheet_by_name("EMAE")
+    """sh_emae_mensual_base2004.xls → [{f, orig, via, dest, vm}]
+
+    INDEC renombró la hoja de 'EMAE' a 'Tabla' alrededor de mayo 2026.
+    Probamos ambos nombres; si no funciona, caemos al primer sheet por índice.
+    """
+    sh = None
+    for nombre in ("EMAE", "Tabla"):
+        try:
+            sh = wb.sheet_by_name(nombre)
+            break
+        except xlrd.biffh.XLRDError:
+            continue
+    if sh is None:
+        sh = wb.sheet_by_index(0)
     out, current_year = [], None
     for r in range(sh.nrows):
         y_cell = sh.cell_value(r, 0)
@@ -1711,7 +1799,15 @@ EMAE_S_COLS = {
 
 def parse_emae_actividad_xls(wb: xlrd.book.Book) -> list[dict]:
     """sh_emae_actividad_base2004.xls (hoja 'Tabla Letras') → [{f, s:{Agro,Pesca,...}}]"""
-    sh = wb.sheet_by_name("Tabla Letras")
+    sh = None
+    for nombre in ("Tabla Letras", "Tabla", "Letras"):
+        try:
+            sh = wb.sheet_by_name(nombre)
+            break
+        except xlrd.biffh.XLRDError:
+            continue
+    if sh is None:
+        sh = wb.sheet_by_index(0)
     out, current_year = [], None
     for r in range(sh.nrows):
         y_cell = sh.cell_value(r, 0)
@@ -2169,6 +2265,7 @@ def main() -> int:
     update_simple_monthly(D, "rec",   INDEC_SERIES["rec"],   "tot", "Recaudación")
     update_uci_sectorial(D)
     update_salarios(D)
+    update_salarios_csv(D)  # complementa: CSV oficial más fresco que la API series
     update_empleo(D)
     update_empresas(D)
     update_fiscal_indec(D)
