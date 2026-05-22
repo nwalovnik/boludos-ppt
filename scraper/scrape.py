@@ -643,6 +643,129 @@ def update_salarios(D: dict) -> int:
         log(f"Salarios falló: {e}", "warn")
     return nuevos
 
+def update_comercio_interior(D: dict) -> int:
+    """Comercio interior — Supermercados + Autoservicios Mayoristas (INDEC).
+
+    Fuentes:
+      - Supermercados:        serie_supermercados.xlsx Cuadro 2 (precios constantes)
+      - Autoservicios mayor.: sh_super_mayoristas.xls Cuadro 8 (precios constantes)
+
+    Schema:
+      D.super  = [{f, n_real, via_real, acum_real, dest_real, vm_dest}]
+      D.mayor  = [{f, n_real, via_real, acum_real, dest_real, vm_dest}]
+    """
+    nuevos = 0
+    # === Supermercados (XLSX — Cuadro 1: precios CONSTANTES, no corrientes) ===
+    try:
+        import openpyxl
+        url = "https://www.indec.gob.ar/ftp/cuadros/economia/serie_supermercados.xlsx"
+        r = requests.get(url, timeout=TIMEOUT, headers={**HEADERS, "User-Agent": "Mozilla/5.0"})
+        r.raise_for_status()
+        wb = openpyxl.load_workbook(io.BytesIO(r.content), data_only=True)
+        # Cuadro 1 = Índice ventas totales a PRECIOS CONSTANTES (real, base 2017=100)
+        # Cuadro 2 era corrientes (nominal) y daba lecturas equivocadas
+        sn = next((s for s in wb.sheetnames if "Cuadro 1" in s), None)
+        if sn:
+            ws = wb[sn]
+            arr = D.setdefault("super", [])
+            for row_idx in range(7, ws.max_row + 1):
+                periodo = ws.cell(row_idx, 1).value
+                if periodo is None:
+                    continue
+                if hasattr(periodo, "strftime"):
+                    f = periodo.strftime("%Y-%m")
+                elif isinstance(periodo, str) and len(periodo) >= 7 and "-" in periodo:
+                    f = periodo[:7]
+                else:
+                    continue
+                n_real    = _safe_float(ws.cell(row_idx, 2).value)
+                via_real  = _safe_float(ws.cell(row_idx, 3).value)
+                acum_real = _safe_float(ws.cell(row_idx, 4).value)
+                dest_real = _safe_float(ws.cell(row_idx, 6).value)
+                vm_dest   = _safe_float(ws.cell(row_idx, 7).value)
+                if n_real is None:
+                    continue
+                rec = next((x for x in arr if x.get("f") == f), None)
+                new = {"f": f, "n_real": round(n_real, 2)}
+                if via_real is not None:  new["via_real"]  = round(via_real, 2)
+                if acum_real is not None: new["acum_real"] = round(acum_real, 2)
+                if dest_real is not None: new["dest_real"] = round(dest_real, 2)
+                if vm_dest is not None:   new["vm_dest"]   = round(vm_dest, 2)
+                if rec is None:
+                    arr.append(new)
+                    nuevos += 1
+                else:
+                    rec.update({k: v for k, v in new.items() if k != "f"})
+            arr.sort(key=lambda x: x["f"])
+            if arr:
+                log(f"Supermercados (XLSX): actualizado (último {arr[-1]['f']}, vía real={arr[-1].get('via_real','—')}%)", "ok")
+    except Exception as e:
+        log(f"Supermercados XLSX falló: {e}", "warn")
+
+    # === Autoservicios Mayoristas (XLS — Cuadro 9 ventas totales) ===
+    # Estructura: col 0=tag, col 1=año, col 2=mes, col 3=ventas_nom (miles $),
+    #             col 4=bocas, col 5=ventas/boca, col 6=superficie, col 7=ventas/m2,
+    #             col 8=operaciones, col 9=ventas/operación
+    try:
+        url = "https://www.indec.gob.ar/ftp/cuadros/economia/sh_super_mayoristas.xls"
+        r = requests.get(url, timeout=TIMEOUT, headers={**HEADERS, "User-Agent": "Mozilla/5.0"})
+        r.raise_for_status()
+        wb = xlrd.open_workbook(file_contents=r.content)
+        try:
+            sh = wb.sheet_by_name("Cuadro 9")
+        except Exception:
+            sh = None
+        if sh is not None:
+            arr = D.setdefault("mayor", [])
+            current_year = None
+            ult_f = None
+            for r2 in range(sh.nrows):
+                y_cell = sh.cell_value(r2, 1)
+                m_cell = sh.cell_value(r2, 2)
+                if isinstance(y_cell, float) and y_cell > 1990:
+                    current_year = int(y_cell)
+                elif isinstance(y_cell, str):
+                    s = y_cell.strip().rstrip("*").strip()
+                    if s.isdigit() and 1990 < int(s) < 2100:
+                        current_year = int(s)
+                if not current_year:
+                    continue
+                month_num = _month_num(m_cell) if m_cell else None
+                if not month_num:
+                    continue
+                ventas_nom = _safe_float(sh.cell_value(r2, 3))
+                bocas      = _safe_float(sh.cell_value(r2, 4)) if sh.ncols > 4 else None
+                vta_boca   = _safe_float(sh.cell_value(r2, 5)) if sh.ncols > 5 else None
+                operac     = _safe_float(sh.cell_value(r2, 8)) if sh.ncols > 8 else None
+                if ventas_nom is None:
+                    continue
+                f = f"{current_year:04d}-{month_num:02d}"
+                ult_f = f
+                rec = next((x for x in arr if x.get("f") == f), None)
+                new = {"f": f, "ventas_nom": int(round(ventas_nom))}
+                if bocas is not None:    new["bocas"]    = int(round(bocas))
+                if vta_boca is not None: new["vta_boca"] = round(vta_boca, 0)
+                if operac is not None:   new["operac"]   = int(round(operac))
+                if rec is None:
+                    arr.append(new)
+                    nuevos += 1
+                else:
+                    rec.update({k: v for k, v in new.items() if k != "f"})
+            arr.sort(key=lambda x: x["f"])
+            # Calcular variación interanual nominal contra mismo mes año anterior
+            idx = {x["f"]: i for i, x in enumerate(arr) if "f" in x}
+            for rec in arr:
+                py = prev_year(rec["f"])
+                if py in idx:
+                    prev = arr[idx[py]]
+                    if prev.get("ventas_nom") and rec.get("ventas_nom"):
+                        rec["via_nom"] = round((rec["ventas_nom"] / prev["ventas_nom"] - 1) * 100, 2)
+            if ult_f:
+                log(f"Autoservicios mayoristas (Cuadro 9): actualizado (último {ult_f})", "ok")
+    except Exception as e:
+        log(f"Mayoristas XLS falló: {e}", "warn")
+    return nuevos
+
 def update_salarios_csv(D: dict) -> int:
     """Índice de Salarios desde el CSV oficial INDEC (más fresco que la API series).
 
@@ -2028,6 +2151,8 @@ SERIES_TRACK_PUB = {
     "ipim":     ("INDEC", "f"),
     "ipib":     ("INDEC", "f"),
     "ipp":      ("INDEC", "f"),
+    "super":    ("INDEC", "f"),
+    "mayor":    ("INDEC", "f"),
     "emae":     ("INDEC", "f"),
     "ipi":      ("INDEC", "f"),
     "isac":     ("INDEC", "f"),
@@ -2050,6 +2175,8 @@ SERIE_LBL = {
     "ipim":     "IPIM mayorista",
     "ipib":     "IPIB básicos",
     "ipp":      "IPP productor",
+    "super":    "Encuesta Supermercados",
+    "mayor":    "Encuesta Autoservicios Mayoristas",
     "emae":     "EMAE actividad",
     "ipi":      "IPI manufacturero",
     "isac":     "ISAC construcción",
@@ -2088,6 +2215,8 @@ PUB_LAG_DIAS = {
     "ipi":      24,
     "isac":     24,
     "uci":      24,
+    "super":    78,   # Supermercados: ~2.5 meses lag (publica abril en mes +2-3)
+    "mayor":    78,
     "bc":       21,   # ICA: 17-21 del mes siguiente
     "emae":     55,   # EMAE con lag de ~2 meses post-cierre
     "turismo":  45,
@@ -2266,6 +2395,7 @@ def main() -> int:
     update_uci_sectorial(D)
     update_salarios(D)
     update_salarios_csv(D)  # complementa: CSV oficial más fresco que la API series
+    update_comercio_interior(D)  # Supermercados + Autoservicios mayoristas
     update_empleo(D)
     update_empresas(D)
     update_fiscal_indec(D)

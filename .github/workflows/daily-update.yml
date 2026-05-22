@@ -33,15 +33,26 @@ jobs:
       - name: Run scraper
         run: python scraper/scrape.py
 
-      - name: Commit & push if data.json changed
+      - name: Generar PPTX publicaciones de la semana
+        run: python scraper/build_slides.py || echo "Sin publicaciones esta semana o sin pubs aún registradas"
+
+      - name: Commit & push si cambió data.json o publicaciones_semana.pptx
         run: |
           git config user.name "macro-bot"
           git config user.email "macro-bot@users.noreply.github.com"
+          CHANGES=""
           if [[ -n "$(git status --porcelain data.json)" ]]; then
             git add data.json
-            git commit -m "data: update $(date -u +%Y-%m-%d)"
+            CHANGES="data.json"
+          fi
+          if [[ -f publicaciones_semana.pptx ]] && [[ -n "$(git status --porcelain publicaciones_semana.pptx)" || ! "$(git ls-files publicaciones_semana.pptx)" ]]; then
+            git add publicaciones_semana.pptx
+            CHANGES="$CHANGES publicaciones_semana.pptx"
+          fi
+          if [[ -n "$CHANGES" ]]; then
+            git commit -m "data: update $(date -u +%Y-%m-%d) ($CHANGES)"
             git push
-            echo "Pushed update."
+            echo "Pushed: $CHANGES"
           else
             echo "No changes."
           fi

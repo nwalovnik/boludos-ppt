@@ -155,7 +155,10 @@ hr.d{border:none;border-top:.5px solid var(--bd);margin:16px 0}
 .src-stat-lbl{font-size:9.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--tx3);margin-top:10px;font-weight:600}
 /* ESTA SEMANA — timeline editorial de publicaciones */
 .news-week{margin-bottom:32px;padding:24px 4px;border-bottom:.5px solid var(--bd)}
-.news-eyebrow{font-size:10.5px;text-transform:uppercase;letter-spacing:.18em;color:var(--tx3);font-weight:600;margin-bottom:18px}
+.news-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;gap:12px;flex-wrap:wrap}
+.news-eyebrow{font-size:10.5px;text-transform:uppercase;letter-spacing:.18em;color:var(--tx3);font-weight:600;margin-bottom:0}
+.news-ppt-btn{font-size:11px;padding:6px 12px;text-decoration:none;border:.5px solid var(--bd2);border-radius:6px;background:var(--surf);color:var(--tx);font-weight:500;letter-spacing:-.01em;display:inline-flex;align-items:center;gap:5px;transition:all .12s}
+.news-ppt-btn:hover{background:var(--tx);color:var(--surf);border-color:var(--tx)}
 .news-list{display:flex;flex-direction:column;gap:0}
 .news-item{display:grid;grid-template-columns:84px 130px 1fr;gap:18px;padding:14px 0;border-top:.5px solid var(--bd);align-items:baseline}
 .news-item:last-child{border-bottom:.5px solid var(--bd)}
@@ -313,7 +316,10 @@ hr.d{border:none;border-top:.5px solid var(--bd);margin:16px 0}
 
   <!-- ESTA SEMANA: noticias de las publicaciones recientes -->
   <div class="news-week" id="news-week-block" style="display:none">
-    <div class="news-eyebrow" id="news-eyebrow">— esta semana en la macro —</div>
+    <div class="news-header">
+      <div class="news-eyebrow" id="news-eyebrow">— esta semana en la macro —</div>
+      <a href="publicaciones_semana.pptx" download class="btn news-ppt-btn">&#128206; Descargar PPT</a>
+    </div>
     <div class="news-list" id="news-list"></div>
   </div>
 
@@ -412,7 +418,18 @@ hr.d{border:none;border-top:.5px solid var(--bd);margin:16px 0}
   <div class="cc"><div class="cc-hd"><div><div class="cc-t">UCI General y sectores</div><div class="cc-s">% capacidad utilizada</div></div><button class="dl-btn" onclick="dlCSV('uci')">&#8595; CSV</button></div><div style="position:relative;height:200px"><canvas id="c-uci"></canvas></div></div>
 
   <div class="slbl">ISAC - Construcción <span class="breal">INDEC</span></div>
-  <div class="cc"><div class="cc-hd"><div><div class="cc-t">Indicador Sintético de la Actividad de la Construcción</div><div class="cc-s">Serie original y desestacionalizada - Base 2016=100</div></div><button class="dl-btn" onclick="dlCSV('isac')">&#8595; CSV</button></div><div style="position:relative;height:200px"><canvas id="c-isac-act"></canvas></div></div></div>
+  <div class="cc"><div class="cc-hd"><div><div class="cc-t">Indicador Sintético de la Actividad de la Construcción</div><div class="cc-s">Serie original y desestacionalizada - Base 2016=100</div></div><button class="dl-btn" onclick="dlCSV('isac')">&#8595; CSV</button></div><div style="position:relative;height:200px"><canvas id="c-isac-act"></canvas></div></div>
+
+  <hr class="d"/>
+  <div class="slbl">Comercio interior &#183; Encuesta Supermercados</div>
+  <div class="info-box">Ventas a precios constantes (deflactadas) de supermercados de todo el país. Fuente INDEC, base año 2017=100. Indicador clave del consumo masivo en góndolas.</div>
+  <div class="cgrid">
+    <div class="cc"><div class="cc-hd"><div><div class="cc-t">Supermercados &#183; índice ventas reales <span class="breal">INDEC</span></div><div class="cc-s">Serie original y desestacionalizada · base 2017=100</div></div><button class="dl-btn" onclick="dlCSV('super')">&#8595; CSV</button></div><div style="position:relative;height:220px"><canvas id="c-super"></canvas></div></div>
+    <div class="cc"><div class="cc-hd"><div><div class="cc-t">Supermercados &#183; variación interanual real <span class="breal">INDEC</span></div><div class="cc-s">% i.a. vs mismo mes año anterior, deflactado</div></div></div><div style="position:relative;height:220px"><canvas id="c-super-via"></canvas></div></div>
+  </div>
+  <div class="slbl">Detalle reciente</div>
+  <div style="position:relative;overflow-x:auto"><table id="t-super" class="data-table"></table></div>
+</div>
 
 <div id="pg-precios" class="pg">
   <div class="info-box"><strong>Aclaración de fuentes:</strong> IPC hasta <strong>Marzo 2026</strong> = datos reales INDEC. Desde Abril 2026 = <strong>proyecciones REM (Relevamiento de Expectativas de Mercado) del BCRA</strong>, marcadas con línea punteada. No son datos reales.</div>
@@ -1239,6 +1256,12 @@ function noticiaTexto(p){
       return label+" de <span class='em'>"+mesPer+"</span>: saldo <span class='"+(sal>=0?"dn":"up")+"'>"+(sal>=0?"+":"")+fmtN(sal)+"</span> personas";
     case "salarios":
       return label+" de <span class='em'>"+mesPer+"</span>: índice registrado "+(d.is_r||"?");
+    case "super":
+      var via_s=d.via_real;
+      return label+" de <span class='em'>"+mesPer+"</span>: ventas reales "+(via_s!=null?"<span class='"+(via_s>=0?"dn":"up")+"'>"+(via_s>=0?"+":"")+via_s.toFixed(1)+"%</span> i.a.":"actualizado");
+    case "mayor":
+      var via_m=d.via_nom;
+      return label+" de <span class='em'>"+mesPer+"</span>: ventas nominales "+(via_m!=null?(via_m>=0?"+":"")+via_m.toFixed(1)+"% i.a.":"actualizado");
     case "ripte":
       return label+" de <span class='em'>"+mesPer+"</span>: nominal $"+fmtN(d.nom);
     case "trabajo":
@@ -1415,6 +1438,20 @@ var HERO_TPL = {
       return parts.join(" ");
     },
     spark: function(){return {arr:(D.mora||[]).filter(function(r){return r.fam!=null;}).slice(-24),key:"fam",unit:"%",fill:true,color:"red"};}
+  },
+  super: {
+    eyebrow: "Comercio interior · publicación más reciente",
+    headline: function(per, d){
+      var v=d.via_real||0;
+      return "Ventas en supermercados de <span class='em'>"+lblMes(per)+"</span> "+(v>=0?"crecieron":"cayeron")+" <span class='"+(v>=0?"dn":"up")+"'>"+(v>=0?"+":"")+v.toFixed(1)+"%</span> i.a. real";
+    },
+    context: function(per, d){
+      var parts=[];
+      if(d.acum_real!=null)parts.push("Acumulado del año: <span class='"+(d.acum_real>=0?"dn":"up")+"'>"+(d.acum_real>=0?"+":"")+d.acum_real.toFixed(1)+"%</span> real.");
+      if(d.vm_dest!=null)parts.push("Mensual desestacionalizada: <span class='"+(d.vm_dest>=0?"dn":"up")+"'>"+(d.vm_dest>=0?"+":"")+d.vm_dest.toFixed(1)+"%</span>.");
+      return parts.join(" ");
+    },
+    spark: function(){return {arr:(D.super||[]).filter(function(r){return r.via_real!=null;}).slice(-24),key:"via_real",unit:"%",fill:false,color:"mixed"};}
   },
   turismo: {
     eyebrow: "Turismo internacional · publicación más reciente",
@@ -1865,6 +1902,39 @@ function buildActividad(){
   if(!isac_sets.length)
     isac_sets=[line("Desest.",isac.map(function(r){return r.dest;}),C.orange,{fill:false})];
   mk("c-isac-act",isac.map(function(r){return r.f;}),isac_sets,{yf:function(v){return fmtN(v,1);},leg:true,milestones:"isac"});
+
+  // Comercio interior — Supermercados (ventas reales)
+  var sup=filt(D.super||[],desde);
+  if(sup.length){
+    var sup_sets=[
+      line("Original",sup.map(function(r){return r.n_real;}),C.blue),
+      line("Desestacionalizada",sup.map(function(r){return r.dest_real;}),C.orange,{fill:false}),
+    ];
+    mk("c-super",sup.map(function(r){return r.f;}),sup_sets,{yf:function(v){return fmtN(v,1);},leg:true});
+    // Var i.a. real con colores semánticos
+    var supCl=sup.map(function(r){return (r.via_real||0)>=0?C.green+"cc":C.red+"cc";});
+    mk("c-super-via",sup.map(function(r){return r.f;}),[
+      {label:"Var. i.a. real %",data:sup.map(function(r){return r.via_real;}),backgroundColor:supCl,borderRadius:2}
+    ],{type:"bar",yf:function(v){return (v>0?"+":"")+v.toFixed(1)+"%";}});
+    // Tabla detalle últimos 12 meses
+    var t=document.getElementById("t-super");
+    if(t){
+      var ult12=sup.slice(-12).reverse();
+      var html='<thead><tr><th>Mes</th><th style="text-align:right">Índice real</th><th style="text-align:right">Var i.a. real</th><th style="text-align:right">Var acum. año</th><th style="text-align:right">Desest.</th><th style="text-align:right">Var m/m desest.</th></tr></thead><tbody>';
+      ult12.forEach(function(r){
+        var viaCls=(r.via_real||0)>=0?"dn":"up";
+        var acumCls=(r.acum_real||0)>=0?"dn":"up";
+        var vmCls=(r.vm_dest||0)>=0?"dn":"up";
+        html+='<tr><td>'+r.f+'</td><td class="num">'+fmtN(r.n_real,1)+'</td>'
+          +'<td class="num '+viaCls+'">'+(r.via_real!=null?(r.via_real>=0?"+":"")+r.via_real.toFixed(2)+"%":"—")+'</td>'
+          +'<td class="num '+acumCls+'">'+(r.acum_real!=null?(r.acum_real>=0?"+":"")+r.acum_real.toFixed(2)+"%":"—")+'</td>'
+          +'<td class="num">'+(r.dest_real!=null?fmtN(r.dest_real,1):"—")+'</td>'
+          +'<td class="num '+vmCls+'">'+(r.vm_dest!=null?(r.vm_dest>=0?"+":"")+r.vm_dest.toFixed(2)+"%":"—")+'</td>'
+          +'</tr>';
+      });
+      t.innerHTML=html+'</tbody>';
+    }
+  }
 }
 
 function drillSect(el,s){
@@ -2309,6 +2379,8 @@ const SOURCES = [
   {serie:"EMAE (general + 14 sectores)", fuente:"INDEC",            via:"XLS sh_emae_mensual_base2004.xls + sh_emae_actividad_base2004.xls",  freq:"mensual", clave:"emae",     sec:"Actividad"},
   {serie:"IPI manufacturero (general + 16 ramas)", fuente:"INDEC",   via:"XLS sh_ipi_manufacturero_YYYY.xls (Cuadros 1 + 5)",                  freq:"mensual", clave:"ipi",      sec:"Actividad"},
   {serie:"ISAC (construcción)",      fuente:"INDEC",                via:"datos.gob.ar · ID 33.2_ISAC_SIN_EDAD_0_M_23_56",                     freq:"mensual", clave:"isac",     sec:"Actividad"},
+  {serie:"Encuesta Supermercados (ventas reales)", fuente:"INDEC", via:"XLSX serie_supermercados.xlsx · Cuadro 1 precios constantes",     freq:"mensual", clave:"super",    sec:"Actividad"},
+  {serie:"Encuesta Autoservicios Mayoristas",      fuente:"INDEC", via:"XLS sh_super_mayoristas.xls · Cuadro 9",                          freq:"mensual", clave:"mayor",    sec:"Actividad"},
   {serie:"UCI nivel general + 12 sectores", fuente:"INDEC",         via:"XLS sh_capacidad_MM_YY.xls",                                          freq:"mensual", clave:"uci",      sec:"Actividad"},
   {serie:"PBI trimestral + componentes demanda", fuente:"INDEC CCNN", via:"Bedrock baked + datos.gob.ar",                                      freq:"trimestral", clave:"pbi",    sec:"Actividad"},
   {serie:"PBI anual",                fuente:"INDEC CCNN",           via:"Bedrock baked",                                                       freq:"anual",   clave:"pbi_anual",sec:"Actividad"},
@@ -2499,6 +2571,8 @@ var CSV_MAP={
   empresas:{g:function(){return D.empresas;},n:"empresas_oede",f:["a","n","via"],h:["Anio","Empresas_activas","Var_pct"]},
   fiscal:{g:function(){return D.fiscal;},n:"fiscal_spnf",f:["f","sal_prim","sal_fin"],h:["Mes","Resultado_primario_Mpesos","Resultado_financiero_Mpesos"]},
   ipim:{g:function(){return D.ipim;},n:"ipim_indec",f:["f","n","vm","via","nac","imp","prim","manuf"],h:["Mes","Nivel","VM_pct","VIA_pct","Nacionales","Importados","Primarios","Manufactura"]},
+  super:{g:function(){return D.super;},n:"super_indec",f:["f","n_real","via_real","acum_real","dest_real","vm_dest"],h:["Mes","Indice_real","VIA_real_pct","Acum_real_pct","Desest","VM_desest_pct"]},
+  mayor:{g:function(){return D.mayor;},n:"mayoristas_indec",f:["f","ventas_nom","via_nom","bocas","operac"],h:["Mes","Ventas_miles_pesos","VIA_nominal_pct","Bocas","Operaciones"]},
   jubi:{g:function(){return D.jubi;},n:"jubilaciones",f:["f","hm","bo","tot"],h:["Fecha","Haber_min","Bonos","Total"]},
   turismo:{g:function(){return D.turismo;},n:"turismo",f:["f","rec","em","sal"],h:["Fecha","Receptivo","Emisivo","Saldo"]},
   bal_cam:{g:function(){return D.bal_cam||[];},n:"balance_cambiario_bcra",f:["f","total","cta_cte","bienes","cta_fin","var_rrii"],h:["Fecha","Total_BC","Cta_Corriente","Saldo_Bienes","Cta_Financiera","Var_RRII"]}
