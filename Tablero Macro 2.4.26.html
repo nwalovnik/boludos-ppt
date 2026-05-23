@@ -3998,46 +3998,88 @@ function cbFmtMes(ym){
   return CB_MESES_ORD[parseInt(p[1])-1]+" "+p[0];
 }
 function cbDetectPeriodo(ql){
-  // "del X al Y" / "de X a Y" / "X a Y" / "X hasta Y"
-  var rangoMatch=ql.match(/(?:desde|de|del)\s+(\w+\s+\d{4})\s+(?:hasta|a|al)\s+(\w+\s+\d{4})/);
-  if(rangoMatch){
-    var from=cbParseMesAnio(rangoMatch[1]), to=cbParseMesAnio(rangoMatch[2]);
-    if(from && to) return {type:"rango", from:from, to:to};
+  // Detección de palabras de comparación (cuánto varió, comparar, vs, entre)
+  var isCompara=/\b(comparar|comparado|comparada|comparacion|vario|variacion|cambio|crecio|crecimiento|crece|cae|cayo|aumento|aumenta|diferencia|vs\.?|versus)\b/.test(ql);
+
+  // === Patrones de RANGO de fechas ===
+  // 1) "desde mes año hasta mes año" / "de mes año a mes año" — años explícitos en ambos
+  var m=ql.match(/(?:desde|de|del|entre)\s+(\w+\s+\d{4})\s+(?:hasta|a|al|y)\s+(\w+\s+\d{4})/);
+  if(m){
+    var from=cbParseMesAnio(m[1]), to=cbParseMesAnio(m[2]);
+    if(from && to) return {type:"rango",from:from,to:to,compara:isCompara};
   }
-  // Mes específico: "noviembre 2023" / "en marzo 2024" / "de abril de 2025"
+  // 2) "de mes a mes año" — un solo año al final aplicado a ambos meses
+  m=ql.match(/(?:desde|de|del|entre)\s+(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre)\s+(?:hasta|a|al|y)\s+(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre)\s+(?:de\s+)?(\d{4})/);
+  if(m){
+    var y=m[3];
+    return {type:"rango",
+            from:y+"-"+String(CB_MESES[m[1]]).padStart(2,"0"),
+            to:y+"-"+String(CB_MESES[m[2]]).padStart(2,"0"),
+            compara:isCompara};
+  }
+  // 3) "de mes año a mes" (año en el primero, segundo mes asume mismo año)
+  m=ql.match(/(?:desde|de|del|entre)\s+(\w+\s+\d{4})\s+(?:hasta|a|al|y)\s+(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre)(?!\s+\d{4})/);
+  if(m){
+    var f1=cbParseMesAnio(m[1]);
+    if(f1){
+      return {type:"rango",from:f1,
+              to:f1.split("-")[0]+"-"+String(CB_MESES[m[2]]).padStart(2,"0"),
+              compara:isCompara};
+    }
+  }
+  // 4) "del año Y1 al año Y2" / "entre 2022 y 2024"
+  m=ql.match(/(?:desde|de|del|entre)\s+(?:el\s+|ano\s+)?(20\d{2})\s+(?:hasta|a|al|y)\s+(?:el\s+|ano\s+)?(20\d{2})/);
+  if(m){
+    return {type:"rango",from:m[1]+"-01",to:m[2]+"-12",compara:isCompara,anioCompleto:true};
+  }
+  // 5) "mes año comparado con/vs mes año"
+  m=ql.match(/(\w+\s+\d{4})\s+(?:comparado\s+con|comparada\s+con|vs\.?|versus)\s+(\w+\s+\d{4})/);
+  if(m){
+    var f=cbParseMesAnio(m[1]), t=cbParseMesAnio(m[2]);
+    if(f && t){ var a=f<t?f:t, b=f<t?t:f; return {type:"rango",from:a,to:b,compara:true}; }
+  }
+
+  // === Mes específico ===
   var mesAnio=cbParseMesAnio(ql);
-  if(mesAnio) return {type:"mes", ym:mesAnio};
-  // "primer trimestre 2024" / "1T 2024" / "Q1 2024"
-  var trimMatch=ql.match(/(primer|segundo|tercer|cuarto|1|2|3|4)\s*t?r?i?m?e?s?t?r?e?\s+(?:de\s+)?(\d{4})/);
-  if(trimMatch){
+  if(mesAnio) return {type:"mes",ym:mesAnio};
+
+  // === Trimestres ===
+  m=ql.match(/(primer|segundo|tercer|cuarto|1|2|3|4)\s*t?r?i?m?e?s?t?r?e?\s+(?:de\s+)?(\d{4})/);
+  if(m){
     var qmap={primer:1,segundo:2,tercer:3,cuarto:4,"1":1,"2":2,"3":3,"4":4};
-    var q=qmap[trimMatch[1]], y=trimMatch[2];
-    if(q&&y) return {type:"rango", from:y+"-"+String((q-1)*3+1).padStart(2,"0"), to:y+"-"+String(q*3).padStart(2,"0")};
+    var q=qmap[m[1]], y=m[2];
+    if(q&&y) return {type:"rango",from:y+"-"+String((q-1)*3+1).padStart(2,"0"),to:y+"-"+String(q*3).padStart(2,"0"),compara:isCompara};
   }
-  // "primer/segundo semestre 2024"
-  var semMatch=ql.match(/(primer|segundo|1|2)\s*sem(estre)?\s+(?:de\s+)?(\d{4})/);
-  if(semMatch){
+
+  // === Semestres ===
+  m=ql.match(/(primer|segundo|1|2)\s*sem(estre)?\s+(?:de\s+)?(\d{4})/);
+  if(m){
     var smap={primer:1,segundo:2,"1":1,"2":2};
-    var s=smap[semMatch[1]], y=semMatch[3];
-    if(s&&y) return s===1?{type:"rango",from:y+"-01",to:y+"-06"}:{type:"rango",from:y+"-07",to:y+"-12"};
+    var s=smap[m[1]],y=m[3];
+    if(s&&y) return s===1?{type:"rango",from:y+"-01",to:y+"-06",compara:isCompara}:{type:"rango",from:y+"-07",to:y+"-12",compara:isCompara};
   }
-  // "año 2023" / "en 2023" / "2023" solo
-  var anioMatch=ql.match(/(?:\bano\s+|\ben\s+|\bdel\s+|\bdurante\s+)?(\b20\d{2}\b)(?!\-)/);
-  if(anioMatch){
-    var y=anioMatch[1];
-    // Solo si hay sólo un año mencionado (no parte de un rango ya capturado)
-    return {type:"rango", from:y+"-01", to:y+"-12", anioCompleto:true};
+
+  // === Año completo ===
+  // Capturar TODOS los años mencionados y, si hay 2, hacer rango
+  var aniosAll=ql.match(/\b(20\d{2})\b/g);
+  if(aniosAll && aniosAll.length>=2 && isCompara){
+    var sorted=aniosAll.slice().sort();
+    return {type:"rango",from:sorted[0]+"-01",to:sorted[sorted.length-1]+"-12",compara:true,anioCompleto:true};
   }
-  // "ultimo mes" / "ultimos N meses" / "ultimo año"
-  var ulmMatch=ql.match(/ultim[oa]s?\s+(\d+)\s+mes/);
-  if(ulmMatch) return {type:"ultimos", n:parseInt(ulmMatch[1])};
-  if(/ultim[oa]\s+a[noñ]o/.test(ql)) return {type:"ultimos", n:12};
+  if(aniosAll && aniosAll.length===1){
+    var y2=aniosAll[0];
+    return {type:"rango",from:y2+"-01",to:y2+"-12",anioCompleto:true,compara:isCompara};
+  }
+
+  // === Últimos N meses / mes / año ===
+  m=ql.match(/ultim[oa]s?\s+(\d+)\s+mes/);
+  if(m) return {type:"ultimos",n:parseInt(m[1]),compara:isCompara};
+  if(/ultim[oa]\s+a[noñ]o/.test(ql)) return {type:"ultimos",n:12,compara:isCompara};
   if(/ultim[oa]\s+mes/.test(ql)) return {type:"ultimo"};
-  // default
+
   return null;
 }
 function cbParseMesAnio(s){
-  // Detecta "noviembre 2023" o "noviembre de 2023"
   var m=s.match(/\b(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre)\s+(?:de\s+)?(\d{4})\b/);
   if(!m) return null;
   return m[2]+"-"+String(CB_MESES[m[1]]).padStart(2,"0");
@@ -4150,13 +4192,20 @@ function cbAnsRango(s, arr, per){
   if(!subset.length) return "No hay datos de <strong>"+s.label+"</strong> en ese período.";
 
   var first=subset[0], last=subset[subset.length-1];
-  var parts=["<strong>"+s.label+"</strong> del <span class='em'>"+cbFmtMes(first.f)+"</span> al <span class='em'>"+cbFmtMes(last.f)+"</span>:"];
+  var head = per.compara
+    ? "<strong>Variación de "+s.label+"</strong> entre <span class='em'>"+cbFmtMes(first.f)+"</span> y <span class='em'>"+cbFmtMes(last.f)+"</span>:"
+    : "<strong>"+s.label+"</strong> del <span class='em'>"+cbFmtMes(first.f)+"</span> al <span class='em'>"+cbFmtMes(last.f)+"</span>:";
+  var parts=[head];
 
   // Si tiene field_vm (es una serie de variaciones mensuales), calcular acumulado
   if(s.field_vm){
     var acum=cbAcumPct(subset, s.field_vm, per.from, per.to);
     if(acum!=null){
-      parts.push("Acumulado: <span class='"+(acum>=0?"up":"dn")+"'>"+cbFmtPct(acum,1)+"</span>.");
+      var verbo = acum>=0 ? "Subió" : "Cayó";
+      var lead = per.compara
+        ? verbo+" <span class='"+(acum>=0?"up":"dn")+"'>"+cbFmtPct(acum,1)+"</span> acumulado en el período."
+        : "Acumulado: <span class='"+(acum>=0?"up":"dn")+"'>"+cbFmtPct(acum,1)+"</span>.";
+      parts.push(lead);
     }
     // Promedio mensual
     var vmVals=subset.map(function(r){ return cbGetField(r, s.field_vm); }).filter(function(v){ return v!=null; });
@@ -4174,7 +4223,13 @@ function cbAnsRango(s, arr, per){
     var vN=cbGetField(last, s.field_n);
     if(v0!=null && vN!=null){
       var change=((vN/v0)-1)*100;
-      parts.push("Pasó de <span class='em'>"+cbFmtUnit(v0,s.unit)+"</span> a <span class='em'>"+cbFmtUnit(vN,s.unit)+"</span> ("+(change>=0?"<span class='up'>+":"<span class='dn'>")+cbFmtPct(change,1).slice(1)+"</span>).");
+      var pctTxt=(change>=0?"<span class='up'>+":"<span class='dn'>")+cbFmtPct(change,1).slice(1)+"</span>";
+      if(per.compara){
+        var vbo=change>=0?"Subió":"Cayó";
+        parts.push(vbo+" "+pctTxt+": pasó de <span class='em'>"+cbFmtUnit(v0,s.unit)+"</span> a <span class='em'>"+cbFmtUnit(vN,s.unit)+"</span>.");
+      } else {
+        parts.push("Pasó de <span class='em'>"+cbFmtUnit(v0,s.unit)+"</span> a <span class='em'>"+cbFmtUnit(vN,s.unit)+"</span> ("+pctTxt+").");
+      }
     }
   }
   // Si tiene field_via (var i.a.), promedio de var i.a. en el rango
