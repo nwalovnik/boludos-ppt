@@ -4109,6 +4109,15 @@ function cbGetField(rec, fld){
   return v;
 }
 
+// Color por serie: precios/TC/riesgo/mora suben = rojo (up). Actividad sube = verde (dn).
+var CB_PRICE_SERIES = {ipc:1, ipim:1, ipib:1, ipp:1, tc:1, embi:1, mora:1, eph:1};
+function cbCls(s, v){
+  if(v==null) return "neu";
+  var price = s && CB_PRICE_SERIES[s.serie];
+  if(price) return v>=0 ? "up" : "dn";
+  return v>=0 ? "dn" : "up";
+}
+
 // Helpers formato
 function cbFmtNum(v, dec){
   if(v==null||isNaN(v)) return "—";
@@ -4202,13 +4211,13 @@ function cbAnsMesUnico(s, rec, ym, arr){
     }
   }
   if(vm!=null){
-    parts.push("<strong>"+s.label+"</strong> de <span class='em'>"+cbFmtMes(ym)+"</span>: <span class='"+(vm>=0?"up":"dn")+"'>"+cbFmtPct(vm)+"</span> mensual.");
+    parts.push("<strong>"+s.label+"</strong> de <span class='em'>"+cbFmtMes(ym)+"</span>: <span class='"+cbCls(s,vm)+"'>"+cbFmtPct(vm)+"</span> mensual.");
   } else if(via!=null){
-    parts.push("<strong>"+s.label+"</strong> de <span class='em'>"+cbFmtMes(ym)+"</span>: <span class='"+(via>=0?"dn":"up")+"'>"+cbFmtPct(via)+"</span> i.a.");
+    parts.push("<strong>"+s.label+"</strong> de <span class='em'>"+cbFmtMes(ym)+"</span>: <span class='"+cbCls(s,via)+"'>"+cbFmtPct(via)+"</span> i.a.");
   } else if(nivel!=null){
     parts.push("<strong>"+s.label+"</strong> en <span class='em'>"+cbFmtMes(ym)+"</span>: <span class='em'>"+cbFmtUnit(nivel,s.unit)+"</span>.");
   }
-  if(via!=null && vm!=null) parts.push("Variación interanual: <span class='"+(via>=0?"up":"dn")+"'>"+cbFmtPct(via)+"</span>.");
+  if(via!=null && vm!=null) parts.push("Variación interanual: <span class='"+cbCls(s,via)+"'>"+cbFmtPct(via)+"</span>.");
   if(nivel!=null && (vm!=null||via!=null)) parts.push("Nivel del índice: "+cbFmtNum(nivel,2)+".");
   return parts.join(" ");
 }
@@ -4229,8 +4238,8 @@ function cbAnsRango(s, arr, per){
     if(acum!=null){
       var verbo = acum>=0 ? "Subió" : "Cayó";
       var lead = per.compara
-        ? verbo+" <span class='"+(acum>=0?"up":"dn")+"'>"+cbFmtPct(acum,1)+"</span> acumulado en el período."
-        : "Acumulado: <span class='"+(acum>=0?"up":"dn")+"'>"+cbFmtPct(acum,1)+"</span>.";
+        ? verbo+" <span class='"+cbCls(s,acum)+"'>"+cbFmtPct(acum,1)+"</span> acumulado en el período."
+        : "Acumulado: <span class='"+cbCls(s,acum)+"'>"+cbFmtPct(acum,1)+"</span>.";
       parts.push(lead);
     }
     // Promedio mensual
@@ -4249,7 +4258,7 @@ function cbAnsRango(s, arr, per){
     var vN=cbGetField(last, s.field_n);
     if(v0!=null && vN!=null){
       var change=((vN/v0)-1)*100;
-      var pctTxt=(change>=0?"<span class='up'>+":"<span class='dn'>")+cbFmtPct(change,1).slice(1)+"</span>";
+      var pctTxt="<span class='"+cbCls(s,change)+"'>"+cbFmtPct(change,1)+"</span>";
       if(per.compara){
         var vbo=change>=0?"Subió":"Cayó";
         parts.push(vbo+" "+pctTxt+": pasó de <span class='em'>"+cbFmtUnit(v0,s.unit)+"</span> a <span class='em'>"+cbFmtUnit(vN,s.unit)+"</span>.");
