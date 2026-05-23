@@ -3978,16 +3978,30 @@ var CB_SERIES = [
 ];
 
 // Detectar serie por keywords (más específico gana)
+// Una "sub-apertura" (field_n empieza con 'r.' o 's.', o field_vm/via con punto) gana a la serie general
+// aunque el trigger sea más corto. Esto evita que "industria textil" caiga en IPI general por "industria".
 function cbDetectSerie(ql){
-  var best=null, bestLen=0;
+  var matches=[];
   for(var i=0;i<CB_SERIES.length;i++){
     var s=CB_SERIES[i];
     for(var j=0;j<s.triggers.length;j++){
       var t=s.triggers[j];
-      if(ql.indexOf(t)>=0 && t.length>bestLen){ best=s; bestLen=t.length; }
+      if(ql.indexOf(t)>=0){
+        var isSub = (s.field_n && s.field_n.indexOf(".")>=0) ||
+                    (s.field_via && s.field_via.indexOf(".")>=0) ||
+                    (s.field_vm && s.field_vm.indexOf(".")>=0);
+        matches.push({s:s, len:t.length, sub:isSub});
+        break;
+      }
     }
   }
-  return best;
+  if(!matches.length) return null;
+  // Ordenar: primero sub-aperturas, luego por trigger más largo
+  matches.sort(function(a,b){
+    if(a.sub!==b.sub) return a.sub?-1:1;
+    return b.len - a.len;
+  });
+  return matches[0].s;
 }
 
 // Parser de período: detecta mes+año, año solo, rango, "ultimo X meses", "trimestre X"
@@ -4137,7 +4151,7 @@ function cbBuildAnswer(s, per, ql){
   if(per && per.type==="mes"){
     var rec=arr.find(function(r){ return r.f===per.ym && !r.proj; });
     if(!rec) return "No encuentro datos de <strong>"+s.label+"</strong> para <em>"+cbFmtMes(per.ym)+"</em>.";
-    return cbAnsMesUnico(s, rec, per.ym);
+    return cbAnsMesUnico(s, rec, per.ym, arr);
   }
 
   // Caso C: rango (anual, trimestral, semestral, "desde X hasta Y")
@@ -4157,7 +4171,7 @@ function cbBuildAnswer(s, per, ql){
   var arrReal=arr.filter(function(r){ return !r.proj && (cbGetField(r, s.field_n||s.field_vm||"v")!=null || cbGetField(r, s.field_via||"")!=null); });
   if(!arrReal.length) return "Sin datos para <strong>"+s.label+"</strong>.";
   var ult=arrReal[arrReal.length-1];
-  return cbAnsMesUnico(s, ult, ult.f);
+  return cbAnsMesUnico(s, ult, ult.f, arr);
 }
 
 function cbFmtUnit(v, unit){
@@ -4170,11 +4184,23 @@ function cbFmtUnit(v, unit){
   return cbFmtNum(v,2)+(unit||"");
 }
 
-function cbAnsMesUnico(s, rec, ym){
+function cbAnsMesUnico(s, rec, ym, arr){
   var parts=[];
   var nivel=cbGetField(rec, s.field_n);
   var vm=cbGetField(rec, s.field_vm);
   var via=cbGetField(rec, s.field_via);
+  // Si la sub-serie sólo tiene nivel, derivar VM y VIA al vuelo
+  if(arr && nivel!=null && vm==null && via==null && s.field_n){
+    var idx=arr.findIndex(function(r){return r.f===ym;});
+    if(idx>0){
+      var prev=cbGetField(arr[idx-1], s.field_n);
+      if(prev!=null && prev!==0) vm=((nivel/prev)-1)*100;
+    }
+    if(idx>=12){
+      var prevY=cbGetField(arr[idx-12], s.field_n);
+      if(prevY!=null && prevY!==0) via=((nivel/prevY)-1)*100;
+    }
+  }
   if(vm!=null){
     parts.push("<strong>"+s.label+"</strong> de <span class='em'>"+cbFmtMes(ym)+"</span>: <span class='"+(vm>=0?"up":"dn")+"'>"+cbFmtPct(vm)+"</span> mensual.");
   } else if(via!=null){
