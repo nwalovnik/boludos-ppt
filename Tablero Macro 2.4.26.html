@@ -136,6 +136,41 @@ body{font-family:var(--font-sans);background:var(--bg);color:var(--tx);font-size
 #toast{position:fixed;bottom:20px;right:20px;background:var(--surf);border:.5px solid var(--bd2);border-radius:10px;padding:9px 15px;font-size:12px;box-shadow:0 4px 14px rgba(0,0,0,.15);opacity:0;transition:opacity .22s;pointer-events:none;z-index:200;max-width:280px}
 #toast.on{opacity:1}
 hr.d{border:none;border-top:.5px solid var(--bd);margin:16px 0}
+/* ── CHATBOT ───────────────────────────────────────────────────────────── */
+#cb-btn{position:fixed;bottom:24px;right:24px;width:56px;height:56px;border-radius:50%;background:var(--tx);color:var(--surf);border:none;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.18);display:flex;align-items:center;justify-content:center;font-size:24px;z-index:1000;transition:transform .15s,background .15s}
+#cb-btn:hover{transform:translateY(-2px);background:#000}
+#cb-btn .cb-btn-icon{filter:invert(1) brightness(2);font-size:22px}
+#cb-panel{position:fixed;bottom:24px;right:24px;width:420px;max-width:calc(100vw - 32px);height:600px;max-height:calc(100vh - 56px);background:var(--surf);border:.5px solid var(--bd2);border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.22);display:flex;flex-direction:column;z-index:1001;overflow:hidden;font-family:var(--font-sans)}
+.cb-hdr{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:.5px solid var(--bd);background:var(--tx);color:var(--surf)}
+.cb-title{font-family:var(--font-serif);font-size:15px;font-weight:600;letter-spacing:-.01em}
+.cb-sub{font-size:10px;color:var(--tx3);margin-top:2px;letter-spacing:.04em}
+.cb-close{background:transparent;border:none;color:var(--surf);font-size:24px;cursor:pointer;padding:0 4px;line-height:1;opacity:.7}
+.cb-close:hover{opacity:1}
+.cb-body{flex:1;overflow-y:auto;padding:14px 16px;background:var(--bg);display:flex;flex-direction:column;gap:10px}
+.cb-msg{max-width:88%;padding:9px 13px;border-radius:12px;font-size:13px;line-height:1.5;word-wrap:break-word}
+.cb-user{align-self:flex-end;background:var(--tx);color:var(--surf);border-bottom-right-radius:4px}
+.cb-bot{align-self:flex-start;background:var(--surf);border:.5px solid var(--bd);color:var(--tx);border-bottom-left-radius:4px;font-feature-settings:"tnum"}
+.cb-bot .em{font-weight:600}
+.cb-bot .up{color:var(--red);font-weight:600}
+.cb-bot .dn{color:var(--grn);font-weight:600}
+.cb-bot ul{margin:6px 0 0 18px;padding:0}
+.cb-bot li{margin:2px 0}
+.cb-bot table{border-collapse:collapse;margin-top:6px;font-size:11.5px;font-family:var(--font-mono);width:100%}
+.cb-bot td,.cb-bot th{padding:3px 6px;border-bottom:.5px solid var(--bd);text-align:right}
+.cb-bot th{font-weight:600;color:var(--tx3);text-transform:uppercase;font-size:9.5px;letter-spacing:.04em;border-bottom:.5px solid var(--bd2)}
+.cb-bot td:first-child,.cb-bot th:first-child{text-align:left}
+.cb-suggest{display:flex;flex-wrap:wrap;gap:5px;padding:8px 16px;border-top:.5px solid var(--bd);background:var(--surf2)}
+.cb-chip{font-size:10.5px;padding:4px 10px;border:.5px solid var(--bd2);border-radius:14px;background:var(--surf);color:var(--tx2);cursor:pointer;font-family:inherit;white-space:nowrap;transition:all .12s}
+.cb-chip:hover{background:var(--tx);color:var(--surf);border-color:var(--tx)}
+.cb-input{display:flex;gap:8px;padding:12px 14px;border-top:.5px solid var(--bd);background:var(--surf)}
+.cb-input input{flex:1;font-size:13px;padding:8px 12px;border:.5px solid var(--bd2);border-radius:18px;background:var(--surf2);color:var(--tx);font-family:inherit;outline:none}
+.cb-input input:focus{border-color:var(--tx)}
+.cb-send{width:36px;height:36px;border-radius:50%;background:var(--tx);color:var(--surf);border:none;cursor:pointer;font-size:16px;line-height:1;display:flex;align-items:center;justify-content:center;transition:background .12s}
+.cb-send:hover{background:#000}
+@media(max-width:480px){
+  #cb-panel{width:100%;height:100%;max-height:100%;bottom:0;right:0;border-radius:0}
+  #cb-btn{bottom:14px;right:14px;width:52px;height:52px}
+}
 .slbl{font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--tx3);margin:0 0 16px;font-weight:600}
 /* Editorial tables */
 .data-table{width:100%;border-collapse:collapse;font-size:12.5px;font-feature-settings:"tnum"}
@@ -918,6 +953,34 @@ hr.d{border:none;border-top:.5px solid var(--bd);margin:16px 0}
   <div class="slbl">Noticias de mercado &#183; traidas por Claude</div>
   <button class="btn btn-p" onclick="cargarNoticias()" style="margin-bottom:12px">&#127757; Buscar noticias que impactan en mercados argentinos</button>
   <div id="noticias-out" style="font-size:13px;color:var(--tx2);line-height:1.7">Hacé clic para traer las últimas noticias relevantes (FMI, commodities, Brasil, Fed, etc.).</div>
+</div>
+<!-- ════════════════════════════════════════════════════════════════════
+     CHATBOT — preguntas sobre series del tablero (rule-based, sin API)
+     ════════════════════════════════════════════════════════════════════ -->
+<button id="cb-btn" onclick="cbToggle()" title="Preguntar sobre los datos">
+  <span class="cb-btn-icon">&#128172;</span>
+</button>
+<div id="cb-panel" style="display:none">
+  <div class="cb-hdr">
+    <div>
+      <div class="cb-title">Consultar al sistema</div>
+      <div class="cb-sub">Pregunta sobre cualquier serie</div>
+    </div>
+    <button class="cb-close" onclick="cbToggle()" aria-label="Cerrar">&times;</button>
+  </div>
+  <div class="cb-body" id="cb-msgs"></div>
+  <div class="cb-suggest" id="cb-suggest">
+    <button class="cb-chip" onclick="cbAsk('Inflación de alimentos en 2023')">Inflación alimentos 2023</button>
+    <button class="cb-chip" onclick="cbAsk('IPIM mayorista de noviembre 2023')">IPIM nov 2023</button>
+    <button class="cb-chip" onclick="cbAsk('Cuánto creció el sector textil')">Sector textil último</button>
+    <button class="cb-chip" onclick="cbAsk('Reservas brutas')">Reservas hoy</button>
+    <button class="cb-chip" onclick="cbAsk('Dólar blue')">Dólar blue hoy</button>
+    <button class="cb-chip" onclick="cbAsk('Resultado fiscal de abril 2026')">Fiscal abril 2026</button>
+  </div>
+  <div class="cb-input">
+    <input id="cb-q" placeholder="Ej: inflación de salud en marzo 2024" onkeydown="if(event.key==='Enter')cbSend()"/>
+    <button onclick="cbSend()" class="cb-send">&#10148;</button>
+  </div>
 </div>
 <div id="toast"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
@@ -3786,6 +3849,373 @@ async function reloadDataJson(){
   // El scraper (GitHub Action) genera data.json diariamente y eso es la fuente de verdad.
   // Si querés forzar refresh manual, el botón "Actualizar" recarga data.json.
 })();
+
+// ════════════════════════════════════════════════════════════════════════
+// CHATBOT — parser de queries en español sobre las series del sistema
+// ════════════════════════════════════════════════════════════════════════
+function cbToggle(){
+  var p=document.getElementById("cb-panel");
+  var b=document.getElementById("cb-btn");
+  var open=p.style.display==="none"||p.style.display==="";
+  p.style.display=open?"flex":"none";
+  b.style.display=open?"none":"flex";
+  if(open && !document.getElementById("cb-msgs").children.length){
+    cbAdd("bot","¡Hola! Te respondo sobre las series del tablero. Hacé preguntas tipo:<br/>"+
+      "<ul><li><em>Inflación de alimentos en 2023</em></li>"+
+      "<li><em>IPIM mayorista en noviembre 2023</em></li>"+
+      "<li><em>Cuánto creció el sector textil</em></li>"+
+      "<li><em>Reservas brutas</em> / <em>EMBI hoy</em> / <em>dólar blue</em></li></ul>");
+  }
+}
+function cbAsk(q){
+  document.getElementById("cb-q").value=q;
+  cbSend();
+}
+function cbAdd(side,html){
+  var msgs=document.getElementById("cb-msgs");
+  var d=document.createElement("div");
+  d.className="cb-msg cb-"+side;
+  d.innerHTML=html;
+  msgs.appendChild(d);
+  msgs.scrollTop=msgs.scrollHeight;
+}
+function cbSend(){
+  var inp=document.getElementById("cb-q");
+  var q=(inp.value||"").trim();
+  if(!q)return;
+  cbAdd("user",cbEsc(q));
+  inp.value="";
+  setTimeout(function(){
+    try{ cbAdd("bot", cbAnswer(q)); }
+    catch(e){ cbAdd("bot","Hubo un error: "+e.message); console.error(e); }
+  },150);
+}
+function cbEsc(s){return String(s).replace(/[<>&]/g,function(c){return{"<":"&lt;",">":"&gt;","&":"&amp;"}[c];});}
+
+// ── Normalización ──
+function cbNorm(q){
+  return String(q).toLowerCase()
+    .normalize("NFD").replace(/[̀-ͯ]/g,"")  // sin tildes
+    .replace(/\s+/g," ").trim();
+}
+
+// ── Catálogo de series detectables ──
+// Cada entrada define: triggers (keywords), serieData (key en D), fields (qué campos
+// usar para "default" / "anual" / "nivel"), label, formatFn.
+var CB_SERIES = [
+  // ── IPC general y aperturas ──
+  {key:"ipc_alim",      triggers:["alimentos","alimentacion","alimento","comida"],   serie:"ipc", field_vm:"alim_vm", field_via:"alim_via", label:"Inflación de alimentos", unit:"%"},
+  {key:"ipc_vest",      triggers:["vestimenta","indumentaria","ropa","prendas"],     serie:"ipc", field_vm:"vest",   label:"Inflación de vestimenta", unit:"%"},
+  {key:"ipc_viv",       triggers:["vivienda","alquiler","vivienda y servicios"],     serie:"ipc", field_vm:"viv",    label:"Inflación de vivienda", unit:"%"},
+  {key:"ipc_salud",     triggers:["salud","medicina","medicamentos"],                serie:"ipc", field_vm:"salud",  label:"Inflación de salud", unit:"%"},
+  {key:"ipc_transp",    triggers:["transporte","nafta","combustible al consumidor"], serie:"ipc", field_vm:"transp", label:"Inflación de transporte", unit:"%"},
+  {key:"ipc_educ",      triggers:["educacion","colegio","escuela","universidad"],    serie:"ipc", field_vm:"educ",   label:"Inflación de educación", unit:"%"},
+  {key:"ipc_rest",      triggers:["restaurantes","restoranes","hoteles ipc"],        serie:"ipc", field_vm:"rest",   label:"Inflación de restaurantes y hoteles", unit:"%"},
+  {key:"ipc",           triggers:["inflacion","ipc","precios al consumidor","nivel general"], serie:"ipc", field_vm:"vm", field_via:"via", field_n:"n", label:"Inflación IPC nivel general", unit:"%"},
+  // ── IPIM mayorista ──
+  {key:"ipim_nac",      triggers:["mayorista nacionales","ipim nacionales","mayorista nacional"], serie:"ipim", field_n:"nac", label:"IPIM productos nacionales", unit:""},
+  {key:"ipim_imp",      triggers:["mayorista importados","ipim importados"],         serie:"ipim", field_n:"imp", label:"IPIM productos importados", unit:""},
+  {key:"ipim",          triggers:["mayorista","ipim","precios mayoristas","mayoristas"], serie:"ipim", field_vm:"vm", field_via:"via", field_n:"n", label:"Inflación mayorista IPIM", unit:"%"},
+  {key:"ipib",          triggers:["ipib","basicos al por mayor","precios basicos mayor"], serie:"ipib", field_vm:"vm", field_via:"via", label:"IPIB básicos al por mayor", unit:"%"},
+  {key:"ipp",           triggers:["ipp","productor","precios al productor"],         serie:"ipp",  field_vm:"vm", field_via:"via", label:"IPP precios al productor", unit:"%"},
+  // ── EMAE ──
+  {key:"emae_agro",     triggers:["agro","agricultura","ganaderia","agropecuario"],  serie:"emae", field_via:"s.Agro", field_n:"s.Agro", label:"Sector agropecuario (EMAE)", unit:""},
+  {key:"emae_pesca",    triggers:["pesca"],                                          serie:"emae", field_via:"s.Pesca", label:"Sector pesca (EMAE)", unit:""},
+  {key:"emae_mineria",  triggers:["mineria","mineria emae"],                         serie:"emae", field_via:"s.Mineria", label:"Sector minería (EMAE)", unit:""},
+  {key:"emae_industria",triggers:["industria emae","industria manufacturera"],       serie:"emae", field_via:"s.Industria", label:"Sector industria (EMAE)", unit:""},
+  {key:"emae_const",    triggers:["construccion","construccion emae"],               serie:"emae", field_via:"s.Const", label:"Sector construcción (EMAE)", unit:""},
+  {key:"emae_comercio", triggers:["comercio emae"],                                  serie:"emae", field_via:"s.Comer", label:"Sector comercio (EMAE)", unit:""},
+  {key:"emae_transp",   triggers:["transporte emae","comunicaciones emae"],          serie:"emae", field_via:"s.Transp", label:"Sector transporte (EMAE)", unit:""},
+  {key:"emae",          triggers:["emae","actividad economica","actividad"],         serie:"emae", field_vm:"vm", field_via:"via", field_n:"orig", label:"Actividad económica (EMAE)", unit:""},
+  // ── IPI por rama ──
+  {key:"ipi_alim",      triggers:["industria alimentos","alimentos ipi"],            serie:"ipi", field_n:"r.Alimentos", label:"Industria alimentos (IPI)", unit:""},
+  {key:"ipi_text",      triggers:["textil","textiles","sector textil"],              serie:"ipi", field_n:"r.Textiles", label:"Industria textil (IPI)", unit:""},
+  {key:"ipi_vest",      triggers:["vestimenta ipi","prendas ipi"],                   serie:"ipi", field_n:"r.Vestim", label:"Industria vestimenta (IPI)", unit:""},
+  {key:"ipi_petr",      triggers:["petroleo","refinacion"],                          serie:"ipi", field_n:"r.Petroleo", label:"Refinación petróleo (IPI)", unit:""},
+  {key:"ipi_quim",      triggers:["quimica","quimicos","quimico"],                   serie:"ipi", field_n:"r.Quimica", label:"Industria química (IPI)", unit:""},
+  {key:"ipi_auto",      triggers:["automotriz","autos","automotores"],               serie:"ipi", field_n:"r.Automotriz", label:"Industria automotriz (IPI)", unit:""},
+  {key:"ipi_maquin",    triggers:["maquinaria","maquinaria y equipo"],               serie:"ipi", field_n:"r.Maquinaria", label:"Maquinaria (IPI)", unit:""},
+  {key:"ipi_muebles",   triggers:["muebles"],                                        serie:"ipi", field_n:"r.Muebles", label:"Muebles (IPI)", unit:""},
+  {key:"ipi_madera",    triggers:["madera","papel"],                                 serie:"ipi", field_n:"r.Madera", label:"Madera y papel (IPI)", unit:""},
+  {key:"ipi",           triggers:["ipi","industria","manufacturera","manufactura"],  serie:"ipi", field_vm:"vm", field_via:"via", field_n:"orig", label:"Industria manufacturera (IPI)", unit:""},
+  // ── ISAC, UCI ──
+  {key:"isac",          triggers:["isac","construccion isac","actividad construccion"], serie:"isac", field_vm:"vm", field_via:"via", field_n:"orig", label:"Construcción (ISAC)", unit:""},
+  {key:"uci",           triggers:["uci","capacidad instalada","utilizacion capacidad"], serie:"uci", field_n:"tot", label:"Uso de capacidad instalada", unit:"%"},
+  // ── Supermercados ──
+  {key:"super",         triggers:["supermercados","supermercado","ventas super"],    serie:"super", field_vm:"vm_dest", field_via:"via_real", field_n:"n_real", label:"Ventas en supermercados (real)", unit:"%"},
+  // ── TC, Reservas, EMBI ──
+  {key:"tc_blue",       triggers:["dolar blue","blue"],                              serie:"tc", field_n:"bl", label:"Tipo de cambio Blue", unit:"$", daily:"tc_d", daily_field:"blue"},
+  {key:"tc_mep",        triggers:["dolar mep","mep"],                                serie:"tc", field_n:"of", label:"Tipo de cambio MEP", unit:"$", daily:"tc_d", daily_field:"mep"},
+  {key:"tc_ccl",        triggers:["dolar ccl","ccl","contado con liqui"],            serie:"tc", field_n:"of", label:"Tipo de cambio CCL", unit:"$", daily:"tc_d", daily_field:"ccl"},
+  {key:"tc",            triggers:["dolar oficial","tipo de cambio","dolar","tc"],    serie:"tc", field_n:"of", label:"Tipo de cambio Oficial", unit:"$", daily:"tc_d", daily_field:"of"},
+  {key:"reservas",      triggers:["reservas","rrii","reservas internacionales","reservas brutas"], serie:"reservas", field_n:"v", label:"Reservas internacionales brutas", unit:"USD M", daily:"rrii_d", daily_field:"v"},
+  {key:"embi",          triggers:["embi","riesgo pais","riesgo-pais"],               serie:"embi", field_n:"v", label:"Riesgo país EMBI", unit:" bps", daily:"embi_d", daily_field:"v"},
+  {key:"merval",        triggers:["merval","bolsa"],                                 serie:"merval", field_n:"v", label:"MERVAL", unit:"$", daily:"merval_d", daily_field:"v"},
+  // ── Salarios, Empleo ──
+  {key:"sal_priv",      triggers:["salarios privado","salario privado","sueldo privado"], serie:"salarios", field_n:"real_priv", label:"Salarios sector privado registrado", unit:""},
+  {key:"sal_pub",       triggers:["salarios publico","salario publico","sueldo publico"], serie:"salarios", field_n:"real_pub", label:"Salarios sector público", unit:""},
+  {key:"sal_no_reg",    triggers:["salarios informales","no registrado","informal"], serie:"salarios", field_n:"no_reg", label:"Salarios sector no registrado", unit:""},
+  {key:"salarios",      triggers:["salarios","salario","sueldos","sueldo","ripte"],  serie:"salarios", field_n:"is_r", label:"Índice de salarios total registrado", unit:""},
+  {key:"trabajo",       triggers:["empleo","trabajadores","sipa","empleo registrado"], serie:"trabajo", field_n:"tot", label:"Empleo registrado SIPA", unit:""},
+  {key:"empresas",      triggers:["empresas","firmas","oede"],                       serie:"empresas", field_n:"n", field_via:"via", label:"Empresas activas", unit:""},
+  {key:"eph",           triggers:["desempleo","desocupacion","tasa desempleo"],      serie:"eph", field_n:"td", label:"Tasa de desocupación EPH", unit:"%"},
+  // ── Mora bancaria ──
+  {key:"mora_fam",      triggers:["mora familias","irregularidad familias","mora hogares"], serie:"mora", field_n:"fam", label:"Mora bancaria familias", unit:"%"},
+  {key:"mora_emp",      triggers:["mora empresas","irregularidad empresas"],         serie:"mora", field_n:"emp", label:"Mora bancaria empresas", unit:"%"},
+  {key:"mora",          triggers:["mora","morosidad","irregularidad","cartera irregular"], serie:"mora", field_n:"fam", label:"Mora bancaria", unit:"%"},
+  // ── Fiscal, Recaudación ──
+  {key:"fiscal_fin",    triggers:["resultado financiero","financiero spnf","saldo financiero"], serie:"fiscal", field_n:"sal_fin", label:"Resultado financiero SPNF", unit:" M$"},
+  {key:"fiscal",        triggers:["resultado fiscal","resultado primario","fiscal","spnf","superavit primario","deficit primario"], serie:"fiscal", field_n:"sal_prim", label:"Resultado primario SPNF", unit:" M$"},
+  {key:"rec",           triggers:["recaudacion","afip","arca","tributario"],         serie:"rec", field_n:"tot", label:"Recaudación tributaria", unit:" M$"},
+  // ── BC, Turismo ──
+  {key:"bc_expo",       triggers:["exportaciones","expo"],                           serie:"bc", field_n:"expo", label:"Exportaciones", unit:"USD M"},
+  {key:"bc_impo",       triggers:["importaciones","impo"],                           serie:"bc", field_n:"impo_abs", label:"Importaciones", unit:"USD M"},
+  {key:"bc",            triggers:["balanza comercial","comercio exterior","saldo comercial","ica"], serie:"bc", field_n:"saldo", label:"Saldo balanza comercial", unit:"USD M"},
+  {key:"turismo_sal",   triggers:["saldo turistico","saldo turismo"],                serie:"turismo", field_n:"sal", label:"Saldo turístico", unit:" pers."},
+  {key:"turismo",       triggers:["turismo","turistas","receptivo","emisivo"],       serie:"turismo", field_n:"sal", label:"Turismo (saldo receptivo - emisivo)", unit:" pers."},
+  // ── PBI ──
+  {key:"pbi",           triggers:["pbi","producto bruto","pib"],                     serie:"pbi", field_via:"via", field_n:"pbi", label:"PBI trimestral", unit:""},
+];
+
+// Detectar serie por keywords (más específico gana)
+function cbDetectSerie(ql){
+  var best=null, bestLen=0;
+  for(var i=0;i<CB_SERIES.length;i++){
+    var s=CB_SERIES[i];
+    for(var j=0;j<s.triggers.length;j++){
+      var t=s.triggers[j];
+      if(ql.indexOf(t)>=0 && t.length>bestLen){ best=s; bestLen=t.length; }
+    }
+  }
+  return best;
+}
+
+// Parser de período: detecta mes+año, año solo, rango, "ultimo X meses", "trimestre X"
+var CB_MESES={enero:1,febrero:2,marzo:3,abril:4,mayo:5,junio:6,julio:7,agosto:8,septiembre:9,setiembre:9,octubre:10,noviembre:11,diciembre:12};
+var CB_MESES_ORD=["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+function cbFmtMes(ym){
+  var p=ym.split("-"); if(p.length<2)return ym;
+  return CB_MESES_ORD[parseInt(p[1])-1]+" "+p[0];
+}
+function cbDetectPeriodo(ql){
+  // "del X al Y" / "de X a Y" / "X a Y" / "X hasta Y"
+  var rangoMatch=ql.match(/(?:desde|de|del)\s+(\w+\s+\d{4})\s+(?:hasta|a|al)\s+(\w+\s+\d{4})/);
+  if(rangoMatch){
+    var from=cbParseMesAnio(rangoMatch[1]), to=cbParseMesAnio(rangoMatch[2]);
+    if(from && to) return {type:"rango", from:from, to:to};
+  }
+  // Mes específico: "noviembre 2023" / "en marzo 2024" / "de abril de 2025"
+  var mesAnio=cbParseMesAnio(ql);
+  if(mesAnio) return {type:"mes", ym:mesAnio};
+  // "primer trimestre 2024" / "1T 2024" / "Q1 2024"
+  var trimMatch=ql.match(/(primer|segundo|tercer|cuarto|1|2|3|4)\s*t?r?i?m?e?s?t?r?e?\s+(?:de\s+)?(\d{4})/);
+  if(trimMatch){
+    var qmap={primer:1,segundo:2,tercer:3,cuarto:4,"1":1,"2":2,"3":3,"4":4};
+    var q=qmap[trimMatch[1]], y=trimMatch[2];
+    if(q&&y) return {type:"rango", from:y+"-"+String((q-1)*3+1).padStart(2,"0"), to:y+"-"+String(q*3).padStart(2,"0")};
+  }
+  // "primer/segundo semestre 2024"
+  var semMatch=ql.match(/(primer|segundo|1|2)\s*sem(estre)?\s+(?:de\s+)?(\d{4})/);
+  if(semMatch){
+    var smap={primer:1,segundo:2,"1":1,"2":2};
+    var s=smap[semMatch[1]], y=semMatch[3];
+    if(s&&y) return s===1?{type:"rango",from:y+"-01",to:y+"-06"}:{type:"rango",from:y+"-07",to:y+"-12"};
+  }
+  // "año 2023" / "en 2023" / "2023" solo
+  var anioMatch=ql.match(/(?:\bano\s+|\ben\s+|\bdel\s+|\bdurante\s+)?(\b20\d{2}\b)(?!\-)/);
+  if(anioMatch){
+    var y=anioMatch[1];
+    // Solo si hay sólo un año mencionado (no parte de un rango ya capturado)
+    return {type:"rango", from:y+"-01", to:y+"-12", anioCompleto:true};
+  }
+  // "ultimo mes" / "ultimos N meses" / "ultimo año"
+  var ulmMatch=ql.match(/ultim[oa]s?\s+(\d+)\s+mes/);
+  if(ulmMatch) return {type:"ultimos", n:parseInt(ulmMatch[1])};
+  if(/ultim[oa]\s+a[noñ]o/.test(ql)) return {type:"ultimos", n:12};
+  if(/ultim[oa]\s+mes/.test(ql)) return {type:"ultimo"};
+  // default
+  return null;
+}
+function cbParseMesAnio(s){
+  // Detecta "noviembre 2023" o "noviembre de 2023"
+  var m=s.match(/\b(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre)\s+(?:de\s+)?(\d{4})\b/);
+  if(!m) return null;
+  return m[2]+"-"+String(CB_MESES[m[1]]).padStart(2,"0");
+}
+
+// Obtener valor de un registro usando "campo" o "obj.subkey"
+function cbGetField(rec, fld){
+  if(!rec || !fld) return null;
+  if(fld.indexOf(".")<0) return rec[fld];
+  var parts=fld.split(".");
+  var v=rec;
+  for(var i=0;i<parts.length;i++){ if(v==null) return null; v=v[parts[i]]; }
+  return v;
+}
+
+// Helpers formato
+function cbFmtNum(v, dec){
+  if(v==null||isNaN(v)) return "—";
+  return Intl.NumberFormat("es-AR",{maximumFractionDigits:dec!=null?dec:2}).format(v);
+}
+function cbFmtPct(v, dec){
+  if(v==null) return "—";
+  var sign=v>=0?"+":"";
+  return sign+(v.toFixed(dec!=null?dec:1))+"%";
+}
+
+// Calcular inflación acumulada en un rango (compound de vm)
+function cbAcumPct(arr, fldVm, from, to){
+  var subset = arr.filter(function(r){ return r.f>=from && r.f<=to && r[fldVm.split(".").slice(-1)[0]]!=null && !r.proj; });
+  if(!subset.length) return null;
+  var factor=1;
+  for(var i=0;i<subset.length;i++){
+    var v=cbGetField(subset[i], fldVm);
+    if(v!=null) factor *= (1 + v/100);
+  }
+  return (factor - 1) * 100;
+}
+
+// ── Constructor de respuesta ──
+function cbBuildAnswer(s, per, ql){
+  var arr = D[s.serie];
+  if(!Array.isArray(arr) || !arr.length) return "No tengo datos cargados para <strong>"+s.label+"</strong>.";
+
+  // Caso A: diaria (TC, reservas, EMBI, MERVAL) y pregunta sin período → último valor diario
+  if(s.daily && (!per || per.type==="ultimo")){
+    var dd=window.DD && DD[s.daily];
+    if(dd && dd.length){
+      var ult=dd[dd.length-1];
+      var v=ult[s.daily_field];
+      if(v!=null) return "<strong>"+s.label+"</strong> al <span class='em'>"+ult.f+"</span>: <span class='em'>"+cbFmtUnit(v,s.unit)+"</span>.";
+    }
+  }
+
+  // Caso B: período de un solo mes
+  if(per && per.type==="mes"){
+    var rec=arr.find(function(r){ return r.f===per.ym && !r.proj; });
+    if(!rec) return "No encuentro datos de <strong>"+s.label+"</strong> para <em>"+cbFmtMes(per.ym)+"</em>.";
+    return cbAnsMesUnico(s, rec, per.ym);
+  }
+
+  // Caso C: rango (anual, trimestral, semestral, "desde X hasta Y")
+  if(per && per.type==="rango"){
+    return cbAnsRango(s, arr, per);
+  }
+
+  // Caso D: últimos N meses
+  if(per && per.type==="ultimos"){
+    var subset=arr.filter(function(r){ return !r.proj && cbGetField(r, s.field_vm||s.field_n)!=null; }).slice(-per.n);
+    if(!subset.length) return "Sin datos para <strong>"+s.label+"</strong>.";
+    var from=subset[0].f, to=subset[subset.length-1].f;
+    return cbAnsRango(s, arr, {type:"rango", from:from, to:to});
+  }
+
+  // Caso default: último registro real
+  var arrReal=arr.filter(function(r){ return !r.proj && (cbGetField(r, s.field_n||s.field_vm||"v")!=null || cbGetField(r, s.field_via||"")!=null); });
+  if(!arrReal.length) return "Sin datos para <strong>"+s.label+"</strong>.";
+  var ult=arrReal[arrReal.length-1];
+  return cbAnsMesUnico(s, ult, ult.f);
+}
+
+function cbFmtUnit(v, unit){
+  if(unit==="%") return cbFmtPct(v);
+  if(unit==="USD M") return "USD "+cbFmtNum(v,0)+"M";
+  if(unit==="$") return "$"+cbFmtNum(v,2);
+  if(unit===" bps") return cbFmtNum(v,0)+" bps";
+  if(unit===" pers.") return cbFmtNum(v,0)+" personas";
+  if(unit===" M$") return cbFmtNum(v,0)+" millones de pesos";
+  return cbFmtNum(v,2)+(unit||"");
+}
+
+function cbAnsMesUnico(s, rec, ym){
+  var parts=[];
+  var nivel=cbGetField(rec, s.field_n);
+  var vm=cbGetField(rec, s.field_vm);
+  var via=cbGetField(rec, s.field_via);
+  if(vm!=null){
+    parts.push("<strong>"+s.label+"</strong> de <span class='em'>"+cbFmtMes(ym)+"</span>: <span class='"+(vm>=0?"up":"dn")+"'>"+cbFmtPct(vm)+"</span> mensual.");
+  } else if(via!=null){
+    parts.push("<strong>"+s.label+"</strong> de <span class='em'>"+cbFmtMes(ym)+"</span>: <span class='"+(via>=0?"dn":"up")+"'>"+cbFmtPct(via)+"</span> i.a.");
+  } else if(nivel!=null){
+    parts.push("<strong>"+s.label+"</strong> en <span class='em'>"+cbFmtMes(ym)+"</span>: <span class='em'>"+cbFmtUnit(nivel,s.unit)+"</span>.");
+  }
+  if(via!=null && vm!=null) parts.push("Variación interanual: <span class='"+(via>=0?"up":"dn")+"'>"+cbFmtPct(via)+"</span>.");
+  if(nivel!=null && (vm!=null||via!=null)) parts.push("Nivel del índice: "+cbFmtNum(nivel,2)+".");
+  return parts.join(" ");
+}
+
+function cbAnsRango(s, arr, per){
+  var subset=arr.filter(function(r){ return r.f>=per.from && r.f<=per.to && !r.proj; });
+  if(!subset.length) return "No hay datos de <strong>"+s.label+"</strong> en ese período.";
+
+  var first=subset[0], last=subset[subset.length-1];
+  var parts=["<strong>"+s.label+"</strong> del <span class='em'>"+cbFmtMes(first.f)+"</span> al <span class='em'>"+cbFmtMes(last.f)+"</span>:"];
+
+  // Si tiene field_vm (es una serie de variaciones mensuales), calcular acumulado
+  if(s.field_vm){
+    var acum=cbAcumPct(subset, s.field_vm, per.from, per.to);
+    if(acum!=null){
+      parts.push("Acumulado: <span class='"+(acum>=0?"up":"dn")+"'>"+cbFmtPct(acum,1)+"</span>.");
+    }
+    // Promedio mensual
+    var vmVals=subset.map(function(r){ return cbGetField(r, s.field_vm); }).filter(function(v){ return v!=null; });
+    if(vmVals.length){
+      var prom=vmVals.reduce(function(a,b){return a+b;},0)/vmVals.length;
+      parts.push("Promedio mensual: "+cbFmtPct(prom,2)+".");
+    }
+    // Último mes en el rango
+    var ultVm=cbGetField(last, s.field_vm);
+    if(ultVm!=null) parts.push("Último mes ("+cbFmtMes(last.f)+"): "+cbFmtPct(ultVm)+".");
+  }
+  // Si solo tiene field_n (nivel), calcular var. de primer a último
+  else if(s.field_n){
+    var v0=cbGetField(first, s.field_n);
+    var vN=cbGetField(last, s.field_n);
+    if(v0!=null && vN!=null){
+      var change=((vN/v0)-1)*100;
+      parts.push("Pasó de <span class='em'>"+cbFmtUnit(v0,s.unit)+"</span> a <span class='em'>"+cbFmtUnit(vN,s.unit)+"</span> ("+(change>=0?"<span class='up'>+":"<span class='dn'>")+cbFmtPct(change,1).slice(1)+"</span>).");
+    }
+  }
+  // Si tiene field_via (var i.a.), promedio de var i.a. en el rango
+  if(s.field_via){
+    var viaVals=subset.map(function(r){ return cbGetField(r, s.field_via); }).filter(function(v){ return v!=null; });
+    if(viaVals.length){
+      var lastVia=viaVals[viaVals.length-1];
+      parts.push("Variación interanual al último mes: "+cbFmtPct(lastVia,1)+".");
+    }
+  }
+
+  // Tabla resumen mensual si el rango es ≤ 18 meses
+  if(subset.length<=18 && (s.field_vm || s.field_via)){
+    var rows=["<tr><th>Mes</th>"];
+    if(s.field_vm) rows.push("<th>VM</th>");
+    if(s.field_via) rows.push("<th>VIA</th>");
+    if(s.field_n && !s.field_vm) rows.push("<th>Nivel</th>");
+    rows.push("</tr>");
+    var html="<table><thead>"+rows.join("")+"</thead><tbody>";
+    subset.forEach(function(r){
+      html+="<tr><td>"+cbFmtMes(r.f).split(" ")[0].substring(0,3)+" "+r.f.split("-")[0].slice(2)+"</td>";
+      if(s.field_vm){ var v=cbGetField(r,s.field_vm); html+="<td>"+(v!=null?cbFmtPct(v):"—")+"</td>"; }
+      if(s.field_via){ var vv=cbGetField(r,s.field_via); html+="<td>"+(vv!=null?cbFmtPct(vv):"—")+"</td>"; }
+      if(s.field_n && !s.field_vm){ var n=cbGetField(r,s.field_n); html+="<td>"+cbFmtNum(n,1)+"</td>"; }
+      html+="</tr>";
+    });
+    html+="</tbody></table>";
+    parts.push(html);
+  }
+  return parts.join(" ");
+}
+
+function cbAnswer(q){
+  var ql=cbNorm(q);
+  var s=cbDetectSerie(ql);
+  if(!s){
+    return "No identifiqué a qué serie te referís. Probá con: <em>inflación, IPC, IPIM mayorista, EMAE, IPI, ISAC, UCI, dólar, blue, reservas, EMBI, MERVAL, salarios, mora, fiscal, recaudación, balanza, supermercados, turismo, PBI, desempleo, empresas</em>. También podés pedir aperturas como <em>alimentos, vivienda, transporte, textil, automotriz, química, agro, construcción</em>.";
+  }
+  var per=cbDetectPeriodo(ql);
+  return cbBuildAnswer(s, per, ql);
+}
 
 
 var IND_SECTOR="Alimentos";
