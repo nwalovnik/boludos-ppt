@@ -4,84 +4,100 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Boludos del PPT — Análisis Económico</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600;8..60,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#f6f5f2;--surf:#fff;--surf2:#eeede8;--surf3:#e4e3dc;
-  --bd:rgba(0,0,0,.07);--bd2:rgba(0,0,0,.15);
-  --tx:#181816;--tx2:#6a6960;--tx3:#9a9990;
-  --acc:#1a4edb;--acc2:#eef2ff;
-  --grn:#0a7c42;--grn2:#edfaf3;
-  --red:#c0392b;
-  --r:12px;--rl:16px;
+  --bg:#faf9f6;--surf:#ffffff;--surf2:#f1efe9;--surf3:#e6e3d9;
+  --bd:rgba(15,15,15,.07);--bd2:rgba(15,15,15,.14);
+  --tx:#1a1a1a;--tx2:#525050;--tx3:#9a9690;
+  --acc:#1e4a8a;--acc2:#eef3fb;
+  --grn:#15803d;--grn2:#f0f7f2;
+  --red:#b91c1c;--red2:#fbf2f0;
+  --amb:#a85c1e;--amb2:#fbf6ee;
+  --pur:#6d28d9;--teal:#0d9488;
+  --font-sans:'Inter',-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --font-serif:'Source Serif 4',Georgia,'Times New Roman',serif;
+  --font-mono:'JetBrains Mono',ui-monospace,'SF Mono',monospace;
+  --r:8px;--rl:12px;
 }
 @media(prefers-color-scheme:dark){:root{
-  --bg:#111110;--surf:#1c1c1a;--surf2:#242420;--surf3:#2e2e2a;
-  --bd:rgba(255,255,255,.07);--bd2:rgba(255,255,255,.14);
-  --tx:#e4e3dc;--tx2:#9a9990;--tx3:#5e5d58;
-  --acc:#7b9ef9;--acc2:#182040;
-  --grn:#34d399;--grn2:#081f14;
+  --bg:#0c0c0a;--surf:#161614;--surf2:#1f1f1c;--surf3:#2a2a26;
+  --bd:rgba(255,255,255,.06);--bd2:rgba(255,255,255,.13);
+  --tx:#ebe9e2;--tx2:#a8a59c;--tx3:#5a5752;
+  --acc:#7da7f5;--acc2:#152643;
+  --grn:#4ade80;--grn2:#0a1c12;
+  --red:#f87171;--red2:#291011;
+  --amb:#fbbf24;--amb2:#1f1607;
 }}
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;font-size:14px;line-height:1.5}
+html{font-feature-settings:"ss01","cv11","tnum"}
+body{font-family:var(--font-sans);background:var(--bg);color:var(--tx);min-height:100vh;font-size:14px;line-height:1.55;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;font-feature-settings:"tnum"}
 
 /* ── Header ── */
-.hdr{background:var(--surf);border-bottom:.5px solid var(--bd);padding:0 32px;height:58px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
-.hdr-brand{display:flex;align-items:baseline;gap:10px}
-.hdr-logo{font-size:17px;font-weight:700;letter-spacing:-.03em}
-.hdr-tagline{font-size:11px;color:var(--tx3);letter-spacing:.02em;text-transform:uppercase}
-.hdr-r{display:flex;align-items:center;gap:8px}
-.badge-priv{display:inline-flex;align-items:center;gap:5px;font-size:11px;background:var(--surf2);color:var(--tx3);padding:3px 10px;border-radius:20px;border:.5px solid var(--bd2)}
-.badge-priv::before{content:"";width:6px;height:6px;border-radius:50%;background:#f59e0b}
+.hdr{background:var(--surf);border-bottom:.5px solid var(--bd);padding:14px 32px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;gap:16px}
+.hdr-brand{display:flex;align-items:baseline;gap:12px}
+.hdr-logo{font-family:var(--font-serif);font-size:22px;font-weight:600;letter-spacing:-.015em;line-height:1.1}
+.hdr-tagline{font-size:11px;color:var(--tx3);letter-spacing:.06em;text-transform:uppercase;font-weight:500}
+.hdr-r{display:flex;align-items:center;gap:10px}
+.live-badge{display:inline-flex;align-items:center;gap:6px;font-size:10px;background:transparent;color:var(--tx3);padding:4px 10px;border-radius:20px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;border:.5px solid var(--bd2)}
+.live-badge::before{content:"";width:6px;height:6px;border-radius:50%;background:#f59e0b;animation:pulse 2.4s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:.9}50%{opacity:.3}}
 
-/* ── Hero ── */
-.hero{padding:64px 32px 48px;max-width:760px;margin:0 auto;text-align:center}
-.hero h1{font-size:32px;font-weight:700;letter-spacing:-.04em;line-height:1.15;margin-bottom:14px}
-.hero h1 em{font-style:normal;color:var(--acc)}
-.hero p{font-size:15px;color:var(--tx2);line-height:1.7;max-width:520px;margin:0 auto}
+/* ── Hero editorial ── */
+.hero{padding:80px 32px 56px;max-width:880px;margin:0 auto}
+.hero-eyebrow{font-size:10.5px;text-transform:uppercase;letter-spacing:.18em;color:var(--tx3);font-weight:600;margin-bottom:18px;display:block}
+.hero h1{font-family:var(--font-serif);font-size:clamp(36px,5vw,56px);font-weight:600;letter-spacing:-.028em;line-height:1.08;margin-bottom:20px;max-width:780px}
+.hero h1 em{font-style:italic;color:var(--tx2)}
+.hero p{font-family:var(--font-serif);font-size:18px;color:var(--tx2);line-height:1.55;max-width:620px;font-feature-settings:"tnum","onum"}
+.hero p .em{color:var(--tx);font-weight:600}
 
-/* ── Grid de sistemas ── */
-.section{max-width:900px;margin:0 auto;padding:0 32px 64px}
-.section-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--tx3);margin-bottom:16px}
-.sys-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px;max-width:680px;margin:0 auto}
-@media(max-width:700px){.sys-grid{grid-template-columns:1fr}}
+/* ── Sección de sistemas ── */
+.section{max-width:1100px;margin:0 auto;padding:0 32px 80px}
+.section-eyebrow{font-size:10.5px;text-transform:uppercase;letter-spacing:.14em;color:var(--tx3);margin-bottom:22px;font-weight:600;padding-bottom:12px;border-bottom:.5px solid var(--bd)}
 
-/* ── Card de sistema ── */
-.sys-card{background:var(--surf);border:.5px solid var(--bd);border-radius:var(--rl);padding:24px;display:flex;flex-direction:column;gap:12px;transition:all .15s;text-decoration:none;color:inherit;position:relative;overflow:hidden}
-.sys-card:hover{border-color:var(--acc);box-shadow:0 4px 24px rgba(26,78,219,.08);transform:translateY(-2px)}
-.sys-card.disabled{opacity:.6;cursor:default;pointer-events:none}
-.sys-card.disabled:hover{transform:none;box-shadow:none;border-color:var(--bd)}
-.sys-card-accent{position:absolute;top:0;left:0;right:0;height:3px;border-radius:var(--rl) var(--rl) 0 0}
-.accent-blue{background:linear-gradient(90deg,#1a4edb,#6b8fef)}
-.accent-teal{background:linear-gradient(90deg,#0d9488,#5eead4)}
-.accent-purple{background:linear-gradient(90deg,#6d28d9,#c4b5fd)}
-.accent-amber{background:linear-gradient(90deg,#b45309,#fbbf24)}
+/* ── Grid cards ── */
+.sys-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:0;border:.5px solid var(--bd);border-radius:var(--rl);overflow:hidden;background:var(--surf)}
 
-.sys-card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
-.sys-ic{font-size:26px;line-height:1}
-.sys-status{font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;letter-spacing:.03em}
-.status-live{background:var(--grn2);color:var(--grn)}
+.sys-card{background:var(--surf);padding:32px 30px 28px;display:flex;flex-direction:column;gap:14px;text-decoration:none;color:inherit;position:relative;border-right:.5px solid var(--bd);border-bottom:.5px solid var(--bd);margin-right:-.5px;margin-bottom:-.5px;transition:background .18s;min-height:280px}
+.sys-card:hover{background:var(--surf2)}
+.sys-card.disabled{opacity:.55;cursor:default;pointer-events:none;background:var(--surf2)}
+
+.sys-card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:6px}
+.sys-num{font-family:var(--font-mono);font-size:10.5px;color:var(--tx3);letter-spacing:.02em;font-weight:500}
+.sys-status{font-size:9.5px;font-weight:600;padding:3px 8px;border-radius:3px;letter-spacing:.07em;text-transform:uppercase}
+.status-live{background:var(--grn2);color:var(--grn);border:.5px solid color-mix(in srgb,var(--grn) 22%,transparent)}
 .status-soon{background:var(--surf2);color:var(--tx3);border:.5px solid var(--bd2)}
-.status-wip{background:#fef3c7;color:#92400e}
+.status-wip{background:var(--amb2);color:var(--amb);border:.5px solid color-mix(in srgb,var(--amb) 22%,transparent)}
 
-.sys-name{font-size:15px;font-weight:600;letter-spacing:-.02em;line-height:1.3}
-.sys-desc{font-size:12px;color:var(--tx2);line-height:1.6}
-.sys-tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:4px}
-.sys-tag{font-size:10px;padding:2px 7px;background:var(--surf2);color:var(--tx3);border-radius:4px;border:.5px solid var(--bd)}
-.sys-footer{display:flex;align-items:center;justify-content:space-between;margin-top:auto;padding-top:12px;border-top:.5px solid var(--bd)}
-.sys-src{font-size:10px;color:var(--tx3)}
-.sys-arrow{font-size:14px;color:var(--acc);opacity:0;transition:opacity .15s}
-.sys-card:hover .sys-arrow{opacity:1}
+.sys-name{font-family:var(--font-serif);font-size:24px;font-weight:600;letter-spacing:-.02em;line-height:1.18}
+.sys-desc{font-family:var(--font-serif);font-size:14.5px;color:var(--tx2);line-height:1.6;font-feature-settings:"tnum"}
+.sys-desc .em{color:var(--tx);font-weight:600}
 
-/* ── Footer ── */
-.ftr{border-top:.5px solid var(--bd);padding:24px 32px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
-.ftr-l{font-size:11px;color:var(--tx3)}
-.ftr-r{font-size:11px;color:var(--tx3)}
+.sys-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.sys-tag{font-size:9.5px;padding:3px 8px;background:transparent;color:var(--tx3);border-radius:3px;border:.5px solid var(--bd2);text-transform:uppercase;letter-spacing:.05em;font-weight:600}
 
-@media(max-width:600px){
-  .hero{padding:40px 20px 32px}
-  .hero h1{font-size:24px}
-  .section{padding:0 20px 48px}
-  .hdr{padding:0 20px}
+.sys-footer{display:flex;align-items:center;justify-content:space-between;margin-top:auto;padding-top:18px;border-top:.5px solid var(--bd);gap:8px}
+.sys-src{font-family:var(--font-mono);font-size:10.5px;color:var(--tx3);letter-spacing:-.01em}
+.sys-cta{font-size:12.5px;font-weight:500;color:var(--tx);letter-spacing:-.01em;display:flex;align-items:center;gap:6px;transition:gap .15s}
+.sys-card:hover .sys-cta{gap:10px;color:var(--acc)}
+.sys-cta-arrow{transition:transform .15s}
+.sys-card:hover .sys-cta-arrow{transform:translateX(2px)}
+
+/* ── Footer editorial ── */
+.ftr{border-top:.5px solid var(--bd);padding:24px 32px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:auto}
+.ftr-l{font-family:var(--font-mono);font-size:10.5px;color:var(--tx3);letter-spacing:-.01em}
+.ftr-r{font-size:10.5px;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+
+@media(max-width:680px){
+  .hdr{padding:14px 20px}
+  .hero{padding:48px 20px 36px}
+  .section{padding:0 20px 56px}
+  .sys-grid{grid-template-columns:1fr}
+  .sys-card{padding:26px 22px;min-height:auto}
+  .sys-name{font-size:21px}
+  .ftr{padding:20px;flex-direction:column;align-items:flex-start;gap:6px}
 }
 </style>
 </head>
@@ -93,72 +109,66 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
     <span class="hdr-tagline">Análisis Económico</span>
   </div>
   <div class="hdr-r">
-    <span class="badge-priv">Acceso privado</span>
+    <span class="live-badge">Acceso privado</span>
   </div>
 </header>
 
 <section class="hero">
-  <h1>Datos económicos.<br><em>Sin vueltas.</em></h1>
-  <p>Plataforma de análisis macro y fiscal para Argentina. Indicadores actualizados, visualizaciones y series históricas en un solo lugar.</p>
+  <span class="hero-eyebrow">Sistema GDS · Ministerio de Producción PBA</span>
+  <h1>Datos económicos<br><em>sin vueltas.</em></h1>
+  <p>Plataforma de análisis macro, fiscal y laboral para Argentina. <span class="em">Indicadores actualizados</span>, visualizaciones y series históricas en un solo lugar, con scraping automático diario y carga manual asistida.</p>
 </section>
 
 <main class="section">
-  <div class="section-lbl">Sistemas disponibles</div>
+  <div class="section-eyebrow">Sistemas disponibles</div>
   <div class="sys-grid">
 
     <!-- ── Tablero Macro ── -->
     <a class="sys-card" href="Tablero Macro 2.4.26.html">
-      <div class="sys-card-accent accent-blue"></div>
       <div class="sys-card-top">
-        <span class="sys-ic">&#128202;</span>
+        <span class="sys-num">01 / Macro</span>
         <span class="sys-status status-live">● Live</span>
       </div>
-      <div>
-        <div class="sys-name">Tablero Macroeconómico</div>
-        <div class="sys-desc">Inflación, actividad, empleo, sector externo, fiscal y financiero. Datos de INDEC, BCRA y otras fuentes con actualización automática.</div>
-      </div>
+      <div class="sys-name">Tablero Macroeconómico</div>
+      <div class="sys-desc">Inflación, actividad, empleo, sector externo, fiscal y financiero. Datos de <span class="em">INDEC, BCRA, ArgentinaDatos</span> con actualización diaria automática.</div>
       <div class="sys-tags">
         <span class="sys-tag">INDEC</span>
         <span class="sys-tag">BCRA</span>
         <span class="sys-tag">IPC · EMAE · EPH</span>
-        <span class="sys-tag">Nacional</span>
+        <span class="sys-tag">Diario</span>
       </div>
       <div class="sys-footer">
-        <span class="sys-src">v2.4.26 · Actualizado 2026</span>
-        <span class="sys-arrow">&#8599;</span>
+        <span class="sys-src">v2.4.26 · 2026</span>
+        <span class="sys-cta">Abrir tablero <span class="sys-cta-arrow">→</span></span>
       </div>
     </a>
 
     <!-- ── Monitor Despidos ── -->
     <a class="sys-card" href="Tablero Despidos.html">
-      <div class="sys-card-accent accent-amber"></div>
       <div class="sys-card-top">
-        <span class="sys-ic">&#128680;</span>
+        <span class="sys-num">02 / Laboral</span>
         <span class="sys-status status-live">● Live</span>
       </div>
-      <div>
-        <div class="sys-name">Monitor de Despidos y Cierres</div>
-        <div class="sys-desc">Seguimiento diario de despidos, suspensiones y cierres de empresas. Actualización automática vía RSS + carga manual histórica desde 2023.</div>
-      </div>
+      <div class="sys-name">Monitor de Despidos y Cierres</div>
+      <div class="sys-desc">Seguimiento de despidos, suspensiones y cierres de empresas. <span class="em">Scraping diario vía RSS</span> + carga manual desde Google Form + agregado por link individual.</div>
       <div class="sys-tags">
-        <span class="sys-tag">Despidos</span>
         <span class="sys-tag">RSS Auto</span>
+        <span class="sys-tag">Google Form</span>
         <span class="sys-tag">Nacional</span>
-        <span class="sys-tag">Diario</span>
+        <span class="sys-tag">800+ eventos</span>
       </div>
       <div class="sys-footer">
-        <span class="sys-src">v1.0 · 600+ eventos</span>
-        <span class="sys-arrow">&#8599;</span>
+        <span class="sys-src">v1.1 · 2026</span>
+        <span class="sys-cta">Abrir tablero <span class="sys-cta-arrow">→</span></span>
       </div>
     </a>
-
 
   </div>
 </main>
 
 <footer class="ftr">
-  <span class="ftr-l">Boludos del PPT &mdash; Análisis Económico &copy; 2026</span>
-  <span class="ftr-r">Uso interno &mdash; no distribuir</span>
+  <span class="ftr-l">boludos-ppt.nwalovnik.workers.dev</span>
+  <span class="ftr-r">Uso interno · No distribuir</span>
 </footer>
 
 </body>
