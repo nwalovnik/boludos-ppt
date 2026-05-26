@@ -30,29 +30,35 @@ jobs:
       - name: Install deps
         run: pip install -r scraper/requirements.txt
 
-      - name: Run scraper
+      - name: Run scraper macro
         run: python scraper/scrape.py
+
+      - name: Refresh manual despidos desde Google Sheet
+        env:
+          GSHEET_URL: ${{ vars.GSHEET_URL }}
+        run: python scraper/load_manual_excel.py --gsheet-env || echo "Sin GSHEET_URL configurada o fallo, sigo igual"
+
+      - name: Run scraper despidos
+        run: python scraper/scrape_despidos.py || echo "Scraper despidos fallo, sigo igual"
 
       - name: Generar PPTX publicaciones de la semana
         run: python scraper/build_slides.py || echo "Sin publicaciones esta semana o sin pubs aún registradas"
 
-      - name: Commit & push si cambió data.json o publicaciones_semana.pptx
+      - name: Commit & push si cambiaron outputs
         run: |
           git config user.name "macro-bot"
           git config user.email "macro-bot@users.noreply.github.com"
           CHANGES=""
-          if [[ -n "$(git status --porcelain data.json)" ]]; then
-            git add data.json
-            CHANGES="data.json"
-          fi
-          if [[ -f publicaciones_semana.pptx ]] && [[ -n "$(git status --porcelain publicaciones_semana.pptx)" || ! "$(git ls-files publicaciones_semana.pptx)" ]]; then
-            git add publicaciones_semana.pptx
-            CHANGES="$CHANGES publicaciones_semana.pptx"
-          fi
+          for FILE in data.json despidos.json scraper/historical_despidos.json publicaciones_semana.pptx; do
+            if [[ -f "$FILE" ]] && [[ -n "$(git status --porcelain "$FILE")" || -z "$(git ls-files "$FILE")" ]]; then
+              git add "$FILE"
+              CHANGES="$CHANGES $FILE"
+            fi
+          done
           if [[ -n "$CHANGES" ]]; then
             git commit -m "data: update $(date -u +%Y-%m-%d) ($CHANGES)"
             git push
-            echo "Pushed: $CHANGES"
+            echo "Pushed:$CHANGES"
           else
             echo "No changes."
           fi

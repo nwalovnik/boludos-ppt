@@ -1,0 +1,52 @@
+name: Despidos - agregar por URL
+
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: "URL de la noticia (link al articulo del medio)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  process:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: scraper/requirements.txt
+
+      - name: Install deps
+        run: pip install -r scraper/requirements.txt
+
+      - name: Process URL
+        run: python scraper/scrape_despidos.py --url "${{ inputs.url }}"
+
+      - name: Commit & push
+        run: |
+          git config user.name "despidos-bot"
+          git config user.email "despidos-bot@users.noreply.github.com"
+          CHANGES=""
+          for FILE in despidos.json scraper/historical_despidos.json; do
+            if [[ -n "$(git status --porcelain "$FILE")" ]]; then
+              git add "$FILE"
+              CHANGES="$CHANGES $FILE"
+            fi
+          done
+          if [[ -n "$CHANGES" ]]; then
+            SHORT_URL=$(echo "${{ inputs.url }}" | cut -c1-80)
+            git commit -m "despidos: agregado por URL ($SHORT_URL)"
+            git push
+            echo "Pushed: $CHANGES"
+          else
+            echo "URL no produjo evento nuevo (rechazada o duplicada)"
+          fi
