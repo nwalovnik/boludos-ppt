@@ -1,18 +1,28 @@
-name: Despidos - agregar por URL
+name: Despidos - editar o eliminar evento
 
 on:
   workflow_dispatch:
     inputs:
-      url:
-        description: "URL de la noticia (link al articulo del medio)"
+      id:
+        description: "ID del evento (hash de 12 chars)"
         required: true
         type: string
+      action:
+        description: "edit o delete"
+        required: true
+        type: choice
+        options: ["edit", "delete"]
+      patch:
+        description: "JSON con campos a editar (solo si action=edit)"
+        required: false
+        type: string
+        default: "{}"
 
 permissions:
   contents: write
 
 jobs:
-  process:
+  apply:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -28,8 +38,15 @@ jobs:
       - name: Install deps
         run: pip install -r scraper/requirements.txt
 
-      - name: Process URL
-        run: python scraper/scrape_despidos.py --url "${{ inputs.url }}"
+      - name: Apply edit/delete
+        run: |
+          python scraper/edit_event.py \
+            --id "${{ inputs.id }}" \
+            --action "${{ inputs.action }}" \
+            --patch '${{ inputs.patch }}'
+
+      - name: Regenerar despidos.json desde bedrock
+        run: python scraper/scrape_despidos.py --skip-rss
 
       - name: Commit & push
         run: |
@@ -43,11 +60,10 @@ jobs:
             fi
           done
           if [[ -n "$CHANGES" ]]; then
-            SHORT_URL=$(echo "${{ inputs.url }}" | cut -c1-80)
-            git commit -m "despidos: agregado por URL ($SHORT_URL)"
+            git commit -m "despidos: ${{ inputs.action }} evento ${{ inputs.id }}"
             git push
             echo "Pushed: $CHANGES"
           else
-            echo "URL no produjo evento nuevo (rechazada por fecha/relevancia o absorbida por dedupe contra un evento existente)"
+            echo "Sin cambios (¿id inexistente o patch vacio?)"
             exit 1
           fi

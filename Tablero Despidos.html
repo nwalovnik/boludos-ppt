@@ -152,6 +152,30 @@ tbody tr:hover td{background:var(--surf2)}
 .info-box{background:transparent;border-left:2px solid var(--tx3);padding:8px 16px;font-size:12px;color:var(--tx2);margin-bottom:24px;line-height:1.65;font-style:italic;font-family:var(--font-serif)}
 .info-box b,.info-box strong{font-style:normal;color:var(--tx);font-family:var(--font-sans);font-weight:600}
 
+/* ── Acciones de fila ── */
+.row-acts{display:flex;gap:4px}
+.row-btn{font-size:13px;width:24px;height:24px;border:.5px solid var(--bd2);border-radius:4px;background:transparent;color:var(--tx2);cursor:pointer;font-family:inherit;transition:all .12s;display:inline-flex;align-items:center;justify-content:center;padding:0;line-height:1}
+.row-btn:hover{color:var(--tx);border-color:var(--tx3);background:var(--surf2)}
+.row-btn-del:hover{color:var(--red);border-color:var(--red)}
+.td-acts{white-space:nowrap}
+
+/* ── Modal de edición ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:300;padding:20px}
+.modal-overlay.on{display:flex}
+.modal{background:var(--surf);border:.5px solid var(--bd2);border-radius:14px;padding:24px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;box-shadow:0 12px 40px rgba(0,0,0,.22)}
+.modal-hd{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;padding-bottom:14px;border-bottom:.5px solid var(--bd)}
+.modal-hd h2{font-family:var(--font-serif);font-size:18px;font-weight:600;letter-spacing:-.01em}
+.modal-hd .modal-sub{font-size:11px;color:var(--tx3);margin-top:3px;font-family:var(--font-mono)}
+.modal-close{background:transparent;border:none;font-size:22px;cursor:pointer;color:var(--tx3);line-height:1;padding:0 4px}
+.modal-close:hover{color:var(--tx)}
+.modal-body{display:grid;grid-template-columns:120px 1fr;gap:10px 14px;align-items:center;margin-bottom:18px}
+.modal-body label{font-size:11px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+.modal-body input,.modal-body select,.modal-body textarea{font-size:13px;padding:7px 10px;border:.5px solid var(--bd2);border-radius:5px;background:var(--surf);color:var(--tx);font-family:inherit;width:100%;font-feature-settings:"tnum"}
+.modal-body textarea{font-family:var(--font-serif);min-height:60px;resize:vertical;line-height:1.5}
+.modal-actions{display:flex;justify-content:flex-end;gap:8px;padding-top:14px;border-top:.5px solid var(--bd)}
+.modal-status{font-size:12px;color:var(--tx2);margin-right:auto;padding-top:7px}
+@media(max-width:520px){.modal-body{grid-template-columns:1fr}.modal-body label{margin-top:8px}}
+
 /* ── Toast ── */
 #toast{position:fixed;bottom:20px;right:20px;background:var(--surf);border:.5px solid var(--bd2);border-radius:10px;padding:9px 15px;font-size:12px;box-shadow:0 4px 14px rgba(0,0,0,.15);opacity:0;transition:opacity .22s;pointer-events:none;z-index:200;max-width:300px}
 #toast.on{opacity:1}
@@ -277,7 +301,7 @@ hr.d{border:none;border-top:.5px solid var(--bd);margin:16px 0}
       <thead><tr>
         <th>Fecha</th><th>Empresa/Organismo</th><th>Tipo</th><th>Rubro</th>
         <th style="text-align:right">Empleados</th><th>Provincia</th>
-        <th>Estado</th><th>Fuente</th><th>Noticia</th>
+        <th>Estado</th><th>Fuente</th><th>Noticia</th><th></th>
       </tr></thead>
       <tbody id="tbl-body"></tbody>
     </table>
@@ -331,6 +355,75 @@ hr.d{border:none;border-top:.5px solid var(--bd);margin:16px 0}
 
 </div><!-- content-area -->
 </div><!-- layout -->
+
+<!-- ── Modal de edición ───────────────────────────────────────────────────── -->
+<div id="edit-modal" class="modal-overlay" onclick="if(event.target===this)cerrarEditar()">
+  <div class="modal">
+    <div class="modal-hd">
+      <div>
+        <h2>Editar evento</h2>
+        <div class="modal-sub" id="edit-id-disp">—</div>
+      </div>
+      <button class="modal-close" onclick="cerrarEditar()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <label>Fecha</label>
+      <input type="date" id="ed-fecha">
+      <label>Empresa</label>
+      <input type="text" id="ed-empresa">
+      <label>Empleados</label>
+      <input type="number" id="ed-empleados" min="0">
+      <label>Tipo</label>
+      <select id="ed-tipo">
+        <option value="despido">Despido</option>
+        <option value="suspensión">Suspensión</option>
+        <option value="cierre">Cierre</option>
+      </select>
+      <label>Rubro</label>
+      <input type="text" id="ed-rubro">
+      <label>Provincia</label>
+      <input type="text" id="ed-provincia">
+      <label>Municipio</label>
+      <input type="text" id="ed-municipio">
+      <label>Sector</label>
+      <select id="ed-sector">
+        <option value="Sector Privado">Privado</option>
+        <option value="Sector Público">Público</option>
+      </select>
+      <label>Estado</label>
+      <input type="text" id="ed-estado">
+      <label>¿Cerró?</label>
+      <select id="ed-cerro">
+        <option value="false">No</option>
+        <option value="true">Sí</option>
+      </select>
+      <label>Comentario</label>
+      <textarea id="ed-comentario"></textarea>
+    </div>
+    <div class="modal-actions">
+      <span class="modal-status" id="edit-status"></span>
+      <button class="btn" onclick="cerrarEditar()">Cancelar</button>
+      <button class="btn btn-p" id="edit-save-btn" onclick="guardarEdicion()">Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal de confirmación de borrado ───────────────────────────────────── -->
+<div id="del-modal" class="modal-overlay" onclick="if(event.target===this)cerrarDel()">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-hd">
+      <h2>¿Eliminar evento?</h2>
+      <button class="modal-close" onclick="cerrarDel()">&times;</button>
+    </div>
+    <p style="font-family:var(--font-serif);font-size:14px;line-height:1.6;color:var(--tx2);margin-bottom:16px" id="del-summary">—</p>
+    <p style="font-size:11px;color:var(--tx3);margin-bottom:18px">Esta acción modifica el bedrock del repo y dispara el workflow <code style="font-family:var(--font-mono)">dispatch_edit.yml</code>. Es reversible solo restaurando el commit anterior.</p>
+    <div class="modal-actions">
+      <span class="modal-status" id="del-status"></span>
+      <button class="btn" onclick="cerrarDel()">Cancelar</button>
+      <button class="btn btn-red" id="del-confirm-btn" onclick="ejecutarEliminar()">Eliminar</button>
+    </div>
+  </div>
+</div>
 
 <div id="toast"></div>
 
@@ -620,9 +713,16 @@ function renderTabla(){
     var empClass=r.empleados>0?'td-emp':'td-emp cero';
     var empTxt=r.empleados>0?r.empleados.toLocaleString('es'):'—';
     var link=r.url?'<a href="'+r.url+'" target="_blank">&#8599;</a>':'';
-    html+='<tr>'+
+    var rid = r.id || '';
+    var editedBadge = r.edited ? ' <span style="font-size:9px;color:var(--grn);font-weight:600">✓</span>' : '';
+    var acciones = rid ?
+      '<div class="row-acts">'+
+        '<button class="row-btn" title="Editar" onclick="abrirEditarPorId(\''+rid+'\')">✎</button>'+
+        '<button class="row-btn row-btn-del" title="Eliminar" onclick="confirmarEliminar(\''+rid+'\')">✕</button>'+
+      '</div>' : '<span style="color:var(--tx3);font-size:10px">—</span>';
+    html+='<tr data-id="'+rid+'">'+
       '<td>'+((r.fecha||'').slice(0,10)||'—')+'</td>'+
-      '<td><b>'+esc(r.empresa||'—')+'</b></td>'+
+      '<td><b>'+esc(r.empresa||'—')+'</b>'+editedBadge+'</td>'+
       '<td>'+tipoTag+'</td>'+
       '<td>'+esc(r.rubro||'—')+'</td>'+
       '<td class="'+empClass+'">'+empTxt+'</td>'+
@@ -630,12 +730,13 @@ function renderTabla(){
       '<td>'+estadoTag+(r.estado&&r.estado!=='Pendiente revisión'?esc(r.estado):'')+'</td>'+
       '<td>'+fuenteTag+'</td>'+
       '<td class="td-link">'+link+'</td>'+
+      '<td class="td-acts">'+acciones+'</td>'+
     '</tr>';
     if(r.comentario){
-      html+='<tr><td colspan="9"><div class="td-coment" title="'+esc(r.comentario)+'">&#128172; '+esc(r.comentario.slice(0,120))+(r.comentario.length>120?'...':'')+'</div></td></tr>';
+      html+='<tr class="row-coment" data-id="'+rid+'"><td colspan="10"><div class="td-coment" title="'+esc(r.comentario)+'">&#128172; '+esc(r.comentario.slice(0,120))+(r.comentario.length>120?'...':'')+'</div></td></tr>';
     }
   });
-  document.getElementById('tbl-body').innerHTML=html||'<tr><td colspan="9" style="text-align:center;color:var(--tx3);padding:20px">Sin resultados</td></tr>';
+  document.getElementById('tbl-body').innerHTML=html||'<tr><td colspan="10" style="text-align:center;color:var(--tx3);padding:20px">Sin resultados</td></tr>';
 
   // Info
   var total=TBL_FILTERED.length;
@@ -817,6 +918,170 @@ function pollearRun(repo, token, t0, btn, stat){
     logLink('Error consultando run: '+e.message, 'err');
     stat.innerHTML = '<span style="color:var(--red)">Error consultando run</span>';
     btn.disabled = false;
+  });
+}
+
+// ── Editar/Eliminar evento ──────────────────────────────────────────────────
+var EDIT_TARGET = null;
+
+function findEvById(id){
+  for(var i=0;i<D.length;i++) if(D[i].id === id) return D[i];
+  return null;
+}
+
+function abrirEditarPorId(id){
+  var ev = findEvById(id);
+  if(!ev){ toast('Evento no encontrado'); return; }
+  EDIT_TARGET = ev;
+  document.getElementById('edit-id-disp').textContent = 'ID: '+id+' · fuente: '+(ev.fuente||'manual');
+  document.getElementById('ed-fecha').value      = (ev.fecha||'').slice(0,10);
+  document.getElementById('ed-empresa').value    = ev.empresa||'';
+  document.getElementById('ed-empleados').value  = ev.empleados||0;
+  document.getElementById('ed-tipo').value       = ev.tipo||'despido';
+  document.getElementById('ed-rubro').value      = ev.rubro||'';
+  document.getElementById('ed-provincia').value  = ev.provincia||'';
+  document.getElementById('ed-municipio').value  = ev.municipio||'';
+  document.getElementById('ed-sector').value     = ev.sector||'Sector Privado';
+  document.getElementById('ed-estado').value     = ev.estado||'';
+  document.getElementById('ed-cerro').value      = ev.cerro ? 'true' : 'false';
+  document.getElementById('ed-comentario').value = ev.comentario||'';
+  document.getElementById('edit-status').textContent = '';
+  document.getElementById('edit-save-btn').disabled = false;
+  document.getElementById('edit-modal').classList.add('on');
+}
+
+function cerrarEditar(){ document.getElementById('edit-modal').classList.remove('on'); EDIT_TARGET=null; }
+
+function guardarEdicion(){
+  if(!EDIT_TARGET){ cerrarEditar(); return; }
+  var token = localStorage.getItem('gh_token');
+  var repo  = localStorage.getItem('gh_repo') || 'nwalovnik/boludos-ppt';
+  if(!token){ toast('Configurá el GitHub token primero'); abrirSettings(); return; }
+  var btn  = document.getElementById('edit-save-btn');
+  var stat = document.getElementById('edit-status');
+
+  // Construir patch solo con campos que cambiaron
+  var orig = EDIT_TARGET;
+  var nuevos = {
+    fecha:      document.getElementById('ed-fecha').value,
+    empresa:    document.getElementById('ed-empresa').value.trim(),
+    empleados:  parseInt(document.getElementById('ed-empleados').value, 10) || 0,
+    tipo:       document.getElementById('ed-tipo').value,
+    rubro:      document.getElementById('ed-rubro').value.trim(),
+    provincia:  document.getElementById('ed-provincia').value.trim(),
+    municipio:  document.getElementById('ed-municipio').value.trim(),
+    sector:     document.getElementById('ed-sector').value,
+    estado:     document.getElementById('ed-estado').value.trim(),
+    cerro:      document.getElementById('ed-cerro').value === 'true',
+    comentario: document.getElementById('ed-comentario').value.trim(),
+  };
+  var patch = {};
+  Object.keys(nuevos).forEach(function(k){
+    if(nuevos[k] !== (orig[k]===undefined ? '' : orig[k])) patch[k] = nuevos[k];
+  });
+  if(!Object.keys(patch).length){ toast('Sin cambios'); cerrarEditar(); return; }
+
+  btn.disabled = true;
+  stat.innerHTML = '<span style="color:var(--acc)">⏳ Disparando workflow...</span>';
+  var t0 = new Date();
+  fetch('https://api.github.com/repos/'+repo+'/actions/workflows/dispatch_edit.yml/dispatches', {
+    method:'POST',
+    headers:{'Authorization':'Bearer '+token,'Accept':'application/vnd.github+json','Content-Type':'application/json'},
+    body: JSON.stringify({ ref:'main', inputs:{ id: orig.id, action:'edit', patch: JSON.stringify(patch) } }),
+  }).then(function(r){
+    if(r.status === 204){
+      stat.innerHTML = '<span style="color:var(--acc)">⏳ Buscando run...</span>';
+      setTimeout(function(){ pollearEdit(repo, token, t0, btn, stat, 'edit'); }, 3000);
+    } else {
+      return r.text().then(function(t){
+        stat.innerHTML = '<span style="color:var(--red)">Error '+r.status+'</span>';
+        toast('Error '+r.status); btn.disabled = false;
+      });
+    }
+  }).catch(function(e){
+    stat.innerHTML = '<span style="color:var(--red)">Fallo de red</span>'; btn.disabled = false;
+  });
+}
+
+function confirmarEliminar(id){
+  var ev = findEvById(id);
+  if(!ev){ toast('Evento no encontrado'); return; }
+  EDIT_TARGET = ev;
+  document.getElementById('del-summary').innerHTML =
+    '<b>'+esc(ev.empresa||'—')+'</b> · '+esc((ev.fecha||'').slice(0,10))+
+    ' · <span style="color:var(--red)">'+(ev.empleados||0)+' empleados</span>' +
+    (ev.comentario ? '<br><span style="font-size:12px;color:var(--tx3);font-style:italic">"'+esc(ev.comentario.slice(0,140))+(ev.comentario.length>140?'…':'')+'"</span>' : '');
+  document.getElementById('del-status').textContent = '';
+  document.getElementById('del-confirm-btn').disabled = false;
+  document.getElementById('del-modal').classList.add('on');
+}
+
+function cerrarDel(){ document.getElementById('del-modal').classList.remove('on'); EDIT_TARGET=null; }
+
+function ejecutarEliminar(){
+  if(!EDIT_TARGET){ cerrarDel(); return; }
+  var token = localStorage.getItem('gh_token');
+  var repo  = localStorage.getItem('gh_repo') || 'nwalovnik/boludos-ppt';
+  if(!token){ toast('Configurá el GitHub token primero'); abrirSettings(); return; }
+  var btn  = document.getElementById('del-confirm-btn');
+  var stat = document.getElementById('del-status');
+  btn.disabled = true;
+  stat.innerHTML = '<span style="color:var(--acc)">⏳ Disparando workflow...</span>';
+  var t0 = new Date();
+  fetch('https://api.github.com/repos/'+repo+'/actions/workflows/dispatch_edit.yml/dispatches', {
+    method:'POST',
+    headers:{'Authorization':'Bearer '+token,'Accept':'application/vnd.github+json','Content-Type':'application/json'},
+    body: JSON.stringify({ ref:'main', inputs:{ id: EDIT_TARGET.id, action:'delete', patch:'{}' } }),
+  }).then(function(r){
+    if(r.status === 204){
+      stat.innerHTML = '<span style="color:var(--acc)">⏳ Buscando run...</span>';
+      setTimeout(function(){ pollearEdit(repo, token, t0, btn, stat, 'delete'); }, 3000);
+    } else {
+      stat.innerHTML = '<span style="color:var(--red)">Error '+r.status+'</span>';
+      toast('Error '+r.status); btn.disabled = false;
+    }
+  }).catch(function(e){
+    stat.innerHTML = '<span style="color:var(--red)">Fallo de red</span>'; btn.disabled = false;
+  });
+}
+
+function pollearEdit(repo, token, t0, btn, stat, modo){
+  fetch('https://api.github.com/repos/'+repo+'/actions/workflows/dispatch_edit.yml/runs?per_page=5', {
+    headers:{'Authorization':'Bearer '+token,'Accept':'application/vnd.github+json'}
+  }).then(function(r){ return r.json(); }).then(function(j){
+    var runs = (j.workflow_runs||[]).filter(function(run){ return new Date(run.created_at) >= t0; });
+    if(!runs.length){
+      stat.innerHTML = '<span style="color:var(--acc)">⏳ Esperando que arranque...</span>';
+      setTimeout(function(){ pollearEdit(repo, token, t0, btn, stat, modo); }, 5000);
+      return;
+    }
+    var run = runs[0];
+    var elapsed = Math.round((Date.now()-t0)/1000);
+    if(run.status === 'completed'){
+      var ok = run.conclusion === 'success';
+      var emoji = ok ? '✅' : '❌';
+      var color = ok ? 'var(--grn)' : 'var(--red)';
+      stat.innerHTML = '<span style="color:'+color+'">'+emoji+' '+run.conclusion+' en '+elapsed+'s · <a href="'+run.html_url+'" target="_blank" style="color:var(--acc)">ver log</a></span>';
+      btn.disabled = false;
+      toast(ok ? (modo==='edit'?'Edición guardada':'Evento eliminado') : 'Workflow falló');
+      if(ok){
+        setTimeout(function(){
+          cargarDatos().then(function(){
+            initData();
+            if(modo==='edit') cerrarEditar();
+            else cerrarDel();
+            buildTabla();
+            toast('Datos recargados');
+          });
+        }, 8000);
+      }
+    } else {
+      var label = run.status === 'queued' ? '🕐 En cola' : '⚙ Procesando';
+      stat.innerHTML = '<span style="color:var(--acc)">'+label+' · '+elapsed+'s</span>';
+      setTimeout(function(){ pollearEdit(repo, token, t0, btn, stat, modo); }, 5000);
+    }
+  }).catch(function(e){
+    stat.innerHTML = '<span style="color:var(--red)">Error</span>'; btn.disabled = false;
   });
 }
 

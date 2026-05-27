@@ -20,6 +20,7 @@ Uso:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import sys
@@ -129,6 +130,13 @@ BLACKLIST_CONCEPTOS = {
     "luz", "luz azul", "punto", "linea", "línea",
     "industricidio", "industricidios",
     "fuero", "fuero del trabajo", "trabajo",
+    # mas falsos positivos detectados en produccion
+    "urgente", "vaciamiento", "berlingo", "palomar", "citro", "stanley",
+    "brasil", "uruguay", "chile", "peru", "perú", "mexico", "méxico",
+    "venezuela", "colombia", "bolivia", "paraguay", "ecuador",
+    "estados unidos", "eeuu", "ee.uu", "ee uu", "espana", "españa",
+    "europa", "francia", "alemania", "italia", "china", "japon", "japón",
+    "lotto deja de fabricar botines", "fin de una era", "otra empresa",
 }
 
 # Provincias y ciudades que NO son nombre de empresa cuando aparecen solas
@@ -172,10 +180,73 @@ BLACKLIST_MEDIOS = {
     "diario digital conclusion", "diario digital conclusión",
 }
 
+# Tech giants extranjeros: cuando aparecen en noticias suelen referir
+# a despidos globales, no a operaciones argentinas. Ver tambien INTL_ONLY_KW abajo.
+BLACKLIST_EXTRANJERAS = {
+    "meta", "facebook", "instagram", "whatsapp meta", "meta platforms",
+    "google", "alphabet", "youtube", "microsoft", "apple", "amazon",
+    "x", "twitter", "x corp", "tiktok", "bytedance",
+    "spotify", "netflix", "tesla", "spacex", "uber", "lyft",
+    "ibm", "oracle", "salesforce", "intel", "amd", "nvidia",
+    "boeing", "airbus", "samsung", "sony", "huawei", "xiaomi",
+    "lg", "panasonic", "siemens", "philips",
+    "general electric", "ge", "ford motor", "tesla motors",
+    "wells fargo", "citigroup", "jpmorgan", "goldman sachs", "morgan stanley",
+    "deutsche bank", "credit suisse", "ubs",
+    "amazon web services", "aws",
+}
+
 BLACKLIST = (
     BLACKLIST_POLITICOS | BLACKLIST_CONCEPTOS |
-    BLACKLIST_UBICACIONES | BLACKLIST_MEDIOS
+    BLACKLIST_UBICACIONES | BLACKLIST_MEDIOS |
+    BLACKLIST_EXTRANJERAS
 )
+
+# Keywords que indican que la noticia es sobre despidos internacionales/globales,
+# no sobre Argentina. Si el texto los menciona Y no hay ningun indicador
+# argentino fuerte, rechazamos.
+INTL_ONLY_KW = [
+    "despidos globales", "global layoffs", "layoffs", "casa matriz",
+    "sede en estados unidos", "sede en silicon valley", "silicon valley",
+    "estados unidos despide", "estados unidos despidio",
+    "europa despide", "en europa", "en eeuu", "en ee.uu.", "en ee uu",
+    "a nivel global", "a nivel mundial", "a escala global", "globalmente",
+    "en su sede", "en sus oficinas centrales",
+    "la multinacional", "la tecnologica estadounidense", "la tecnológica estadounidense",
+    "su plan global", "reestructuracion global", "reestructuración global",
+    "compania estadounidense", "compañia estadounidense", "compañía estadounidense",
+    "ceo de la empresa global", "wall street",
+]
+
+# Si una noticia matchea INTL_ONLY_KW, requiere al menos uno de estos
+# tokens para no ser rechazada como internacional pura.
+AR_GEO_KW = [
+    "argentina", "argentino", "argentina,", "argentina.",
+    "buenos aires", "caba", "ciudad de buenos aires",
+    "rosario", "cordoba", "córdoba", "mendoza", "tucuman", "tucumán",
+    "santa fe", "salta", "jujuy", "neuquen", "neuquén", "san juan",
+    "chaco", "misiones", "corrientes", "entre rios", "entre ríos",
+    "rio negro", "río negro", "la pampa", "san luis", "catamarca",
+    "santa cruz", "tierra del fuego", "formosa", "chubut",
+    "santiago del estero", "la rioja",
+    "planta de argentina", "planta argentina", "filial argentina",
+    "operacion argentina", "operación argentina", "subsidiaria argentina",
+    "en pesos", "argentinos", "argentinas",
+]
+
+
+def es_noticia_internacional(titulo: str, cuerpo: str) -> bool:
+    """True si la noticia parece referirse a despidos GLOBALES sin operaciones AR.
+
+    Logica: si menciona keywords internacionales fuertes Y no hay ningun
+    indicador geografico argentino, se descarta.
+    """
+    texto = (titulo + " " + cuerpo[:2000]).lower()
+    tiene_intl = any(k in texto for k in INTL_ONLY_KW)
+    if not tiene_intl:
+        return False
+    tiene_ar = any(k in texto for k in AR_GEO_KW)
+    return not tiene_ar
 
 # ──────────────────────────────────────────────────────────────────────────────
 # ALIAS_EMPRESAS expandido (~150 entradas)
@@ -965,19 +1036,44 @@ def son_duplicados(a: str, b: str, umbral: int = 4) -> bool:
     return len(palabras_clave(a) & palabras_clave(b)) >= umbral
 
 
+def _prioridad_fuente(ev: dict) -> int:
+    """Prioridad para dedupe: manual > auto-link > auto-rss.
+
+    auto-link es carga manual del usuario por URL: si la carga, es porque
+    quiere que esa version del evento sea la canonica.
+    """
+    f = ev.get("fuente", "")
+    if f == "manual":    return 3
+    if f == "auto-link": return 2
+    if f == "auto-rss":  return 1
+    return 0
+
+
+def _mejor(a: dict, b: dict) -> dict:
+    """Devuelve el evento preferido entre a y b. Prioridad: fuente > empleados."""
+    pa, pb = _prioridad_fuente(a), _prioridad_fuente(b)
+    if pa != pb:
+        return a if pa > pb else b
+    # Misma prioridad: el de mas empleados
+    return a if a.get("empleados", 0) >= b.get("empleados", 0) else b
+
+
 def deduplicar(eventos: list[dict]) -> list[dict]:
     """
     Pasada 1: por (empresa_normalizada, YYYY-MM).
     Pasada 2: por similitud de titulo en el mismo mes.
-    Conserva siempre el evento con mayor cantidad de empleados.
+    Conserva el evento con mayor prioridad de fuente (manual > auto-link > auto-rss),
+    y a igual prioridad, el de mas empleados.
     """
     grupos = {}
     for ev in eventos:
         mes = ev.get("fecha", "0000-00")[:7]
         emp_key = normalizar_key(ev.get("empresa", ""))
         key = (emp_key, mes)
-        if key not in grupos or ev.get("empleados", 0) > grupos[key].get("empleados", 0):
+        if key not in grupos:
             grupos[key] = ev
+        else:
+            grupos[key] = _mejor(ev, grupos[key])
     resultado = list(grupos.values())
 
     # Pasada 2: similitud cross-empresa en el mismo mes
@@ -998,9 +1094,34 @@ def deduplicar(eventos: list[dict]) -> list[dict]:
                 if son_duplicados(evs[i].get("comentario", ""), evs[j].get("comentario", "")):
                     grupo.append(evs[j])
                     usados[j] = True
-            mejor = max(grupo, key=lambda e: e.get("empleados", 0))
+            mejor = grupo[0]
+            for ev in grupo[1:]:
+                mejor = _mejor(ev, mejor)
             final.append(mejor)
     return final
+
+
+def event_id(ev: dict) -> str:
+    """Hash determinista de un evento. Estable ante reordenamiento o re-procesado.
+
+    Se usa para identificar el evento desde la UI (editar/borrar) y como
+    URL-safe id en los workflow inputs.
+
+    Base: fecha + empresa_normalizada + url|comentario_truncado.
+    """
+    base = "|".join([
+        (ev.get("fecha") or "")[:10],
+        normalizar_key(ev.get("empresa") or ""),
+        (ev.get("url") or ev.get("comentario") or "")[:120],
+    ])
+    return hashlib.sha1(base.encode("utf-8")).hexdigest()[:12]
+
+
+def asignar_ids(eventos: list[dict]) -> list[dict]:
+    """Asegura que cada evento tenga un campo 'id' estable."""
+    for ev in eventos:
+        ev["id"] = event_id(ev)
+    return eventos
 
 
 def canonicalizar(eventos: list[dict]) -> list[dict]:
@@ -1055,6 +1176,14 @@ def scraping_rss(vistos: set[str], max_fetch: int) -> tuple[list[dict], dict]:
                 rechazos["no_relevante"] += 1
                 continue
 
+            # Filtro rapido por blacklist extranjera en el titulo (antes de bajar el body)
+            t_low = titulo.lower()
+            if any(re.search(r"\b" + re.escape(b) + r"\b", t_low) for b in BLACKLIST_EXTRANJERAS):
+                if not any(k in t_low for k in AR_GEO_KW):
+                    rechazos["empresa_extranjera"] += 1
+                    vistos.add(link)
+                    continue
+
             # Bajar cuerpo del articulo si tenemos cuota
             cuerpo = ""
             fecha_articulo = None
@@ -1073,6 +1202,12 @@ def scraping_rss(vistos: set[str], max_fetch: int) -> tuple[list[dict], dict]:
             ok_fecha, razon = validar_fecha_evento(fecha, texto_validacion)
             if not ok_fecha:
                 rechazos[razon.split("(")[0].strip()] += 1
+                vistos.add(link)
+                continue
+
+            # Filtro de contenido para despidos globales/internacionales
+            if es_noticia_internacional(titulo, cuerpo + " " + desc):
+                rechazos["internacional"] += 1
                 vistos.add(link)
                 continue
 
@@ -1223,10 +1358,24 @@ def main(argv: list[str] | None = None) -> int:
     # Re-procesar eventos auto-rss viejos con el extractor nuevo (limpia basura legacy).
     # Conserva 'empleados' si era >1 (asumimos que fue extraido bien); recalcula si era 1.
     relaboreados = 0
+    descartados_intl = 0
+    sobrevivientes = []
     for ev in eventos_auto_previos:
+        # Si fue editado manualmente desde la UI, no tocamos los campos
+        if ev.get("edited"):
+            sobrevivientes.append(ev)
+            continue
         coment = ev.get("comentario", "")
         if not coment:
+            sobrevivientes.append(ev)
             continue
+        # Filtro internacional: si la noticia es global y la empresa esta en
+        # blacklist extranjera, la descartamos del bedrock
+        empresa_norm = normalizar_key(ev.get("empresa", ""))
+        if empresa_norm in BLACKLIST_EXTRANJERAS or es_noticia_internacional(coment, ""):
+            descartados_intl += 1
+            continue
+
         empresa_old = ev.get("empresa", "")
         empresa_new = extraer_empresa(coment, "")
         if empresa_new != "Sin identificar" and (
@@ -1244,7 +1393,11 @@ def main(argv: list[str] | None = None) -> int:
             new_emp = extraer_empleados(coment, "")
             if new_emp > 1:
                 ev["empleados"] = new_emp
-    log(f"Eventos auto-rss del bedrock re-procesados: {relaboreados}")
+        sobrevivientes.append(ev)
+    eventos_auto_previos = sobrevivientes
+    log(f"Eventos auto del bedrock re-procesados: {relaboreados}")
+    if descartados_intl:
+        log(f"Eventos descartados por filtro internacional: {descartados_intl}", "warn")
 
     todos_auto = deduplicar(canonicalizar(eventos_auto_previos + nuevos))
 
@@ -1261,6 +1414,7 @@ def main(argv: list[str] | None = None) -> int:
 
     # 4. Output
     todos = eventos_manual + todos_auto
+    asignar_ids(todos)
     desde = (date.today() - timedelta(days=7)).isoformat()
     ultimos_7 = [e for e in todos
                  if e.get("fuente") in AUTO_FUENTES and e.get("fecha", "") >= desde]
