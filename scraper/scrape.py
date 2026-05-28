@@ -2215,11 +2215,11 @@ PUB_LAG_DIAS = {
     "ipi":      24,
     "isac":     24,
     "uci":      24,
-    "super":    78,   # Supermercados: ~2.5 meses lag (publica abril en mes +2-3)
-    "mayor":    78,
+    "super":    52,   # Supermercados: ~52 días (marzo 2026 publicado 22-may-26)
+    "mayor":    52,
     "bc":       21,   # ICA: 17-21 del mes siguiente
     "emae":     55,   # EMAE con lag de ~2 meses post-cierre
-    "turismo":  45,
+    "turismo":  26,   # Turismo internacional: ~26 días (abril 2026 publicado 26-may-26)
     "salarios": 50,
     "ripte":    35,
     "trabajo":  60,   # SIPA con ~2 meses lag
