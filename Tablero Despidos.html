@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600;8..60,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/gitbrent/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
 <style>
 :root{
   /* Paleta editorial — warm neutrals + acentos semánticos (igual a Tablero Macro) */
@@ -214,6 +215,10 @@ hr.d{border:none;border-top:.5px solid var(--bd);margin:16px 0}
     <span class="sb-lbl">Cargar</span>
     <button class="nav-item" onclick="T('link',this)" id="nav-link"><span class="nav-ic">&#128279;</span>Agregar por link</button>
   </div>
+  <div class="sb-sec">
+    <span class="sb-lbl">Reportes</span>
+    <button class="nav-item" onclick="T('informe',this)" id="nav-informe"><span class="nav-ic">&#128203;</span>Informe semanal</button>
+  </div>
 </nav>
 
 <div class="content-area">
@@ -335,6 +340,32 @@ hr.d{border:none;border-top:.5px solid var(--bd);margin:16px 0}
   </div>
 </div>
 
+<!-- ── Informe semanal ── -->
+<div id="pg-informe" class="pg">
+  <div class="slbl">Generar informe semanal en PowerPoint</div>
+  <div class="info-box">
+    Genera un .pptx con el formato <em>Contador de Tristeza</em>: portada, totales acumulados, resumen narrativo de la semana, tablas paginadas de despidos y suspensiones del período seleccionado.
+  </div>
+  <div class="cc" style="padding:20px">
+    <div style="display:grid;grid-template-columns:140px 1fr;gap:10px 14px;align-items:center;margin-bottom:18px">
+      <label style="font-size:11px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;font-weight:600">Desde</label>
+      <input type="date" id="rep-desde" style="font-size:13px;padding:7px 10px;border:.5px solid var(--bd2);border-radius:5px;background:var(--surf);color:var(--tx);font-family:inherit;width:200px">
+      <label style="font-size:11px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;font-weight:600">Hasta</label>
+      <input type="date" id="rep-hasta" style="font-size:13px;padding:7px 10px;border:.5px solid var(--bd2);border-radius:5px;background:var(--surf);color:var(--tx);font-family:inherit;width:200px">
+      <label style="font-size:11px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;font-weight:600">Fecha base totales</label>
+      <input type="date" id="rep-base" value="2023-12-10" style="font-size:13px;padding:7px 10px;border:.5px solid var(--bd2);border-radius:5px;background:var(--surf);color:var(--tx);font-family:inherit;width:200px">
+    </div>
+    <p style="font-size:11px;color:var(--tx3);margin-bottom:14px;line-height:1.5">
+      Los totales acumulados se cuentan desde la <em>Fecha base</em> (asunción Milei: 10/12/2023). Los detalles de tablas y resumen narrativo cubren el rango <em>Desde — Hasta</em>.
+    </p>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <button class="btn btn-p" id="rep-btn" onclick="generarInforme()">📊 Generar y descargar .pptx</button>
+      <span id="rep-status" style="font-size:12px;color:var(--tx2)"></span>
+    </div>
+    <div id="rep-stats" style="margin-top:18px;font-size:12px;color:var(--tx2);font-family:var(--font-mono);line-height:1.7"></div>
+  </div>
+</div>
+
 <!-- ── Settings modal ── -->
 <div id="settings-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;align-items:center;justify-content:center">
   <div style="background:var(--surf);border-radius:var(--rl);padding:24px;max-width:480px;width:90%;border:.5px solid var(--bd2)">
@@ -450,6 +481,7 @@ function T(id, btn){
   if(id==='mapa')buildMapa();
   if(id==='tabla')buildTabla();
   if(id==='nuevas')buildNuevas();
+  if(id==='informe')initInforme();
 }
 
 function toast(msg,dur){
@@ -753,6 +785,16 @@ function renderTabla(){
 }
 
 function goPage(p){TBL_PAGE=p;renderTabla();window.scrollTo(0,0);}
+
+// Re-render la página actualmente visible. Llamada despues de editar/borrar/cargar
+// para que las estadísticas de TODAS las hojas reflejen el cambio.
+function refrescarVistaActiva(){
+  // initData() ya actualiza KPIs y dashboard, asi que aca solo refresco
+  // las vistas que dependen de D y que no se renderizan en initData.
+  if(document.getElementById('pg-tabla').classList.contains('on')) buildTabla();
+  if(document.getElementById('pg-mapa').classList.contains('on'))  buildMapa();
+  if(document.getElementById('pg-nuevas').classList.contains('on'))buildNuevas();
+}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
 // ── Noticias nuevas ─────────────────────────────────────────────────────────
@@ -905,6 +947,7 @@ function pollearRun(repo, token, t0, btn, stat){
           logLink('Recargando datos...');
           cargarDatos().then(function(){
             initData();
+            refrescarVistaActiva();
             toast('Datos recargados');
           });
         }, 8000);
@@ -919,6 +962,282 @@ function pollearRun(repo, token, t0, btn, stat){
     stat.innerHTML = '<span style="color:var(--red)">Error consultando run</span>';
     btn.disabled = false;
   });
+}
+
+// ── Informe semanal PPTX ────────────────────────────────────────────────────
+// Genera un .pptx con el formato Contador de Tristeza.
+
+// Inicializar fechas por defecto al abrir la tab
+function initInforme(){
+  var desde = document.getElementById('rep-desde');
+  var hasta = document.getElementById('rep-hasta');
+  if(desde.value && hasta.value) return; // ya inicializado
+  // Por defecto: lunes a domingo de la semana pasada
+  var hoy = new Date();
+  var dow = hoy.getDay();             // 0=domingo 1=lunes ... 6=sabado
+  var diasDesdeLunes = dow === 0 ? 6 : dow - 1;
+  var finSemanaPasada = new Date(hoy); finSemanaPasada.setDate(hoy.getDate() - diasDesdeLunes - 1);  // domingo pasado
+  var inicioSemanaPasada = new Date(finSemanaPasada); inicioSemanaPasada.setDate(finSemanaPasada.getDate() - 6);
+  desde.value = inicioSemanaPasada.toISOString().slice(0,10);
+  hasta.value = finSemanaPasada.toISOString().slice(0,10);
+}
+
+function fmtFecha(iso){
+  // YYYY-MM-DD → D/M/YYYY
+  if(!iso || iso.length<10) return iso||'';
+  var p = iso.slice(0,10).split('-');
+  return parseInt(p[2],10)+'/'+parseInt(p[1],10)+'/'+p[0];
+}
+
+function fmtFechaCorta(iso){
+  // YYYY-MM-DD → D/M/YY
+  if(!iso || iso.length<10) return iso||'';
+  var p = iso.slice(0,10).split('-');
+  return parseInt(p[2],10)+'/'+parseInt(p[1],10)+'/'+p[0].slice(2);
+}
+
+function esPBA(prov){
+  if(!prov) return false;
+  var p = prov.toLowerCase();
+  return p.includes('buenos aires') && !p.includes('caba') && !p.includes('ciudad');
+}
+
+function generarInforme(){
+  if(typeof PptxGenJS === 'undefined'){ toast('PptxGenJS no cargo'); return; }
+  var desdeStr = document.getElementById('rep-desde').value;
+  var hastaStr = document.getElementById('rep-hasta').value;
+  var baseStr  = document.getElementById('rep-base').value || '2023-12-10';
+  if(!desdeStr || !hastaStr){ toast('Elegí ambas fechas'); return; }
+  if(desdeStr > hastaStr){ toast('Desde debe ser <= Hasta'); return; }
+
+  var btn  = document.getElementById('rep-btn');
+  var stat = document.getElementById('rep-status');
+  btn.disabled = true;
+  stat.innerHTML = '<span style="color:var(--acc)">⏳ Generando .pptx...</span>';
+
+  try {
+    // ── Filtrado de eventos ───────────────────────────────────────────────
+    var enRango = function(e){
+      var f = (e.fecha||'').slice(0,10);
+      return f >= desdeStr && f <= hastaStr;
+    };
+    var desdeBase = function(e){
+      var f = (e.fecha||'').slice(0,10);
+      return f >= baseStr && f <= hastaStr;
+    };
+    var esDespido = function(e){ return (e.tipo||'despido')==='despido' || (e.tipo||'')==='cierre'; };
+    var esSuspO = function(e){ return (e.tipo||'')==='suspensión'; };
+
+    var despPeriodo  = D.filter(function(e){ return enRango(e) && esDespido(e); });
+    var suspPeriodo  = D.filter(function(e){ return enRango(e) && esSuspO(e); });
+    var despAcum     = D.filter(function(e){ return desdeBase(e) && esDespido(e); });
+    var suspAcum     = D.filter(function(e){ return desdeBase(e) && esSuspO(e); });
+    var despPBA      = despAcum.filter(function(e){ return esPBA(e.provincia); });
+    var sumEmp = function(arr){ return arr.reduce(function(a,e){return a+(parseInt(e.empleados,10)||0);},0); };
+    var empAcumNac = sumEmp(despAcum);
+    var empAcumPBA = sumEmp(despPBA);
+    var empresasAcumNac = new Set(despAcum.map(function(e){return e.empresa;})).size;
+    var empresasAcumPBA = new Set(despPBA.map(function(e){return e.empresa;})).size;
+    var empSemPer = sumEmp(despPeriodo);
+    var empAcumSusp = sumEmp(suspAcum);
+
+    // Stats al usuario en la pagina
+    document.getElementById('rep-stats').innerHTML =
+      'Rango: <b>'+fmtFecha(desdeStr)+'</b> al <b>'+fmtFecha(hastaStr)+'</b><br>'+
+      'Despidos del periodo: <b>'+despPeriodo.length+' eventos · '+empSemPer.toLocaleString('es')+' empleos</b><br>'+
+      'Suspensiones del periodo: <b>'+suspPeriodo.length+' eventos</b><br>'+
+      'Acumulado desde '+fmtFecha(baseStr)+': <b>'+despAcum.length+' eventos · '+empAcumNac.toLocaleString('es')+' empleos · '+empresasAcumNac+' empresas</b>';
+
+    // ── Build PPTX ────────────────────────────────────────────────────────
+    var pptx = new PptxGenJS();
+    pptx.layout = 'LAYOUT_WIDE'; // 13.3 x 7.5
+
+    // Paleta editorial
+    var COL = {
+      acc:'1E4A8A', red:'B91C1C', amb:'A85C1E', grn:'15803D',
+      bg:'FAF9F6',  surf:'FFFFFF', tx:'1A1A1A', tx2:'525050', tx3:'9A9690',
+      bd:'E5E2DA',
+    };
+    var FONT_S = 'Inter';
+    var FONT_H = 'Georgia';
+    var FOOTER = 'Fuente: elaboración propia en base a relevamiento de notas periodísticas y sufren actualizaciones y ajustes de información cada semana';
+
+    // Slide 1: Portada
+    var s1 = pptx.addSlide();
+    s1.background = { color: COL.bg };
+    s1.addText('RESUMEN', { x:0.6, y:2.0, w:12, h:0.6, fontFace:FONT_S, fontSize:18, color:COL.tx3, charSpacing:8 });
+    s1.addText('CONTADOR DE TRISTEZA', { x:0.6, y:2.55, w:12, h:1.4, fontFace:FONT_H, fontSize:64, bold:true, color:COL.red });
+    s1.addText('Sistema GDS · Tablero de despidos y cierres de empresas', { x:0.6, y:4.0, w:12, h:0.5, fontFace:FONT_H, italic:true, fontSize:18, color:COL.tx2 });
+    s1.addText('PARA MÁS INFO HISTÓRICA, VISITAR EL TABLERO INTERACTIVO', { x:0.6, y:5.4, w:12, h:0.4, fontFace:FONT_S, fontSize:11, color:COL.tx3, charSpacing:6 });
+    s1.addText('Período: '+fmtFecha(desdeStr)+' al '+fmtFecha(hastaStr), { x:0.6, y:6.6, w:12, h:0.3, fontFace:FONT_S, fontSize:13, color:COL.tx2 });
+
+    // Slide 2: Totales acumulados
+    var s2 = pptx.addSlide();
+    s2.background = { color: COL.bg };
+    s2.addText('CONTADOR DE TRISTEZA', { x:0.6, y:0.5, w:12, h:0.4, fontFace:FONT_S, fontSize:13, color:COL.tx3, charSpacing:6 });
+    s2.addText('Desde que asumió Milei', { x:0.6, y:0.9, w:12, h:0.5, fontFace:FONT_H, fontSize:24, bold:true, color:COL.tx });
+    s2.addText('Relevamiento propio del Ministerio de Producción', { x:0.6, y:1.4, w:12, h:0.4, fontFace:FONT_H, italic:true, fontSize:14, color:COL.tx2 });
+    // 4 KPI boxes
+    var kpis = [
+      { lbl:'CASOS DE DESPIDOS EN PBA',                val: empAcumPBA.toLocaleString('es'),  color: COL.red },
+      { lbl:'EMPRESAS QUE DESPIDIERON EN PBA',         val: empresasAcumPBA.toLocaleString('es'), color: COL.red },
+      { lbl:'CASOS DE DESPIDOS A NIVEL NACIONAL',      val: empAcumNac.toLocaleString('es'),  color: COL.red },
+      { lbl:'EMPRESAS QUE DESPIDIERON A NIVEL NACIONAL', val: empresasAcumNac.toLocaleString('es'), color: COL.red },
+    ];
+    kpis.forEach(function(k, i){
+      var col = i % 2, row = Math.floor(i/2);
+      var x = 0.6 + col*6.4, y = 2.4 + row*2.2;
+      s2.addShape(pptx.ShapeType.rect, { x:x, y:y, w:6, h:1.9, fill:{color:COL.surf}, line:{color:COL.bd, width:0.5} });
+      s2.addText(k.lbl,  { x:x+0.3, y:y+0.2, w:5.6, h:0.5, fontFace:FONT_S, fontSize:11, bold:true, color:COL.tx3, charSpacing:6 });
+      s2.addText(k.val,  { x:x+0.3, y:y+0.65, w:5.6, h:1.1, fontFace:FONT_H, fontSize:48, bold:true, color:k.color });
+    });
+
+    // Slide 3: Resumen narrativo de la semana — top eventos
+    var s3 = pptx.addSlide();
+    s3.background = { color: COL.bg };
+    s3.addText('RESUMEN DE LA SEMANA', { x:0.6, y:0.4, w:12, h:0.4, fontFace:FONT_S, fontSize:13, color:COL.tx3, charSpacing:6 });
+    s3.addText('Despidos de esta semana y los casos más tristes', { x:0.6, y:0.85, w:12, h:0.5, fontFace:FONT_H, fontSize:22, bold:true, color:COL.tx });
+    // Top 6 eventos por empleados afectados
+    var topDesp = despPeriodo.slice().sort(function(a,b){return (b.empleados||0)-(a.empleados||0);}).slice(0,6);
+    var resumenText = topDesp.map(function(e){
+      var who = e.empresa || 'Sin identificar';
+      var prov = e.provincia ? ' ('+e.provincia+')' : '';
+      var emp = (e.empleados>0)? e.empleados.toLocaleString('es')+' empleos': 's/d';
+      return who + prov + ' · ' + emp + ': ' + (e.comentario||'').slice(0,260);
+    });
+    if(suspPeriodo.length){
+      resumenText.push('');
+      resumenText.push('ANUNCIOS Y SUSPENSIONES');
+      suspPeriodo.slice(0,3).forEach(function(e){
+        resumenText.push((e.empresa||'—')+': '+(e.comentario||'').slice(0,260));
+      });
+    }
+    s3.addText(resumenText.map(function(t){return {text:t, options:{bullet:t!==''&&t!=='ANUNCIOS Y SUSPENSIONES', breakLine:true}};}),
+      { x:0.6, y:1.55, w:12.2, h:5.4, fontFace:FONT_H, fontSize:12, color:COL.tx, paraSpaceAfter:6, valign:'top' });
+    s3.addText(FOOTER, { x:0.6, y:7.05, w:12.2, h:0.3, fontFace:FONT_S, fontSize:8, italic:true, color:COL.tx3 });
+
+    // Slide 4: Anexo I — Tabla de despidos paginada
+    var anexo = pptx.addSlide();
+    anexo.background = { color: COL.bg };
+    anexo.addText('ANEXO I', { x:0.6, y:3.0, w:12, h:0.8, fontFace:FONT_H, fontSize:54, bold:true, color:COL.tx });
+    anexo.addText('DESPIDOS', { x:0.6, y:3.95, w:12, h:0.5, fontFace:FONT_S, fontSize:22, color:COL.tx2, charSpacing:8 });
+
+    // Tablas paginadas: 16 filas por slide
+    var FILAS_X_SLIDE = 16;
+    var totDespPer = sumEmp(despPeriodo);
+    var headerDesp = [
+      { text:'FECHA',      options:{bold:true, color:'FFFFFF', fill:{color:COL.tx}, fontSize:10} },
+      { text:'EMPRESA',    options:{bold:true, color:'FFFFFF', fill:{color:COL.tx}, fontSize:10} },
+      { text:'RUBRO',      options:{bold:true, color:'FFFFFF', fill:{color:COL.tx}, fontSize:10} },
+      { text:'Q DESPIDOS', options:{bold:true, color:'FFFFFF', fill:{color:COL.tx}, fontSize:10, align:'right'} },
+      { text:'PROVINCIA',  options:{bold:true, color:'FFFFFF', fill:{color:COL.tx}, fontSize:10} },
+      { text:'¿CERRÓ?',    options:{bold:true, color:'FFFFFF', fill:{color:COL.tx}, fontSize:10} },
+    ];
+    var despSorted = despPeriodo.slice().sort(function(a,b){return (a.fecha||'').localeCompare(b.fecha||'');});
+    var nPages = Math.max(1, Math.ceil(despSorted.length / FILAS_X_SLIDE));
+    for(var p=0; p<nPages; p++){
+      var slide = pptx.addSlide();
+      slide.background = { color: COL.bg };
+      slide.addText('Resumen contador de tristeza de la semana'+(p>0?' (cont.)':''), { x:0.6, y:0.35, w:12, h:0.3, fontFace:FONT_S, fontSize:11, color:COL.tx3, charSpacing:5 });
+      slide.addText('Despidos del '+fmtFechaCorta(desdeStr)+' al '+fmtFechaCorta(hastaStr), { x:0.6, y:0.7, w:12, h:0.5, fontFace:FONT_H, fontSize:20, bold:true, color:COL.tx });
+      slide.addText([
+        { text:'Total del período: ', options:{fontFace:FONT_S, fontSize:11, color:COL.tx2} },
+        { text: totDespPer.toLocaleString('es'), options:{fontFace:FONT_S, fontSize:11, bold:true, color:COL.red} },
+        { text:'   ·   Registrados desde el inicio de Milei: ', options:{fontFace:FONT_S, fontSize:11, color:COL.tx2} },
+        { text: empAcumNac.toLocaleString('es'), options:{fontFace:FONT_S, fontSize:11, bold:true, color:COL.red} },
+      ], { x:0.6, y:1.2, w:12, h:0.4 });
+
+      var filas = despSorted.slice(p*FILAS_X_SLIDE, (p+1)*FILAS_X_SLIDE);
+      var tableRows = [headerDesp];
+      filas.forEach(function(e){
+        var cerro = e.cerro ? 'Sí' : 'No';
+        if((e.tipo||'')==='cierre') cerro = 'Sí';
+        tableRows.push([
+          { text: fmtFechaCorta(e.fecha) },
+          { text: e.empresa || '—', options:{bold:true} },
+          { text: e.rubro || '—' },
+          { text: e.empleados>0 ? e.empleados.toLocaleString('es') : 's/d', options:{align:'right', color:COL.red, bold:true} },
+          { text: e.provincia || '—' },
+          { text: cerro },
+        ]);
+      });
+      slide.addTable(tableRows, {
+        x:0.5, y:1.7, w:12.3,
+        colW:[1.1, 2.6, 3.0, 1.4, 2.6, 1.6],
+        fontFace:FONT_S, fontSize:10, color:COL.tx,
+        border: { type:'solid', color:COL.bd, pt:0.5 },
+        rowH: 0.32, valign:'middle',
+      });
+      slide.addText('Página '+(p+1)+' de '+nPages+' · '+FOOTER, { x:0.6, y:7.15, w:12.2, h:0.25, fontFace:FONT_S, fontSize:8, italic:true, color:COL.tx3 });
+    }
+
+    // Anexo II: Suspensiones
+    if(suspPeriodo.length){
+      var anexo2 = pptx.addSlide();
+      anexo2.background = { color: COL.bg };
+      anexo2.addText('ANEXO II', { x:0.6, y:3.0, w:12, h:0.8, fontFace:FONT_H, fontSize:54, bold:true, color:COL.tx });
+      anexo2.addText('SUSPENSIONES Y RETIROS VOLUNTARIOS', { x:0.6, y:3.95, w:12, h:0.5, fontFace:FONT_S, fontSize:20, color:COL.tx2, charSpacing:6 });
+
+      var headerSusp = [
+        { text:'FECHA',     options:{bold:true, color:'FFFFFF', fill:{color:COL.tx}, fontSize:10} },
+        { text:'EMPRESA',   options:{bold:true, color:'FFFFFF', fill:{color:COL.tx}, fontSize:10} },
+        { text:'TIPO',      options:{bold:true, color:'FFFFFF', fill:{color:COL.tx}, fontSize:10} },
+        { text:'RUBRO',     options:{bold:true, color:'FFFFFF', fill:{color:COL.tx}, fontSize:10} },
+        { text:'CANTIDAD',  options:{bold:true, color:'FFFFFF', fill:{color:COL.tx}, fontSize:10, align:'right'} },
+        { text:'PROVINCIA', options:{bold:true, color:'FFFFFF', fill:{color:COL.tx}, fontSize:10} },
+      ];
+      var suspSorted = suspPeriodo.slice().sort(function(a,b){return (a.fecha||'').localeCompare(b.fecha||'');});
+      var nPS = Math.max(1, Math.ceil(suspSorted.length / FILAS_X_SLIDE));
+      for(var ps=0; ps<nPS; ps++){
+        var slS = pptx.addSlide();
+        slS.background = { color: COL.bg };
+        slS.addText('Resumen contador de tristeza de la semana'+(ps>0?' (cont.)':''), { x:0.6, y:0.35, w:12, h:0.3, fontFace:FONT_S, fontSize:11, color:COL.tx3, charSpacing:5 });
+        slS.addText('Suspensiones y retiros del '+fmtFechaCorta(desdeStr)+' al '+fmtFechaCorta(hastaStr), { x:0.6, y:0.7, w:12, h:0.5, fontFace:FONT_H, fontSize:20, bold:true, color:COL.tx });
+        slS.addText([
+          { text:'Total del período: ', options:{fontFace:FONT_S, fontSize:11, color:COL.tx2} },
+          { text: sumEmp(suspPeriodo).toLocaleString('es'), options:{fontFace:FONT_S, fontSize:11, bold:true, color:COL.amb} },
+          { text:'   ·   Acumulado desde el inicio de Milei: ', options:{fontFace:FONT_S, fontSize:11, color:COL.tx2} },
+          { text: empAcumSusp.toLocaleString('es'), options:{fontFace:FONT_S, fontSize:11, bold:true, color:COL.amb} },
+        ], { x:0.6, y:1.2, w:12, h:0.4 });
+
+        var filasS = suspSorted.slice(ps*FILAS_X_SLIDE, (ps+1)*FILAS_X_SLIDE);
+        var rowsS = [headerSusp];
+        filasS.forEach(function(e){
+          rowsS.push([
+            { text: fmtFechaCorta(e.fecha) },
+            { text: e.empresa || '—', options:{bold:true} },
+            { text: (e.tipo||'suspensión').charAt(0).toUpperCase()+(e.tipo||'suspensión').slice(1) },
+            { text: e.rubro || '—' },
+            { text: e.empleados>0 ? e.empleados.toLocaleString('es') : 's/d', options:{align:'right', color:COL.amb, bold:true} },
+            { text: e.provincia || '—' },
+          ]);
+        });
+        slS.addTable(rowsS, {
+          x:0.5, y:1.7, w:12.3,
+          colW:[1.1, 2.6, 1.6, 2.6, 1.4, 3.0],
+          fontFace:FONT_S, fontSize:10, color:COL.tx,
+          border: { type:'solid', color:COL.bd, pt:0.5 },
+          rowH: 0.32, valign:'middle',
+        });
+        slS.addText('Página '+(ps+1)+' de '+nPS+' · '+FOOTER, { x:0.6, y:7.15, w:12.2, h:0.25, fontFace:FONT_S, fontSize:8, italic:true, color:COL.tx3 });
+      }
+    }
+
+    // ── Descargar ─────────────────────────────────────────────────────────
+    var nombre = 'Contador de Tristeza '+desdeStr+' al '+hastaStr+'.pptx';
+    pptx.writeFile({ fileName: nombre }).then(function(){
+      stat.innerHTML = '<span style="color:var(--grn)">✅ Generado · '+nombre+'</span>';
+      btn.disabled = false;
+      toast('Informe descargado');
+    }).catch(function(e){
+      stat.innerHTML = '<span style="color:var(--red)">❌ Error: '+e.message+'</span>';
+      btn.disabled = false;
+    });
+  } catch(e){
+    stat.innerHTML = '<span style="color:var(--red)">❌ '+e.message+'</span>';
+    btn.disabled = false;
+    console.error(e);
+  }
 }
 
 // ── Editar/Eliminar evento ──────────────────────────────────────────────────
@@ -1067,10 +1386,10 @@ function pollearEdit(repo, token, t0, btn, stat, modo){
       if(ok){
         setTimeout(function(){
           cargarDatos().then(function(){
-            initData();
+            initData();           // resetea D, NUEVOS, KPIs, dashboard, filtros
             if(modo==='edit') cerrarEditar();
             else cerrarDel();
-            buildTabla();
+            refrescarVistaActiva(); // re-renderiza la vista actual sea cual sea
             toast('Datos recargados');
           });
         }, 8000);
