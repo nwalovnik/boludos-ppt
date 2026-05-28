@@ -1048,178 +1048,212 @@ function generarInforme(){
       'Suspensiones del periodo: <b>'+suspPeriodo.length+' eventos</b><br>'+
       'Acumulado desde '+fmtFecha(baseStr)+': <b>'+despAcum.length+' eventos · '+empAcumNac.toLocaleString('es')+' empleos · '+empresasAcumNac+' empresas</b>';
 
-    // ── Build PPTX ────────────────────────────────────────────────────────
+    // ── Build PPTX (paleta y layout del ejemplo Contador de Tristeza) ───
     var pptx = new PptxGenJS();
-    pptx.layout = 'LAYOUT_WIDE'; // 13.3 x 7.5
+    pptx.layout = 'LAYOUT_WIDE'; // 13.33 x 7.5
 
-    // Paleta editorial
+    // Paleta extraida del PPT de ejemplo
     var COL = {
-      acc:'1E4A8A', red:'B91C1C', amb:'A85C1E', grn:'15803D',
-      bg:'FAF9F6',  surf:'FFFFFF', tx:'1A1A1A', tx2:'525050', tx3:'9A9690',
-      bd:'E5E2DA',
+      cyan: '00B2C9',   // cyan principal
+      cyan2:'00AEC3',   // cyan profundo (header slide 2)
+      dark: '222A35',   // azul oscuro (accents, header tablas)
+      gray: '595959',   // gris secundario
+      gray2:'434343',   // gris texto
+      white:'FFFFFF',
+      black:'000000',
+      bgrow:'F2F8FA',   // banda alterna tablas
     };
-    var FONT_S = 'Inter';
-    var FONT_H = 'Georgia';
+    var FONT  = 'Encode Sans';
+    var FONTH = 'Encode Sans Black';
     var FOOTER = 'Fuente: elaboración propia en base a relevamiento de notas periodísticas y sufren actualizaciones y ajustes de información cada semana';
 
-    // Slide 1: Portada
-    var s1 = pptx.addSlide();
-    s1.background = { color: COL.bg };
-    s1.addText('RESUMEN', { x:0.6, y:2.0, w:12, h:0.6, fontFace:FONT_S, fontSize:18, color:COL.tx3, charSpacing:8 });
-    s1.addText('CONTADOR DE TRISTEZA', { x:0.6, y:2.55, w:12, h:1.4, fontFace:FONT_H, fontSize:64, bold:true, color:COL.red });
-    s1.addText('Sistema GDS · Tablero de despidos y cierres de empresas', { x:0.6, y:4.0, w:12, h:0.5, fontFace:FONT_H, italic:true, fontSize:18, color:COL.tx2 });
-    s1.addText('PARA MÁS INFO HISTÓRICA, VISITAR EL TABLERO INTERACTIVO', { x:0.6, y:5.4, w:12, h:0.4, fontFace:FONT_S, fontSize:11, color:COL.tx3, charSpacing:6 });
-    s1.addText('Período: '+fmtFecha(desdeStr)+' al '+fmtFecha(hastaStr), { x:0.6, y:6.6, w:12, h:0.3, fontFace:FONT_S, fontSize:13, color:COL.tx2 });
+    function addHeaderBand(slide, opts){
+      opts = opts || {};
+      var alto = opts.alto || 0.84;
+      var color = opts.color || COL.cyan;
+      slide.addShape(pptx.ShapeType.rect, { x:0, y:0, w:13.33, h:alto, fill:{color:color}, line:{type:'none'} });
+      slide.addShape(pptx.ShapeType.rect, { x:0, y:0, w:0.12, h: Math.max(0.5, alto-0.13), fill:{color:COL.dark}, line:{type:'none'} });
+    }
+    function addFooter(slide, pageInfo){
+      var txt = (pageInfo? pageInfo+' · ':'')+FOOTER;
+      slide.addText(txt, { x:0.5, y:7.15, w:12.3, h:0.25, fontFace:FONT, fontSize:8, italic:true, color:COL.gray });
+    }
 
-    // Slide 2: Totales acumulados
+    s1.background = { color: COL.white };
+    // Barra vertical cyan a la izquierda (como en el ejemplo)
+    s1.addShape(pptx.ShapeType.rect, { x:0.92, y:0.92, w:0.14, h:5.4, fill:{color:COL.cyan}, line:{type:'none'} });
+    s1.addText('RESUMEN', { x:1.21, y:1.51, w:11, h:0.7, fontFace:FONTH, fontSize:38, bold:true, color:COL.cyan, charSpacing:4 });
+    s1.addText('CONTADOR DE TRISTEZA', { x:1.21, y:2.25, w:11, h:1.0, fontFace:FONTH, fontSize:54, bold:true, color:COL.black, charSpacing:2 });
+    s1.addText('Sistema GDS · Despidos y cierres de empresas en Argentina', { x:1.21, y:3.35, w:11, h:0.5, fontFace:FONT, fontSize:18, color:COL.gray });
+    s1.addText('PARA MÁS INFO HISTÓRICA, VISITAR EL TABLERO INTERACTIVO', { x:2.12, y:5.4, w:9, h:0.6, fontFace:FONT, fontSize:14, bold:true, color:COL.cyan, charSpacing:4 });
+    s1.addText('Período del informe: '+fmtFecha(desdeStr)+' al '+fmtFecha(hastaStr), { x:1.21, y:6.7, w:11, h:0.3, fontFace:FONT, fontSize:13, color:COL.gray2 });
+
+    // ── Slide 2: TOTALES ACUMULADOS (header cyan grande arriba) ────────
     var s2 = pptx.addSlide();
-    s2.background = { color: COL.bg };
-    s2.addText('CONTADOR DE TRISTEZA', { x:0.6, y:0.5, w:12, h:0.4, fontFace:FONT_S, fontSize:13, color:COL.tx3, charSpacing:6 });
-    s2.addText('Desde que asumió Milei', { x:0.6, y:0.9, w:12, h:0.5, fontFace:FONT_H, fontSize:24, bold:true, color:COL.tx });
-    s2.addText('Relevamiento propio del Ministerio de Producción', { x:0.6, y:1.4, w:12, h:0.4, fontFace:FONT_H, italic:true, fontSize:14, color:COL.tx2 });
-    // 4 KPI boxes
+    s2.background = { color: COL.white };
+    s2.addShape(pptx.ShapeType.rect, { x:0, y:0, w:13.33, h:2.42, fill:{color:COL.cyan2}, line:{type:'none'} });
+    s2.addText('CONTADOR DE TRISTEZA', { x:0.42, y:0.35, w:12.3, h:0.5, fontFace:FONTH, fontSize:22, bold:true, color:COL.white, charSpacing:4 });
+    s2.addText('Desde que asumió Milei', { x:0.42, y:0.95, w:12.3, h:0.6, fontFace:FONTH, fontSize:36, bold:true, color:COL.white });
+    s2.addText('Relevamiento propio del Ministerio de Producción', { x:0.42, y:1.65, w:12.3, h:0.4, fontFace:FONT, fontSize:14, italic:true, color:COL.white });
     var kpis = [
-      { lbl:'CASOS DE DESPIDOS EN PBA',                val: empAcumPBA.toLocaleString('es'),  color: COL.red },
-      { lbl:'EMPRESAS QUE DESPIDIERON EN PBA',         val: empresasAcumPBA.toLocaleString('es'), color: COL.red },
-      { lbl:'CASOS DE DESPIDOS A NIVEL NACIONAL',      val: empAcumNac.toLocaleString('es'),  color: COL.red },
-      { lbl:'EMPRESAS QUE DESPIDIERON A NIVEL NACIONAL', val: empresasAcumNac.toLocaleString('es'), color: COL.red },
+      { lbl:'CASOS DE DESPIDOS EN PBA',                  val: empAcumPBA.toLocaleString('es') },
+      { lbl:'Q DE EMPRESAS QUE DESPIDIERON EN PBA',      val: empresasAcumPBA.toLocaleString('es') },
+      { lbl:'CASOS DE DESPIDOS A NIVEL NACIONAL',        val: empAcumNac.toLocaleString('es') },
+      { lbl:'Q DE EMPRESAS QUE DESPIDIERON A NIVEL NACIONAL', val: empresasAcumNac.toLocaleString('es') },
     ];
     kpis.forEach(function(k, i){
       var col = i % 2, row = Math.floor(i/2);
-      var x = 0.6 + col*6.4, y = 2.4 + row*2.2;
-      s2.addShape(pptx.ShapeType.rect, { x:x, y:y, w:6, h:1.9, fill:{color:COL.surf}, line:{color:COL.bd, width:0.5} });
-      s2.addText(k.lbl,  { x:x+0.3, y:y+0.2, w:5.6, h:0.5, fontFace:FONT_S, fontSize:11, bold:true, color:COL.tx3, charSpacing:6 });
-      s2.addText(k.val,  { x:x+0.3, y:y+0.65, w:5.6, h:1.1, fontFace:FONT_H, fontSize:48, bold:true, color:k.color });
+      var x = 0.5 + col*6.4, y = 3.0 + row*2.0;
+      // Recuadro con borde inferior cyan grueso (como el ejemplo)
+      s2.addShape(pptx.ShapeType.rect, { x:x, y:y, w:6.2, h:1.8, fill:{color:COL.white}, line:{color:'D9DEE3', width:0.5} });
+      s2.addShape(pptx.ShapeType.rect, { x:x, y:y+1.70, w:6.2, h:0.10, fill:{color:COL.cyan}, line:{type:'none'} });
+      s2.addText(k.lbl, { x:x+0.25, y:y+0.18, w:5.8, h:0.5, fontFace:FONT, fontSize:11, bold:true, color:COL.gray2, charSpacing:4 });
+      s2.addText(k.val, { x:x+0.25, y:y+0.55, w:5.8, h:1.1, fontFace:FONTH, fontSize:44, bold:true, color:COL.cyan });
     });
 
-    // Slide 3: Resumen narrativo de la semana — top eventos
+    // ── Slide 3: RESUMEN NARRATIVO ──────────────────────────────────────
     var s3 = pptx.addSlide();
-    s3.background = { color: COL.bg };
-    s3.addText('RESUMEN DE LA SEMANA', { x:0.6, y:0.4, w:12, h:0.4, fontFace:FONT_S, fontSize:13, color:COL.tx3, charSpacing:6 });
-    s3.addText('Despidos de esta semana y los casos más tristes', { x:0.6, y:0.85, w:12, h:0.5, fontFace:FONT_H, fontSize:22, bold:true, color:COL.tx });
-    // Top 6 eventos por empleados afectados
+    s3.background = { color: COL.white };
+    addHeaderBand(s3);
+    s3.addText('RESUMEN DE LA SEMANA', { x:0.5, y:0.12, w:12.3, h:0.6, fontFace:FONTH, fontSize:22, bold:true, color:COL.white, charSpacing:4 });
+    s3.addText('Despidos de esta semana y los casos más tristes', { x:0.5, y:1.0, w:12.3, h:0.5, fontFace:FONTH, fontSize:20, bold:true, color:COL.cyan });
     var topDesp = despPeriodo.slice().sort(function(a,b){return (b.empleados||0)-(a.empleados||0);}).slice(0,6);
-    var resumenText = topDesp.map(function(e){
-      var who = e.empresa || 'Sin identificar';
+    var resumenItems = topDesp.map(function(e){
       var prov = e.provincia ? ' ('+e.provincia+')' : '';
       var emp = (e.empleados>0)? e.empleados.toLocaleString('es')+' empleos': 's/d';
-      return who + prov + ' · ' + emp + ': ' + (e.comentario||'').slice(0,260);
-    });
+      return [
+        { text: (e.empresa||'Sin identificar'), options:{bold:true, color:COL.cyan} },
+        { text: prov+' · '+emp+': ', options:{color:COL.gray2} },
+        { text: (e.comentario||'').slice(0,260), options:{color:COL.gray2, breakLine:true} },
+      ];
+    }).reduce(function(acc,x){return acc.concat(x);},[]);
     if(suspPeriodo.length){
-      resumenText.push('');
-      resumenText.push('ANUNCIOS Y SUSPENSIONES');
+      resumenItems.push({ text:' ', options:{breakLine:true} });
+      resumenItems.push({ text:'ANUNCIOS Y SUSPENSIONES', options:{bold:true, color:COL.dark, breakLine:true} });
       suspPeriodo.slice(0,3).forEach(function(e){
-        resumenText.push((e.empresa||'—')+': '+(e.comentario||'').slice(0,260));
+        resumenItems.push({ text:(e.empresa||'—')+': ', options:{bold:true, color:COL.cyan} });
+        resumenItems.push({ text:(e.comentario||'').slice(0,260), options:{color:COL.gray2, breakLine:true} });
       });
     }
-    s3.addText(resumenText.map(function(t){return {text:t, options:{bullet:t!==''&&t!=='ANUNCIOS Y SUSPENSIONES', breakLine:true}};}),
-      { x:0.6, y:1.55, w:12.2, h:5.4, fontFace:FONT_H, fontSize:12, color:COL.tx, paraSpaceAfter:6, valign:'top' });
-    s3.addText(FOOTER, { x:0.6, y:7.05, w:12.2, h:0.3, fontFace:FONT_S, fontSize:8, italic:true, color:COL.tx3 });
+    s3.addText(resumenItems, { x:0.5, y:1.7, w:12.3, h:5.2, fontFace:FONT, fontSize:12, paraSpaceAfter:8, valign:'top' });
+    addFooter(s3);
 
-    // Slide 4: Anexo I — Tabla de despidos paginada
+    // ── Slide ANEXO I (separador grande) ────────────────────────────────
     var anexo = pptx.addSlide();
-    anexo.background = { color: COL.bg };
-    anexo.addText('ANEXO I', { x:0.6, y:3.0, w:12, h:0.8, fontFace:FONT_H, fontSize:54, bold:true, color:COL.tx });
-    anexo.addText('DESPIDOS', { x:0.6, y:3.95, w:12, h:0.5, fontFace:FONT_S, fontSize:22, color:COL.tx2, charSpacing:8 });
+    anexo.background = { color: COL.white };
+    addHeaderBand(anexo);
+    anexo.addText('RESUMEN CONTADOR DE TRISTEZA DE LA SEMANA', { x:0.5, y:0.12, w:12.3, h:0.6, fontFace:FONTH, fontSize:18, bold:true, color:COL.white, charSpacing:4 });
+    anexo.addShape(pptx.ShapeType.rect, { x:0, y:3.0, w:13.33, h:1.8, fill:{color:COL.cyan2}, line:{type:'none'} });
+    anexo.addText('ANEXO I', { x:0, y:3.05, w:13.33, h:0.95, fontFace:FONTH, fontSize:60, bold:true, color:COL.white, align:'center' });
+    anexo.addText('DESPIDOS', { x:0, y:4.0, w:13.33, h:0.6, fontFace:FONT, fontSize:24, color:COL.white, align:'center', charSpacing:8 });
 
-    // Tablas paginadas: 16 filas por slide
+    // ── Tablas de despidos paginadas ────────────────────────────────────
     var FILAS_X_SLIDE = 16;
     var totDespPer = sumEmp(despPeriodo);
+    var headerOpts = { bold:true, color:COL.white, fill:{color:COL.dark}, fontSize:10, fontFace:FONT, valign:'middle' };
     var headerDesp = [
-      { text:'FECHA',      options:{bold:true, color:'FFFFFF', fill:{color:COL.tx}, fontSize:10} },
-      { text:'EMPRESA',    options:{bold:true, color:'FFFFFF', fill:{color:COL.tx}, fontSize:10} },
-      { text:'RUBRO',      options:{bold:true, color:'FFFFFF', fill:{color:COL.tx}, fontSize:10} },
-      { text:'Q DESPIDOS', options:{bold:true, color:'FFFFFF', fill:{color:COL.tx}, fontSize:10, align:'right'} },
-      { text:'PROVINCIA',  options:{bold:true, color:'FFFFFF', fill:{color:COL.tx}, fontSize:10} },
-      { text:'¿CERRÓ?',    options:{bold:true, color:'FFFFFF', fill:{color:COL.tx}, fontSize:10} },
+      { text:'FECHA',      options:Object.assign({}, headerOpts) },
+      { text:'EMPRESA',    options:Object.assign({}, headerOpts) },
+      { text:'RUBRO',      options:Object.assign({}, headerOpts) },
+      { text:'Q DESPIDOS', options:Object.assign({}, headerOpts, {align:'right'}) },
+      { text:'PROVINCIA',  options:Object.assign({}, headerOpts) },
+      { text:'¿CERRÓ?',    options:Object.assign({}, headerOpts) },
     ];
     var despSorted = despPeriodo.slice().sort(function(a,b){return (a.fecha||'').localeCompare(b.fecha||'');});
     var nPages = Math.max(1, Math.ceil(despSorted.length / FILAS_X_SLIDE));
     for(var p=0; p<nPages; p++){
       var slide = pptx.addSlide();
-      slide.background = { color: COL.bg };
-      slide.addText('Resumen contador de tristeza de la semana'+(p>0?' (cont.)':''), { x:0.6, y:0.35, w:12, h:0.3, fontFace:FONT_S, fontSize:11, color:COL.tx3, charSpacing:5 });
-      slide.addText('Despidos del '+fmtFechaCorta(desdeStr)+' al '+fmtFechaCorta(hastaStr), { x:0.6, y:0.7, w:12, h:0.5, fontFace:FONT_H, fontSize:20, bold:true, color:COL.tx });
+      slide.background = { color: COL.white };
+      addHeaderBand(slide, { alto: 0.70 });
+      slide.addText('RESUMEN CONTADOR DE TRISTEZA DE LA SEMANA'+(p>0?' (CONT.)':''), { x:0.5, y:0.10, w:12.3, h:0.5, fontFace:FONTH, fontSize:14, bold:true, color:COL.white, charSpacing:4 });
+      slide.addText('DESPIDOS EJECUTADOS ENTRE EL '+fmtFechaCorta(desdeStr)+' Y EL '+fmtFechaCorta(hastaStr), { x:0.5, y:0.85, w:12.3, h:0.4, fontFace:FONTH, fontSize:14, bold:true, color:COL.dark });
       slide.addText([
-        { text:'Total del período: ', options:{fontFace:FONT_S, fontSize:11, color:COL.tx2} },
-        { text: totDespPer.toLocaleString('es'), options:{fontFace:FONT_S, fontSize:11, bold:true, color:COL.red} },
-        { text:'   ·   Registrados desde el inicio de Milei: ', options:{fontFace:FONT_S, fontSize:11, color:COL.tx2} },
-        { text: empAcumNac.toLocaleString('es'), options:{fontFace:FONT_S, fontSize:11, bold:true, color:COL.red} },
-      ], { x:0.6, y:1.2, w:12, h:0.4 });
+        { text:'TOTAL DEL PERIODO: ', options:{fontFace:FONT, fontSize:11, bold:true, color:COL.gray2} },
+        { text: totDespPer.toLocaleString('es'), options:{fontFace:FONT, fontSize:11, bold:true, color:COL.cyan} },
+        { text:'      TOTAL REGISTRADOS DESDE EL INICIO DE LA GESTIÓN DE MILEI: ', options:{fontFace:FONT, fontSize:11, bold:true, color:COL.gray2} },
+        { text: empAcumNac.toLocaleString('es'), options:{fontFace:FONT, fontSize:11, bold:true, color:COL.cyan} },
+      ], { x:0.5, y:1.25, w:12.3, h:0.4 });
 
       var filas = despSorted.slice(p*FILAS_X_SLIDE, (p+1)*FILAS_X_SLIDE);
       var tableRows = [headerDesp];
-      filas.forEach(function(e){
+      filas.forEach(function(e, i){
         var cerro = e.cerro ? 'Sí' : 'No';
         if((e.tipo||'')==='cierre') cerro = 'Sí';
+        var rowFill = i%2===0 ? COL.white : COL.bgrow;
+        var cellBase = { fontFace:FONT, fontSize:10, color:COL.gray2, fill:{color:rowFill}, valign:'middle' };
         tableRows.push([
-          { text: fmtFechaCorta(e.fecha) },
-          { text: e.empresa || '—', options:{bold:true} },
-          { text: e.rubro || '—' },
-          { text: e.empleados>0 ? e.empleados.toLocaleString('es') : 's/d', options:{align:'right', color:COL.red, bold:true} },
-          { text: e.provincia || '—' },
-          { text: cerro },
+          { text: fmtFechaCorta(e.fecha), options:cellBase },
+          { text: e.empresa || '—', options:Object.assign({}, cellBase, {bold:true, color:COL.black}) },
+          { text: e.rubro || '—', options:cellBase },
+          { text: e.empleados>0 ? e.empleados.toLocaleString('es') : 's/d', options:Object.assign({}, cellBase, {align:'right', bold:true, color:COL.cyan}) },
+          { text: e.provincia || '—', options:cellBase },
+          { text: cerro, options:cellBase },
         ]);
       });
       slide.addTable(tableRows, {
-        x:0.5, y:1.7, w:12.3,
-        colW:[1.1, 2.6, 3.0, 1.4, 2.6, 1.6],
-        fontFace:FONT_S, fontSize:10, color:COL.tx,
-        border: { type:'solid', color:COL.bd, pt:0.5 },
-        rowH: 0.32, valign:'middle',
+        x:0.5, y:1.75, w:12.3,
+        colW:[1.0, 2.7, 3.0, 1.4, 2.6, 1.6],
+        border: { type:'solid', color:'D9DEE3', pt:0.5 },
+        rowH: 0.30,
       });
-      slide.addText('Página '+(p+1)+' de '+nPages+' · '+FOOTER, { x:0.6, y:7.15, w:12.2, h:0.25, fontFace:FONT_S, fontSize:8, italic:true, color:COL.tx3 });
+      addFooter(slide, 'Página '+(p+1)+' de '+nPages);
     }
 
-    // Anexo II: Suspensiones
+    // ── Slide ANEXO II + tablas de suspensiones ────────────────────────
     if(suspPeriodo.length){
       var anexo2 = pptx.addSlide();
-      anexo2.background = { color: COL.bg };
-      anexo2.addText('ANEXO II', { x:0.6, y:3.0, w:12, h:0.8, fontFace:FONT_H, fontSize:54, bold:true, color:COL.tx });
-      anexo2.addText('SUSPENSIONES Y RETIROS VOLUNTARIOS', { x:0.6, y:3.95, w:12, h:0.5, fontFace:FONT_S, fontSize:20, color:COL.tx2, charSpacing:6 });
+      anexo2.background = { color: COL.white };
+      addHeaderBand(anexo2);
+      anexo2.addText('RESUMEN CONTADOR DE TRISTEZA DE LA SEMANA', { x:0.5, y:0.12, w:12.3, h:0.6, fontFace:FONTH, fontSize:18, bold:true, color:COL.white, charSpacing:4 });
+      anexo2.addShape(pptx.ShapeType.rect, { x:0, y:3.0, w:13.33, h:1.8, fill:{color:COL.cyan2}, line:{type:'none'} });
+      anexo2.addText('ANEXO II', { x:0, y:3.05, w:13.33, h:0.95, fontFace:FONTH, fontSize:60, bold:true, color:COL.white, align:'center' });
+      anexo2.addText('SUSPENSIONES Y RETIROS VOLUNTARIOS', { x:0, y:4.0, w:13.33, h:0.6, fontFace:FONT, fontSize:22, color:COL.white, align:'center', charSpacing:6 });
 
       var headerSusp = [
-        { text:'FECHA',     options:{bold:true, color:'FFFFFF', fill:{color:COL.tx}, fontSize:10} },
-        { text:'EMPRESA',   options:{bold:true, color:'FFFFFF', fill:{color:COL.tx}, fontSize:10} },
-        { text:'TIPO',      options:{bold:true, color:'FFFFFF', fill:{color:COL.tx}, fontSize:10} },
-        { text:'RUBRO',     options:{bold:true, color:'FFFFFF', fill:{color:COL.tx}, fontSize:10} },
-        { text:'CANTIDAD',  options:{bold:true, color:'FFFFFF', fill:{color:COL.tx}, fontSize:10, align:'right'} },
-        { text:'PROVINCIA', options:{bold:true, color:'FFFFFF', fill:{color:COL.tx}, fontSize:10} },
+        { text:'FECHA',     options:Object.assign({}, headerOpts) },
+        { text:'EMPRESA',   options:Object.assign({}, headerOpts) },
+        { text:'TIPO',      options:Object.assign({}, headerOpts) },
+        { text:'RUBRO',     options:Object.assign({}, headerOpts) },
+        { text:'CANTIDAD',  options:Object.assign({}, headerOpts, {align:'right'}) },
+        { text:'PROVINCIA', options:Object.assign({}, headerOpts) },
       ];
       var suspSorted = suspPeriodo.slice().sort(function(a,b){return (a.fecha||'').localeCompare(b.fecha||'');});
       var nPS = Math.max(1, Math.ceil(suspSorted.length / FILAS_X_SLIDE));
+      var totSusp = sumEmp(suspPeriodo);
       for(var ps=0; ps<nPS; ps++){
         var slS = pptx.addSlide();
-        slS.background = { color: COL.bg };
-        slS.addText('Resumen contador de tristeza de la semana'+(ps>0?' (cont.)':''), { x:0.6, y:0.35, w:12, h:0.3, fontFace:FONT_S, fontSize:11, color:COL.tx3, charSpacing:5 });
-        slS.addText('Suspensiones y retiros del '+fmtFechaCorta(desdeStr)+' al '+fmtFechaCorta(hastaStr), { x:0.6, y:0.7, w:12, h:0.5, fontFace:FONT_H, fontSize:20, bold:true, color:COL.tx });
+        slS.background = { color: COL.white };
+        addHeaderBand(slS, { alto: 0.70 });
+        slS.addText('RESUMEN CONTADOR DE TRISTEZA DE LA SEMANA'+(ps>0?' (CONT.)':''), { x:0.5, y:0.10, w:12.3, h:0.5, fontFace:FONTH, fontSize:14, bold:true, color:COL.white, charSpacing:4 });
+        slS.addText('SUSPENSIONES, RETIROS VOLUNTARIOS Y ADELANTOS DE VACACIONES', { x:0.5, y:0.85, w:12.3, h:0.4, fontFace:FONTH, fontSize:13, bold:true, color:COL.dark });
         slS.addText([
-          { text:'Total del período: ', options:{fontFace:FONT_S, fontSize:11, color:COL.tx2} },
-          { text: sumEmp(suspPeriodo).toLocaleString('es'), options:{fontFace:FONT_S, fontSize:11, bold:true, color:COL.amb} },
-          { text:'   ·   Acumulado desde el inicio de Milei: ', options:{fontFace:FONT_S, fontSize:11, color:COL.tx2} },
-          { text: empAcumSusp.toLocaleString('es'), options:{fontFace:FONT_S, fontSize:11, bold:true, color:COL.amb} },
-        ], { x:0.6, y:1.2, w:12, h:0.4 });
+          { text:'RETIROS Y SUSPENSIONES ENTRE EL '+fmtFechaCorta(desdeStr)+' Y EL '+fmtFechaCorta(hastaStr)+'   ·   TOTAL DEL PERIODO: ', options:{fontFace:FONT, fontSize:11, bold:true, color:COL.gray2} },
+          { text: totSusp.toLocaleString('es'), options:{fontFace:FONT, fontSize:11, bold:true, color:COL.cyan} },
+          { text:'      ACUMULADO DESDE EL INICIO DE LA GESTIÓN DE MILEI: ', options:{fontFace:FONT, fontSize:11, bold:true, color:COL.gray2} },
+          { text: empAcumSusp.toLocaleString('es'), options:{fontFace:FONT, fontSize:11, bold:true, color:COL.cyan} },
+        ], { x:0.5, y:1.25, w:12.3, h:0.4 });
 
         var filasS = suspSorted.slice(ps*FILAS_X_SLIDE, (ps+1)*FILAS_X_SLIDE);
         var rowsS = [headerSusp];
-        filasS.forEach(function(e){
+        filasS.forEach(function(e, i){
+          var rowFill = i%2===0 ? COL.white : COL.bgrow;
+          var cellBase = { fontFace:FONT, fontSize:10, color:COL.gray2, fill:{color:rowFill}, valign:'middle' };
           rowsS.push([
-            { text: fmtFechaCorta(e.fecha) },
-            { text: e.empresa || '—', options:{bold:true} },
-            { text: (e.tipo||'suspensión').charAt(0).toUpperCase()+(e.tipo||'suspensión').slice(1) },
-            { text: e.rubro || '—' },
-            { text: e.empleados>0 ? e.empleados.toLocaleString('es') : 's/d', options:{align:'right', color:COL.amb, bold:true} },
-            { text: e.provincia || '—' },
+            { text: fmtFechaCorta(e.fecha), options:cellBase },
+            { text: e.empresa || '—', options:Object.assign({}, cellBase, {bold:true, color:COL.black}) },
+            { text: (e.tipo||'suspensión').charAt(0).toUpperCase()+(e.tipo||'suspensión').slice(1), options:cellBase },
+            { text: e.rubro || '—', options:cellBase },
+            { text: e.empleados>0 ? e.empleados.toLocaleString('es') : 's/d', options:Object.assign({}, cellBase, {align:'right', bold:true, color:COL.cyan}) },
+            { text: e.provincia || '—', options:cellBase },
           ]);
         });
         slS.addTable(rowsS, {
-          x:0.5, y:1.7, w:12.3,
-          colW:[1.1, 2.6, 1.6, 2.6, 1.4, 3.0],
-          fontFace:FONT_S, fontSize:10, color:COL.tx,
-          border: { type:'solid', color:COL.bd, pt:0.5 },
-          rowH: 0.32, valign:'middle',
+          x:0.5, y:1.75, w:12.3,
+          colW:[1.0, 2.7, 1.7, 2.5, 1.4, 3.0],
+          border: { type:'solid', color:'D9DEE3', pt:0.5 },
+          rowH: 0.30,
         });
-        slS.addText('Página '+(ps+1)+' de '+nPS+' · '+FOOTER, { x:0.6, y:7.15, w:12.2, h:0.25, fontFace:FONT_S, fontSize:8, italic:true, color:COL.tx3 });
+        addFooter(slS, 'Página '+(ps+1)+' de '+nPS);
       }
     }
 
