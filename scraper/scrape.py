@@ -659,8 +659,7 @@ def update_comercio_interior(D: dict) -> int:
     try:
         import openpyxl
         url = "https://www.indec.gob.ar/ftp/cuadros/economia/serie_supermercados.xlsx"
-        r = requests.get(url, timeout=TIMEOUT, headers={**HEADERS, "User-Agent": "Mozilla/5.0"})
-        r.raise_for_status()
+        r = http_get(url, serie="super")
         wb = openpyxl.load_workbook(io.BytesIO(r.content), data_only=True)
         # Cuadro 1 = Índice ventas totales a PRECIOS CONSTANTES (real, base 2017=100)
         # Cuadro 2 era corrientes (nominal) y daba lecturas equivocadas
@@ -708,8 +707,7 @@ def update_comercio_interior(D: dict) -> int:
     #             col 8=operaciones, col 9=ventas/operación
     try:
         url = "https://www.indec.gob.ar/ftp/cuadros/economia/sh_super_mayoristas.xls"
-        r = requests.get(url, timeout=TIMEOUT, headers={**HEADERS, "User-Agent": "Mozilla/5.0"})
-        r.raise_for_status()
+        r = http_get(url, serie="mayor")
         wb = xlrd.open_workbook(file_contents=r.content)
         try:
             sh = wb.sheet_by_name("Cuadro 9")
@@ -789,8 +787,7 @@ def update_salarios_csv(D: dict) -> int:
     nuevos = 0
     url = "https://www.indec.gob.ar/ftp/cuadros/sociedad/indice_salarios.csv"
     try:
-        r = requests.get(url, timeout=TIMEOUT, headers={**HEADERS, "User-Agent": "Mozilla/5.0"})
-        r.raise_for_status()
+        r = http_get(url, serie="salarios")
         text = r.content.decode("utf-8", errors="replace")
         lines = text.strip().split("\n")
         # Parsear header
@@ -896,8 +893,7 @@ def update_turismo(D: dict) -> int:
     url = f"{INDEC_XLS_BASE}/serie_turismo_receptivo_emisivo.xlsx"
     try:
         import openpyxl  # noqa: dependencia opcional
-        r = requests.get(url, timeout=TIMEOUT, headers={**HEADERS, "User-Agent": "Mozilla/5.0"})
-        r.raise_for_status()
+        r = http_get(url, serie="turismo")
         wb = openpyxl.load_workbook(io.BytesIO(r.content), data_only=True)
         ws = wb["Turismo receptivo y emisivo"]
         # Layout: col 1 = Período (datetime), col 2 = receptivo, col 3 = emisivo, col 4 = saldo
@@ -1186,6 +1182,7 @@ def update_fiscal_hacienda(D: dict) -> int:
             resp = requests.get(url, timeout=10, headers={**HEADERS, "User-Agent": "Mozilla/5.0"})
             if resp.status_code == 200 and len(resp.content) > 5000 and resp.content[:2] == b"PK":
                 bytes_xlsx = resp.content
+                _record_last_modified("fiscal", resp)
         except Exception:
             pass
         if bytes_xlsx:
@@ -1490,7 +1487,7 @@ def update_ica_xls(D: dict) -> int:
         log("ICA XLS no encontrado (probados últimos 5 meses)", "warn")
         return 0
     try:
-        wb = download_xls(url)
+        wb = download_xls(url, serie="bc")
         sh = wb.sheet_by_name("c1")
         meses_idx = {"enero":1,"febrero":2,"marzo":3,"abril":4,"mayo":5,"junio":6,
                      "julio":7,"agosto":8,"septiembre":9,"octubre":10,"noviembre":11,"diciembre":12}
@@ -1582,8 +1579,7 @@ def update_mayoristas(D: dict) -> int:
     for clave, fn in fuentes.items():
         try:
             url = f"{BASE}/{fn}"
-            r = requests.get(url, timeout=TIMEOUT, headers={**HEADERS, "User-Agent": "Mozilla/5.0"})
-            r.raise_for_status()
+            r = http_get(url, serie=clave)
             text = r.content.decode("utf-8", errors="replace")
             lines = text.strip().split("\n")
             # Header: periodo;nivel_general_aperturas;indice_<clave>
@@ -1647,8 +1643,7 @@ def update_mora(D: dict) -> int:
     url = "https://www.bcra.gob.ar/archivos/Pdfs/PublicacionesEstadisticas/informes/InfBanc_Anexo.xlsx"
     try:
         import openpyxl
-        r = requests.get(url, timeout=TIMEOUT, headers={**HEADERS, "User-Agent": "Mozilla/5.0"})
-        r.raise_for_status()
+        r = http_get(url, serie="mora")
         wb = openpyxl.load_workbook(io.BytesIO(r.content), data_only=True)
         # Buscar hoja con tilde o sin tilde
         sheet_name = None
@@ -1745,10 +1740,42 @@ MONTHS_ES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
              "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
 INDEC_XLS_BASE = "https://www.indec.gob.ar/ftp/cuadros/economia"
 
-def download_xls(url: str) -> xlrd.book.Book:
-    """Descarga un .xls de INDEC y devuelve el workbook."""
-    r = requests.get(url, timeout=TIMEOUT, headers={**HEADERS, "User-Agent": "Mozilla/5.0"})
+# Fechas reales de publicacion capturadas del header HTTP Last-Modified de cada fuente.
+# Se llena en cada descarga y consume desde calcular_fecha_publicacion().
+SOURCE_LAST_MOD: dict[str, datetime] = {}
+
+def _record_last_modified(serie: str, response: requests.Response) -> None:
+    """Lee el header Last-Modified de un response y lo guarda en SOURCE_LAST_MOD[serie]."""
+    if not serie:
+        return
+    lm = response.headers.get("Last-Modified")
+    if not lm:
+        return
+    try:
+        from email.utils import parsedate_to_datetime
+        dt = parsedate_to_datetime(lm)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        # Si ya hay una fecha, quedarse con la mas reciente (cada XLS por anio en IPI, etc.)
+        prev = SOURCE_LAST_MOD.get(serie)
+        if prev is None or dt > prev:
+            SOURCE_LAST_MOD[serie] = dt
+    except Exception:
+        pass
+
+def http_get(url: str, serie: str | None = None, **kwargs) -> requests.Response:
+    """Wrapper de requests.get que captura Last-Modified por serie."""
+    kwargs.setdefault("timeout", TIMEOUT)
+    headers = {**HEADERS, "User-Agent": "Mozilla/5.0", **kwargs.pop("headers", {})}
+    r = requests.get(url, headers=headers, **kwargs)
     r.raise_for_status()
+    if serie:
+        _record_last_modified(serie, r)
+    return r
+
+def download_xls(url: str, serie: str | None = None) -> xlrd.book.Book:
+    """Descarga un .xls de INDEC y devuelve el workbook (captura Last-Modified si serie)."""
+    r = http_get(url, serie=serie)
     return xlrd.open_workbook(file_contents=r.content)
 
 def _month_num(cell_str: str) -> int | None:
@@ -2010,7 +2037,7 @@ def update_emae_sectores_xls(D: dict) -> int:
     arr = D.setdefault("emae", [])
     nuevos = 0
     try:
-        wb = download_xls(f"{INDEC_XLS_BASE}/sh_emae_actividad_base2004.xls")
+        wb = download_xls(f"{INDEC_XLS_BASE}/sh_emae_actividad_base2004.xls", serie="emae")
         rows = parse_emae_actividad_xls(wb)
         for new in rows:
             rec = next((x for x in arr if x.get("f") == new["f"]), None)
@@ -2034,7 +2061,7 @@ def update_ipi_sectores_xls(D: dict) -> int:
     wb = None
     for year in (today.year, today.year - 1):
         try:
-            wb = download_xls(f"{INDEC_XLS_BASE}/sh_ipi_manufacturero_{year}.xls")
+            wb = download_xls(f"{INDEC_XLS_BASE}/sh_ipi_manufacturero_{year}.xls", serie="ipi")
             break
         except Exception:
             continue
@@ -2060,7 +2087,7 @@ def update_emae_xls(D: dict) -> int:
     arr = D.setdefault("emae", [])
     nuevos = 0
     try:
-        wb = download_xls(f"{INDEC_XLS_BASE}/sh_emae_mensual_base2004.xls")
+        wb = download_xls(f"{INDEC_XLS_BASE}/sh_emae_mensual_base2004.xls", serie="emae")
         rows = parse_emae_xls(wb)
         for new in rows:
             rec = next((x for x in arr if x.get("f") == new["f"]), None)
@@ -2088,7 +2115,7 @@ def update_ipi_xls(D: dict) -> int:
     for year in (today.year, today.year - 1):
         url = f"{INDEC_XLS_BASE}/sh_ipi_manufacturero_{year}.xls"
         try:
-            wb = download_xls(url)
+            wb = download_xls(url, serie="ipi")
             break
         except Exception:
             continue
@@ -2126,7 +2153,7 @@ def update_uci_xls(D: dict) -> int:
         log("UCI XLS no encontrado (probados últimos 6 meses)", "warn")
         return 0
     try:
-        wb = download_xls(url)
+        wb = download_xls(url, serie="uci")
         rows = parse_uci_xls(wb)
         for new in rows:
             rec = next((x for x in arr if x.get("f") == new["f"]), None)
@@ -2232,16 +2259,22 @@ PUB_LAG_DIAS = {
 }
 
 def calcular_fecha_publicacion(serie: str, periodo: str) -> datetime:
-    """Estima cuándo se publicó oficialmente un período de una serie.
+    """Devuelve cuándo se publicó oficialmente un período de una serie.
 
-    Aplica una heurística basada en PUB_LAG_DIAS por serie.
-    Si la estimación cae en el futuro (porque el lag es chico y aún no llegó),
-    clamp a hoy (significa: lo vimos al momento de detección).
+    Prioridad:
+      1) SOURCE_LAST_MOD[serie]: fecha REAL desde el header HTTP Last-Modified
+         del archivo INDEC/BCRA/Hacienda que se descargó en este run.
+      2) Heurística PUB_LAG_DIAS como fallback (si la serie no descargó archivo,
+         por ej. APIs sin Last-Modified).
     """
     from calendar import monthrange
     import re
-    lag = PUB_LAG_DIAS.get(serie, 30)
     today = datetime.now(timezone.utc)
+    # 1) Last-Modified real del archivo fuente
+    real = SOURCE_LAST_MOD.get(serie)
+    if real is not None:
+        return real
+    lag = PUB_LAG_DIAS.get(serie, 30)
     try:
         if len(periodo) == 4 and periodo.isdigit():
             # Anual: fin = 31 dic
