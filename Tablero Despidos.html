@@ -1079,6 +1079,8 @@ function generarInforme(){
       slide.addText(txt, { x:0.5, y:7.15, w:12.3, h:0.25, fontFace:FONT, fontSize:8, italic:true, color:COL.gray });
     }
 
+    // ── Slide 1: PORTADA ────────────────────────────────────────────────
+    var s1 = pptx.addSlide();
     s1.background = { color: COL.white };
     // Barra vertical cyan a la izquierda (como en el ejemplo)
     s1.addShape(pptx.ShapeType.rect, { x:0.92, y:0.92, w:0.14, h:5.4, fill:{color:COL.cyan}, line:{type:'none'} });
