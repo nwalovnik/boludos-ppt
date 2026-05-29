@@ -830,7 +830,7 @@ hr.d{border:none;border-top:.5px solid var(--bd);margin:16px 0}
   <div class="slbl">Reservas brutas vs netas &#183; comparación por metodología</div>
   <div class="info-box">Diferentes cálculos de Reservas Netas. Las series con datos exactos (Brutas, Excl. DEG) vienen directo de la API del BCRA. Las netas con metodología BCRA y FMI se aproximan descontando los <em>pasivos en moneda extranjera</em> estimados de los informes oficiales (encajes USD bancos, Swap China, FMI desembolsos, DEGs y otros). Para los valores exactos del programa EFF, ver el Informe Monetario semanal del BCRA.</div>
   <div class="cgrid">
-    <div class="cc"><div class="cc-hd"><div><div class="cc-t">Reservas mensual &#183; múltiples métricas <span class="breal">BCRA</span></div><div class="cc-s">USD millones &#183; cierre de mes</div></div></div><div style="position:relative;height:260px"><canvas id="c-rrii-netas"></canvas></div></div>
+    <div class="cc"><div class="cc-hd"><div><div class="cc-t">Reservas &#183; múltiples métricas <span class="breal">BCRA</span></div><div class="cc-s">USD millones &#183; <span id="rrii-netas-freq-lbl">mensual cierre</span> · <a href="#" onclick="toggleRRIINetasFreq(event)" style="color:var(--cyn);text-decoration:underline">cambiar a <span id="rrii-netas-freq-alt">diario</span></a></div></div><button class="dl-btn" onclick="dlCSV('reservas_netas')">&#8595; CSV diario</button></div><div style="position:relative;height:260px"><canvas id="c-rrii-netas"></canvas></div></div>
     <div class="cc"><div class="cc-hd"><div><div class="cc-t">Componentes &#183; último dato <span class="breal">BCRA</span></div><div class="cc-s">Cuánto representa cada descuento sobre las brutas</div></div></div><div style="position:relative;height:260px"><canvas id="c-rrii-comp"></canvas></div></div>
   </div>
   <div class="slbl">Detalle reciente</div>
@@ -2617,7 +2617,21 @@ var CSV_MAP={
   ipi:{g:function(){return D.ipi;},n:"ipi_indec",f:["f","orig","via","dest","vm"],h:["Fecha","Original","VIA_pct","Desest","VM_pct"]},
   uci:{g:function(){return D.uci;},n:"uci_indec",f:["f","tot","alim","auto","quim"],h:["Fecha","Total","Alimentos","Automotriz","Quimica"]},
   tc:{g:function(){return D.tc;},n:"tc_gds",f:["f","of","bl","vm_of","vm_bl","via_of","via_real"],h:["Fecha","Oficial","Blue","VM_of_pct","VM_bl_pct","VIA_of_pct","VIA_real_pct"]},
-  reservas:{g:function(){return D.reservas;},n:"reservas_bcra",f:["f","v"],h:["Fecha","USD_M"]},
+  reservas:{g:function(){return D.reservas;},n:"reservas_bcra",f:["f","v","excl_deg","pase_bis","deg","brutas"],h:["Fecha","USD_M","Excl_DEG","Pase_BIS","DEG","Brutas"]},
+  reservas_netas:{
+    g:function(){
+      // Pasivos estimados informes BCRA (USD M, constantes hasta nuevo informe)
+      var PB=38200, PF=55200;
+      var diaria=(window.DD&&DD.rrii_d)||[];
+      return diaria.map(function(r){
+        var b=r.v;
+        return {f:r.f, brutas:b, rin_bcra:b!=null?Math.round(b-PB):null, rin_fmi:b!=null?Math.round(b-PF):null, pas_bcra_est:PB, pas_fmi_est:PF};
+      });
+    },
+    n:"reservas_netas_diario_bcra",
+    f:["f","brutas","rin_bcra","rin_fmi","pas_bcra_est","pas_fmi_est"],
+    h:["Fecha","Brutas_USDM","Netas_BCRA_USDM","Netas_FMI_USDM","Pasivos_BCRA_est","Pasivos_FMI_est"]
+  },
   embi:{g:function(){return D.embi;},n:"embi",f:["f","v"],h:["Fecha","bps"]},
   bc:{g:function(){return D.bc;},n:"bc_indec",f:["f","expo","impo","saldo","pp","moa","moi","cye"],h:["Fecha","Expo","Impo","Saldo","PP","MOA","MOI","CyE"]},
   eph:{g:function(){return D.eph;},n:"eph_empleo",f:["p","td","act","emp"],h:["Período","Desocup_pct","Actividad_pct","Empleo_pct"]},
@@ -3072,6 +3086,16 @@ function buildTCChart(){
   if(!sets.length)return;
   mk("c-tc-d",tc.map(function(r){return r.f;}),sets,{yf:function(v){return"$"+fmtN(v);},leg:true,xt:8,milestones:"tc"});
 }
+var RRII_NETAS_FREQ="monthly"; // "monthly" | "daily"
+function toggleRRIINetasFreq(ev){
+  if(ev) ev.preventDefault();
+  RRII_NETAS_FREQ = RRII_NETAS_FREQ==="monthly" ? "daily" : "monthly";
+  var lbl=document.getElementById("rrii-netas-freq-lbl");
+  var alt=document.getElementById("rrii-netas-freq-alt");
+  if(lbl) lbl.textContent = RRII_NETAS_FREQ==="monthly" ? "mensual cierre" : "diario · últimos 18 meses";
+  if(alt) alt.textContent = RRII_NETAS_FREQ==="monthly" ? "diario" : "mensual";
+  buildReservasNetas();
+}
 function buildReservasNetas(){
   var ult=D.reservas.slice(-1)[0]||{};
   var brutas=ult.v||ult.brutas||0;
@@ -3094,34 +3118,45 @@ function buildReservasNetas(){
     ].map(function(s){return "<div class='stat-item'><div class='stat-lbl'>"+s.l+"</div><div class='stat-val "+s.c+"'>"+s.v+"</div><div class='stat-sub'>"+s.sub+"</div></div>";}).join("");
   }
 
-  // 2. Chart histórico mensual con múltiples metodologías
+  // 2. Chart histórico (mensual o diario según RRII_NETAS_FREQ) con múltiples metodologías
   // Series usadas:
   //  - Brutas (BCRA Var 1): exacta
-  //  - Excl. DEG (BCRA Var 74): exacta cuando el API la trae
+  //  - Excl. DEG (BCRA Var 74): exacta cuando el API la trae (sólo mensual)
   //  - Netas BCRA aprox: brutas - pasivos_bcra_estimados (estimado constante reciente)
   //  - Netas FMI aprox: brutas - pasivos_fmi_estimados (idem)
-  var serieRes=D.reservas.filter(function(r){return r.f>="2017-01"&&(r.v!=null||r.brutas!=null);});
+  var isDaily = window.RRII_NETAS_FREQ === "daily";
+  var serieRes;
+  if(isDaily){
+    // Diario: últimos 18 meses para que no quede ilegible
+    var co=new Date(Date.now()-540*86400000).toISOString().slice(0,10);
+    serieRes=(window.DD&&DD.rrii_d||[]).filter(function(r){return r.f>=co&&r.v!=null;})
+      .map(function(r){return {f:r.f, v:r.v};});
+  } else {
+    serieRes=D.reservas.filter(function(r){return r.f>="2017-01"&&(r.v!=null||r.brutas!=null);});
+  }
   if(serieRes.length){
     var labels=serieRes.map(function(r){return r.f;});
     // Para meses anteriores al último (sin pasivos actualizados), proyectamos los pasivos como % de brutas similar
     // (aproximación: los pasivos crecieron al ritmo de las brutas a partir de 2024)
     var sets=[
-      line("Brutas",serieRes.map(function(r){return r.v||r.brutas;}),C.green,{fill:false,borderWidth:1.75}),
-      line("Excl. DEG (API)",serieRes.map(function(r){return r.excl_deg!=null?r.excl_deg:null;}),C.teal,{fill:false,borderWidth:1.25,borderDash:[4,2]}),
+      line("Brutas",serieRes.map(function(r){return r.v||r.brutas;}),C.green,{fill:false,borderWidth:1.75,pointRadius:isDaily?0:2}),
       line("Netas BCRA aprox.",serieRes.map(function(r){
         var b=r.v||r.brutas;
         return b!=null?Math.round(b-pasivos_bcra_ref):null;
-      }),C.orange,{fill:false,borderWidth:1.5}),
+      }),C.orange,{fill:false,borderWidth:1.5,pointRadius:isDaily?0:2}),
       line("Netas FMI aprox.",serieRes.map(function(r){
         var b=r.v||r.brutas;
         return b!=null?Math.round(b-pasivos_fmi_ref):null;
-      }),C.red,{fill:false,borderWidth:1.5}),
+      }),C.red,{fill:false,borderWidth:1.5,pointRadius:isDaily?0:2}),
     ];
+    if(!isDaily){
+      sets.splice(1,0,line("Excl. DEG (API)",serieRes.map(function(r){return r.excl_deg!=null?r.excl_deg:null;}),C.teal,{fill:false,borderWidth:1.25,borderDash:[4,2]}));
+    }
     mk("c-rrii-netas",labels,sets,{
       yf:function(v){return fmtN(v)+"M";},
       leg:true,
       milestones:"reservas",
-      xt:8
+      xt:isDaily?10:8
     });
   }
 
