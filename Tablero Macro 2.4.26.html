@@ -2622,11 +2622,13 @@ var CSV_MAP={
     g:function(){
       // Pasivos estimados informes BCRA (USD M, constantes hasta nuevo informe)
       var PB=38200, PF=55200;
-      var diaria=(window.DD&&DD.rrii_d)||[];
-      return diaria.map(function(r){
-        var b=r.v;
-        return {f:r.f, brutas:b, rin_bcra:b!=null?Math.round(b-PB):null, rin_fmi:b!=null?Math.round(b-PF):null, pas_bcra_est:PB, pas_fmi_est:PF};
-      });
+      var fuente=(window.DD&&DD.rrii_d&&DD.rrii_d.length)?DD.rrii_d:(D.reservas||[]);
+      var out=fuente.map(function(r){
+        var b=(r.v!=null?r.v:r.brutas);
+        if(b==null) return null;
+        return {f:r.f, brutas:b, rin_bcra:Math.round(b-PB), rin_fmi:Math.round(b-PF), pas_bcra_est:PB, pas_fmi_est:PF};
+      }).filter(function(x){return x;});
+      return out;
     },
     n:"reservas_netas_diario_bcra",
     f:["f","brutas","rin_bcra","rin_fmi","pas_bcra_est","pas_fmi_est"],
