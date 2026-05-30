@@ -9,3 +9,10 @@ Screenshots/
 scraper/_test_*
 scraper/_extract_*
 scraper/_tmp_*
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+.env*
+!.env.example
