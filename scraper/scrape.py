@@ -2332,10 +2332,17 @@ def detect_publicaciones(D_old: dict, D_new: dict) -> list[dict]:
         periodo = str(p.get("periodo", ""))
         if not serie_key or not periodo:
             continue
-        # Recalcular fecha de publicación
+        # Recalcular fecha de publicación (priorizar _pub_at del record si existe)
         try:
-            fecha_pub = calcular_fecha_publicacion(serie_key, periodo)
-            p["publicado_at"] = fecha_pub.isoformat(timespec="seconds")
+            fecha_key0 = SERIES_TRACK_PUB.get(serie_key, (None, None))[1]
+            new_arr0 = D_new.get(serie_key) or []
+            rec0 = next((r for r in new_arr0 if str(r.get(fecha_key0, "")) == periodo), None) if fecha_key0 else None
+            pub_ov = rec0.get("_pub_at") if rec0 else None
+            if pub_ov:
+                p["publicado_at"] = pub_ov
+            else:
+                fecha_pub = calcular_fecha_publicacion(serie_key, periodo)
+                p["publicado_at"] = fecha_pub.isoformat(timespec="seconds")
         except Exception:
             pass
         # Refrescar datos desde D_new[serie][periodo] (snapshot actualizado)
@@ -2366,8 +2373,16 @@ def detect_publicaciones(D_old: dict, D_new: dict) -> list[dict]:
         if not per_new:
             continue
 
-        # Calcular fecha de publicación estimada según heurística
-        fecha_pub = calcular_fecha_publicacion(serie_key, per_new)
+        # Calcular fecha de publicación: si el record tiene _pub_at (override manual), usarla;
+        # sino heurística Last-Modified / lag.
+        pub_override = ult_new.get("_pub_at")
+        if pub_override:
+            try:
+                fecha_pub = datetime.fromisoformat(pub_override)
+            except Exception:
+                fecha_pub = calcular_fecha_publicacion(serie_key, per_new)
+        else:
+            fecha_pub = calcular_fecha_publicacion(serie_key, per_new)
         # Solo registrar si publicado_at está dentro de los últimos 30 días
         if fecha_pub < cutoff:
             continue
@@ -2395,6 +2410,30 @@ def detect_publicaciones(D_old: dict, D_new: dict) -> list[dict]:
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Main
+# ──────────────────────────────────────────────────────────────────────────────
+# Overrides manuales: datos preliminares de notas / consultoras
+# Cada entrada se aplica SOLO si el periodo no existe ya en la serie (no pisa
+# al dato oficial cuando llega). Llevan flag prov:True + fuente:str.
+# ──────────────────────────────────────────────────────────────────────────────
+MANUAL_OVERRIDES = [
+    {
+        "serie": "mora", "f": "2026-04",
+        "data": {"fam": 12.0, "emp": 3.3},
+        "fuente": "Infobae/1816 via CENDEU",
+        "publicado_at": "2026-06-02T00:00:00+00:00",
+    },
+]
+
+def apply_manual_overrides(D: dict) -> None:
+    for ov in MANUAL_OVERRIDES:
+        arr = D.setdefault(ov["serie"], [])
+        if any(x.get("f") == ov["f"] for x in arr):
+            continue  # ya existe el periodo (oficial o previamente cargado)
+        rec = {"f": ov["f"], **ov["data"], "prov": True, "fuente": ov["fuente"], "_pub_at": ov["publicado_at"]}
+        arr.append(rec)
+        arr.sort(key=lambda x: x.get("f", ""))
+        log(f"Override manual: {ov['serie']} {ov['f']} (prov, {ov['fuente']})", "ok")
+
 # ──────────────────────────────────────────────────────────────────────────────
 def main() -> int:
     ap = argparse.ArgumentParser()
@@ -2442,6 +2481,7 @@ def main() -> int:
     update_turismo(D)
     update_merval(D)
     update_daily_series(D)
+    apply_manual_overrides(D)  # datos preliminares de notas/consultoras hasta que llegue el oficial
 
     # Detectar nuevas publicaciones comparando contra el data.json previo
     pubs = detect_publicaciones(D_prev, D)

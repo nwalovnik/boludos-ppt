@@ -1492,15 +1492,61 @@ var HERO_TPL = {
   mora: {
     eyebrow: "Irregularidad bancaria · publicación más reciente",
     headline: function(per, d){
-      return "La mora en familias de <span class='em'>"+lblMes(per)+"</span> subió a <span class='up'>"+(d.fam||0).toFixed(2)+"%</span>";
+      var rec=(D.mora||[]).find(function(r){return r.f===per;})||{};
+      var pref = rec.prov ? " <span class='em' style='font-size:0.55em;vertical-align:middle;padding:2px 6px;border:1px solid var(--bd);border-radius:3px;color:var(--tx2)'>PRELIMINAR</span>" : "";
+      return "La mora en familias de <span class='em'>"+lblMes(per)+"</span> subió a <span class='up'>"+(d.fam||0).toFixed(2)+"%</span>"+pref;
     },
     context: function(per, d){
       var prev=(D.mora||[]).filter(function(r){return r.f<per&&r.fam!=null;}).slice(-1)[0];
       var parts=["Empresas: <span class='em'>"+(d.emp||0).toFixed(2)+"%</span>."];
-      if(prev)parts.push("Familias venía de "+prev.fam.toFixed(2)+"% en "+lblMes(prev.f)+".");
+      if(prev){
+        var delta=(d.fam-prev.fam);
+        parts.push("Familias venía de "+prev.fam.toFixed(2)+"% en "+lblMes(prev.f)+(delta>0?" (<span class='up'>+"+delta.toFixed(2)+" pp</span>)":(delta<0?" (<span class='dn'>"+delta.toFixed(2)+" pp</span>)":""))+".");
+      }
+      var rec=(D.mora||[]).find(function(r){return r.f===per;})||{};
+      if(rec.fuente)parts.push("<em style='color:var(--tx2);font-size:0.9em'>Fuente preliminar: "+rec.fuente+". El BCRA publicará el dato oficial en su próximo Informe sobre Bancos.</em>");
       return parts.join(" ");
     },
     spark: function(){return {arr:(D.mora||[]).filter(function(r){return r.fam!=null;}).slice(-24),key:"fam",unit:"%",fill:true,color:"red"};}
+  },
+  rec: {
+    eyebrow: "Recaudación tributaria · publicación más reciente",
+    headline: function(per, d){
+      // Calcular var i.a. real usando IPC (real o proyección REM)
+      var prevY=(D.rec||[]).find(function(r){return r.f===String(parseInt(per.substring(0,4))-1)+per.substring(4);});
+      if(!prevY||!prevY.tot)return "Recaudación de <span class='em'>"+lblMes(per)+"</span>: <span class='em'>$"+fmtN(d.tot/1000)+"K M$</span>";
+      var nom=(d.tot/prevY.tot-1)*100;
+      var ipcAct=(D.ipc||[]).find(function(r){return r.f===per;});
+      var ipcPrevY=(D.ipc||[]).find(function(r){return r.f===String(parseInt(per.substring(0,4))-1)+per.substring(4);});
+      var real=null;
+      if(ipcAct&&ipcAct.n&&ipcPrevY&&ipcPrevY.n){
+        var infl=ipcAct.n/ipcPrevY.n-1;
+        real=((1+nom/100)/(1+infl)-1)*100;
+      }
+      if(real!=null)return "Recaudación de <span class='em'>"+lblMes(per)+"</span> "+(real>=0?"creció":"cayó")+" <span class='"+(real>=0?"dn":"up")+"'>"+(real>=0?"+":"")+real.toFixed(1)+"%</span> real i.a.";
+      return "Recaudación de <span class='em'>"+lblMes(per)+"</span>: <span class='"+(nom>=0?"dn":"up")+"'>"+(nom>=0?"+":"")+nom.toFixed(1)+"%</span> nominal i.a.";
+    },
+    context: function(per, d){
+      var parts=["Total: <span class='em'>$"+fmtN(d.tot/1000)+"K M$</span>."];
+      var prevY=(D.rec||[]).find(function(r){return r.f===String(parseInt(per.substring(0,4))-1)+per.substring(4);});
+      var ipcAct=(D.ipc||[]).find(function(r){return r.f===per;});
+      var ipcPrevY=(D.ipc||[]).find(function(r){return r.f===String(parseInt(per.substring(0,4))-1)+per.substring(4);});
+      if(ipcAct&&ipcAct.proj)parts.push("Inflación de "+lblMes(per)+" estimada con <em>proyección REM</em> ("+(ipcAct.vm||0).toFixed(1)+"% mensual).");
+      // Comparar con tendencia previa
+      var serie=(D.rec||[]).filter(function(r){return r.via_r!=null&&r.f<=per;}).slice(-6);
+      var negs=serie.filter(function(r){return r.via_r<0;}).length;
+      if(negs>=3){
+        // Calcular real para este mes con IPC act
+        if(prevY&&prevY.tot&&ipcAct&&ipcAct.n&&ipcPrevY&&ipcPrevY.n){
+          var nom=(d.tot/prevY.tot-1)*100;
+          var infl=(ipcAct.n/ipcPrevY.n-1)*100;
+          var real=((1+nom/100)/(1+infl/100)-1)*100;
+          if(real>=0)parts.push("<span class='dn'>Quiebre de tendencia</span>: venía con "+negs+" meses de caída real i.a.");
+        }
+      }
+      return parts.join(" ");
+    },
+    spark: function(){return {arr:(D.rec||[]).filter(function(r){return r.via_r!=null;}).slice(-24),key:"via_r",unit:"%",fill:false,color:"mixed"};}
   },
   super: {
     eyebrow: "Comercio interior · publicación más reciente",
