@@ -378,16 +378,31 @@ def tpl_mora(p, D):
     d = p["datos"]
     arr = D.get("mora", [])
     arr_v = [r for r in arr if r.get("fam") is not None]
+    rec_per = next((r for r in arr if r.get("f") == p["periodo"]), {})
+    is_prov = bool(rec_per.get("prov"))
+    fuente_str = rec_per.get("fuente", "BCRA Informe sobre Bancos")
     fam = d.get("fam", 0)
     emp = d.get("emp", 0)
-    titulo = f"MORA BANCARIA {lbl_mes(p['periodo']).upper()}: FAMILIAS {fam}% · EMPRESAS {emp}%"
-    lede = (f"La irregularidad de cartera del sistema financiero alcanzó {fam}% en familias y "
-            f"{emp}% en empresas en {lbl_mes(p['periodo'])} (BCRA Informe sobre Bancos).")
+    prov_tag = " (PRELIMINAR)" if is_prov else ""
+    titulo = f"MORA BANCARIA {lbl_mes(p['periodo']).upper()}: FAMILIAS {fam}% · EMPRESAS {emp}%{prov_tag}"
+    # Delta vs mes anterior
+    prev = next((r for r in reversed(arr_v) if r.get("f") < p["periodo"]), None)
+    delta_str = ""
+    if prev and prev.get("fam") is not None:
+        delta = fam - prev["fam"]
+        signo = "+" if delta >= 0 else ""
+        delta_str = f" (venía de {prev['fam']:.2f}% en {lbl_mes(prev['f'])}, {signo}{delta:.2f} pp)"
+    lede = (f"La irregularidad de cartera alcanzó {fam}% en familias y {emp}% en empresas "
+            f"en {lbl_mes(p['periodo'])}{delta_str}.")
+    if is_prov:
+        lede += f" Dato preliminar reportado por {fuente_str}; el BCRA publicará el oficial en su próximo Informe sobre Bancos."
     bullets = [
         f"Familias: {fam}% del total de préstamos en situación irregular",
         f"Empresas: {emp}%",
-        "Fuente: BCRA Informe sobre Bancos, Anexo 'Calidad de Cartera por líneas'",
+        f"Fuente: {fuente_str}",
     ]
+    if is_prov:
+        bullets.append("⚠ Dato preliminar — sujeto a revisión cuando el BCRA publique el Informe oficial")
     chart = line_chart(arr_v, "f", ["fam", "emp"],
                        ["Familias", "Empresas"],
                        [ROJO_HX, "#A85C1E"],
@@ -395,7 +410,110 @@ def tpl_mora(p, D):
                        y_fmt=lambda x, p: f"{x:.0f}%", n_meses=24)
     tabla = [["Mes", "Familias %", "Empresas %"]]
     for r in arr_v[-6:][::-1]:
-        tabla.append([lbl_mes(r["f"]).capitalize(), f"{r.get('fam')}%", f"{r.get('emp')}%"])
+        flag = " *" if r.get("prov") else ""
+        tabla.append([lbl_mes(r["f"]).capitalize() + flag,
+                     f"{r.get('fam')}%", f"{r.get('emp')}%"])
+    return titulo, lede, bullets, chart, tabla
+
+def tpl_rec(p, D):
+    """Recaudación tributaria con cálculo de variación real i.a. (usa IPC real o proyección REM)."""
+    d = p["datos"]
+    per = p["periodo"]
+    arr = D.get("rec", [])
+    arr_v = [r for r in arr if r.get("tot") is not None]
+    tot = d.get("tot", 0)
+    # i.a. nominal y real
+    prev_y = next((r for r in arr if r.get("f") == f"{int(per[:4])-1}-{per[5:7]}"), None)
+    via_nom = None
+    via_real = None
+    via_real_src = ""
+    if prev_y and prev_y.get("tot"):
+        via_nom = (tot / prev_y["tot"] - 1) * 100
+        ipc_act = next((r for r in D.get("ipc", []) if r.get("f") == per), None)
+        ipc_prev = next((r for r in D.get("ipc", []) if r.get("f") == f"{int(per[:4])-1}-{per[5:7]}"), None)
+        if ipc_act and ipc_act.get("n") and ipc_prev and ipc_prev.get("n"):
+            infl_ia = (ipc_act["n"] / ipc_prev["n"] - 1) * 100
+            via_real = ((1 + via_nom / 100) / (1 + infl_ia / 100) - 1) * 100
+            via_real_src = "REM" if ipc_act.get("proj") else "IPC oficial"
+    # Headline
+    if via_real is not None:
+        verbo = "creció" if via_real >= 0 else "cayó"
+        titulo = f"RECAUDACIÓN {lbl_mes(per).upper()}: {verbo.upper()} {via_real:+.1f}% REAL I.A."
+    elif via_nom is not None:
+        titulo = f"RECAUDACIÓN {lbl_mes(per).upper()}: {via_nom:+.1f}% NOMINAL I.A."
+    else:
+        titulo = f"RECAUDACIÓN {lbl_mes(per).upper()}: ${fmt_n(tot/1000)}K M$"
+    lede_parts = [f"AFIP/ARCA recaudó ${fmt_n(tot/1000)}K millones en {lbl_mes(per)}."]
+    if via_nom is not None:
+        lede_parts.append(f"Variación nominal interanual: {via_nom:+.1f}%.")
+    if via_real is not None:
+        lede_parts.append(f"En términos reales (deflactado por {via_real_src}): {via_real:+.1f}% i.a.")
+    # Detectar quiebre de tendencia
+    serie_real = [r for r in arr_v if r.get("via_r") is not None and r["f"] < per][-6:]
+    negs = sum(1 for r in serie_real if r.get("via_r", 0) < 0)
+    if via_real is not None and via_real >= 0 and negs >= 3:
+        lede_parts.append(f"Quiebre de tendencia: venía con {negs} meses de caída real interanual.")
+    lede = " ".join(lede_parts)
+    bullets = [f"Total: ${fmt_n(tot/1000)}K M$"]
+    if via_nom is not None:
+        bullets.append(f"Variación nominal i.a.: {via_nom:+.1f}%")
+    if via_real is not None:
+        bullets.append(f"Variación real i.a.: {via_real:+.1f}% (deflactor: {via_real_src})")
+    if d.get("iva") is not None:
+        bullets.append(f"IVA: ${fmt_n(d['iva']/1000)}K M$")
+    if d.get("gan") is not None:
+        bullets.append(f"Ganancias: ${fmt_n(d['gan']/1000)}K M$")
+    bullets.append("Fuente: ARCA (ex AFIP) · indec.gob.ar series")
+    # Chart: var real i.a. últimos 24m
+    arr_chart = [r for r in arr_v if r.get("via_r") is not None][-24:]
+    chart = bar_chart(arr_chart, "f", "via_r",
+                      title="Recaudación tributaria · variación real interanual %",
+                      y_fmt=lambda x, p: f"{x:+.0f}%",
+                      n_meses=24, semantic=True) if arr_chart else None
+    # Tabla
+    tabla = [["Mes", "Total M$", "Var. nom. i.a.", "Var. real i.a."]]
+    for r in arr_v[-6:][::-1]:
+        tabla.append([
+            lbl_mes(r["f"]).capitalize(),
+            fmt_n(r.get("tot", 0)/1000) + "K",
+            f"{r.get('via','—')}%" if r.get("via") is not None else "—",
+            f"{r.get('via_r','—')}%" if r.get("via_r") is not None else "—",
+        ])
+    return titulo, lede, bullets, chart, tabla
+
+def tpl_turismo(p, D):
+    d = p["datos"]
+    per = p["periodo"]
+    arr = D.get("turismo", [])
+    arr_v = [r for r in arr if r.get("sal") is not None]
+    rec = d.get("rec", 0)
+    em = d.get("em", 0)
+    sal = d.get("sal", rec - em)
+    titulo = f"TURISMO INTERNACIONAL {lbl_mes(per).upper()}: SALDO {fmt_n(sal)} PERSONAS"
+    # Var i.a.
+    prev_y = next((r for r in arr if r.get("f") == f"{int(per[:4])-1}-{per[5:7]}"), None)
+    via_str = ""
+    if prev_y and prev_y.get("rec") and prev_y.get("em"):
+        via_rec = (rec / prev_y["rec"] - 1) * 100
+        via_em = (em / prev_y["em"] - 1) * 100
+        via_str = f" Receptivo {via_rec:+.1f}% i.a., emisivo {via_em:+.1f}% i.a."
+    lede = (f"En {lbl_mes(per)} ingresaron {fmt_n(rec)} turistas no residentes y "
+            f"salieron {fmt_n(em)} argentinos al exterior, con saldo de {fmt_n(sal)} personas.{via_str}")
+    bullets = [
+        f"Receptivo: {fmt_n(rec)} personas",
+        f"Emisivo: {fmt_n(em)} personas",
+        f"Saldo (receptivo − emisivo): {fmt_n(sal)} personas",
+        "Fuente: INDEC, Estadísticas de Turismo Internacional (todas las vías)",
+    ]
+    chart = line_chart(arr_v, "f", ["rec", "em"],
+                       ["Receptivo", "Emisivo"],
+                       [CYAN_HX, ROJO_HX],
+                       title="Turismo internacional · personas por mes",
+                       n_meses=24)
+    tabla = [["Mes", "Receptivo", "Emisivo", "Saldo"]]
+    for r in arr_v[-6:][::-1]:
+        tabla.append([lbl_mes(r["f"]).capitalize(),
+                     fmt_n(r.get("rec", 0)), fmt_n(r.get("em", 0)), fmt_n(r.get("sal", 0))])
     return titulo, lede, bullets, chart, tabla
 
 def tpl_default(p, D):
@@ -413,8 +531,10 @@ TEMPLATES = {
     "emae": tpl_emae,
     "ipi": tpl_ipi, "isac": tpl_ipi, "uci": tpl_ipi,
     "super": tpl_super, "mayor": tpl_super,
-    "salarios": tpl_salarios,
+    "salarios": tpl_salarios, "ripte": tpl_salarios,
     "mora": tpl_mora,
+    "rec": tpl_rec,
+    "turismo": tpl_turismo,
 }
 
 # ──────────────────────────────────────────────────────────────────────────────
