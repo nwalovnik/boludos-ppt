@@ -1692,6 +1692,9 @@ def update_mora(D: dict) -> int:
                 nuevos += 1
             else:
                 rec.update({k: v for k, v in new.items() if k != "f"})
+                # Si el record era preliminar (prov), el dato oficial lo reemplaza
+                if rec.pop("prov", False):
+                    log(f"Mora {f}: dato oficial BCRA reemplaza al preliminar", "ok")
         arr.sort(key=lambda x: x["f"])
         if arr:
             log(f"Mora BCRA: actualizado (último {arr[-1]['f']}, fam={arr[-1].get('fam','—')}% emp={arr[-1].get('emp','—')}%)", "ok")
