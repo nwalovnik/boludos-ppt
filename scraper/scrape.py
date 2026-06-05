@@ -2444,12 +2444,29 @@ def main() -> int:
     D = json.loads(HISTORICAL.read_text(encoding="utf-8"))
     log(f"Bedrock: {len(D)} series, {sum(len(v) for v in D.values() if isinstance(v, list))} registros")
 
-    # Cargar data.json previo (resultado del run anterior) para comparar publicaciones
+    # Cargar data.json previo (resultado del run anterior) para:
+    #   1) Detectar publicaciones nuevas comparando.
+    #   2) ACTUAR COMO CONTINUIDAD para series que no estan en historical.json
+    #      (ej. mora: bedrock vacio, todo viene del XLSX BCRA. Si el fetch falla,
+    #      perderiamos la historia sin esta proteccion).
     D_prev = {}
     if OUT_PATH.exists():
         try:
             D_prev = json.loads(OUT_PATH.read_text(encoding="utf-8"))
             log(f"Cargado data.json previo para detección de publicaciones nuevas")
+            # Continuidad: para cada serie del previo, si el bedrock no la tiene
+            # (o la tiene vacia) y el previo si, usar el previo como punto de partida.
+            # Esto protege contra fetch fallidos: si update_X no agrega registros,
+            # mantenemos la historia anterior en lugar de quedar con un array vacio.
+            restored = []
+            for k, v in D_prev.items():
+                if k == "_meta" or not isinstance(v, list) or not v:
+                    continue
+                if not D.get(k):  # ausente o []
+                    D[k] = [dict(r) for r in v]  # deep copy de records
+                    restored.append(f"{k}({len(v)})")
+            if restored:
+                log(f"Continuidad desde data.json previo: {', '.join(restored)}", "ok")
         except Exception as e:
             log(f"No se pudo leer data.json previo: {e}", "warn")
 
