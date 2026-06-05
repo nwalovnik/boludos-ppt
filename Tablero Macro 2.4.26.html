@@ -669,7 +669,7 @@ hr.d{border:none;border-top:.5px solid var(--bd);margin:16px 0}
   </div>
   <div id="mora-status" style="font-size:11px;color:var(--tx2);margin-bottom:6px">Cargando datos de mora desde BCRA...</div>
   <div class="cgrid">
-    <div class="cc"><div class="cc-hd"><div><div class="cc-t">Irregularidad de cartera <span class="breal">BCRA API</span></div><div class="cc-s">% de préstamos en situación irregular &#183; familias y empresas</div></div></div><div style="position:relative;height:210px"><canvas id="c-mora"></canvas></div></div>
+    <div class="cc"><div class="cc-hd"><div><div class="cc-t">Irregularidad de cartera <span class="breal">BCRA</span></div><div class="cc-s">% de préstamos en situación irregular &#183; familias y empresas</div></div><button class="dl-btn" onclick="dlCSV('mora')">&#8595; CSV</button></div><div style="position:relative;height:210px"><canvas id="c-mora"></canvas></div></div>
     <div class="cc"><div class="cc-hd"><div><div class="cc-t">Préstamos por sector <span class="breal">BCRA API</span></div><div class="cc-s">Familias vs empresas &#183; billones de pesos</div></div></div><div style="position:relative;height:210px"><canvas id="c-prest-sect"></canvas></div></div>
   </div>
 </div>
@@ -2687,6 +2687,7 @@ var CSV_MAP={
   salarios:{g:function(){return D.salarios;},n:"salarios_reales",f:["f","is_r","real_r","real_pub","real_priv","via_real"],h:["Fecha","IS_reg","Real_reg","Real_pub","Real_priv","VIA_real_pct"]},
   ripte:{g:function(){return D.ripte;},n:"ripte",f:["f","nom","via_r","vm_r"],h:["Fecha","Nominal","VIA_real_pct","VM_real_pct"]},
   rec:{g:function(){return D.rec;},n:"recaudación",f:["f","tot","via","via_r","iva","gan","dex","ss"],h:["Fecha","Total","VIA_nom_pct","VIA_real_pct","IVA","Ganancias","DEX","Seg_Social"]},
+  mora:{g:function(){return D.mora;},n:"mora_bcra",f:["f","fam","emp","prov","fuente"],h:["Mes","Familias_pct","Empresas_pct","Preliminar","Fuente"]},
   pobreza:{g:function(){return D.pobreza;},n:"pobreza",f:["p","pob","ind"],h:["Período","Pobreza_pct","Indigencia_pct"]},
   bm:{g:function(){return D.bm;},n:"base_monetaria",f:["f","tot"],h:["Fecha","Total_M$"]},
   merval:{g:function(){return D.merval;},n:"merval",f:["f","v"],h:["Fecha","Merval_$"]},
