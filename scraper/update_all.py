@@ -21,10 +21,13 @@ def run(name: str, *args: str) -> int:
 
 
 def main() -> int:
+    # 1) Calendarios oficiales (INDEC PDF + BCRA HTML + ARCA/Hacienda)
+    run("fetch_calendars.py")
+    # 2) Scraping de datos
     rc_scrape = run("scrape.py", *sys.argv[1:])
     if rc_scrape != 0:
         print(f"!! scrape.py terminó con código {rc_scrape}; sigo con build_slides igual.")
-    # build_slides puede salir 1 si no hay pubs de esta semana — no es fatal
+    # 3) PPTX semanal — puede salir 1 si no hay pubs de esta semana, no es fatal
     run("build_slides.py")
     return 0
 
