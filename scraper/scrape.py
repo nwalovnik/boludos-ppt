@@ -2472,52 +2472,45 @@ def _fin_periodo(periodo: str, periodicidad: str = "mensual") -> datetime:
 def compute_proximas_publicaciones(D: dict, days_ahead: int = 7) -> list[dict]:
     """Devuelve eventos de publicación esperados en los próximos N días.
 
-    Para cada serie tracked: toma su último período publicado, calcula el siguiente
-    período esperado, y estima su fecha de publicación usando PUB_LAG_DIAS.
-    Filtra a ventana [hoy, hoy+N] y excluye series diarias.
+    Lee scraper/calendar_oficial.json (generado por fetch_calendars.py que parsea
+    los PDFs/HTML oficiales de INDEC, BCRA, ARCA, Hacienda). NO estima fechas:
+    expone solo lo que los organismos publicaron en sus calendarios.
     """
-    hoy = datetime.now(timezone.utc)
+    cal_path = SCRAPER_DIR / "calendar_oficial.json"
+    if not cal_path.exists():
+        log("calendar_oficial.json no existe — corré 'python scraper/fetch_calendars.py' primero", "warn")
+        return []
+    try:
+        cal = json.loads(cal_path.read_text(encoding="utf-8"))
+    except Exception as e:
+        log(f"No pude leer calendar_oficial.json: {e}", "warn")
+        return []
+    hoy = datetime.now(timezone.utc).date()
     cutoff = hoy + timedelta(days=days_ahead)
     proximas = []
-    for serie, (fuente, fecha_key) in SERIES_TRACK_PUB.items():
-        if serie in SERIES_DIARIAS:
-            continue
-        arr = D.get(serie)
-        if not isinstance(arr, list) or not arr:
-            continue
-        ult = _ultimo_real(arr, fecha_key)
-        if ult is None:
-            continue
-        # Si el último período tiene flag prov, considerarlo como NO publicado oficialmente
-        # → el "siguiente" es ese mismo (esperando oficial)
-        per_ult = str(ult.get(fecha_key, ""))
-        periodicidad = SERIE_PERIODICIDAD.get(serie, "mensual")
-        if ult.get("prov"):
-            per_esperado = per_ult
-        else:
-            per_esperado = _siguiente_periodo(per_ult, periodicidad)
+    for ev in cal.get("eventos", []):
         try:
-            fin = _fin_periodo(per_esperado, periodicidad)
+            fecha = datetime.fromisoformat(ev["fecha"]).date()
         except Exception:
             continue
-        lag = PUB_LAG_DIAS.get(serie, 30)
-        esperada = fin + timedelta(days=lag)
-        # Si la fecha esperada quedó en el pasado, avanzar al siguiente período
-        # (típico cuando el dato salió pero el scraper aún no lo detectó)
-        while esperada < hoy and per_esperado != per_ult:
-            per_esperado = _siguiente_periodo(per_esperado, periodicidad)
-            fin = _fin_periodo(per_esperado, periodicidad)
-            esperada = fin + timedelta(days=lag)
-        if hoy.date() <= esperada.date() <= cutoff.date():
-            proximas.append({
-                "serie": serie,
-                "label": SERIE_LBL.get(serie, serie),
-                "fuente": fuente,
-                "periodo_esperado": per_esperado,
-                "fecha_estimada": esperada.date().isoformat(),
-                "prov_pendiente": bool(ult.get("prov")),
-            })
-    proximas.sort(key=lambda p: p["fecha_estimada"])
+        if not (hoy <= fecha <= cutoff):
+            continue
+        serie = ev.get("serie_key")
+        # Marcar si la serie ya tiene un dato preliminar/prov esperando oficial
+        prov_pendiente = False
+        if serie and isinstance(D.get(serie), list):
+            fecha_key = SERIES_TRACK_PUB.get(serie, (None, "f"))[1] or "f"
+            ult = _ultimo_real(D[serie], fecha_key)
+            if ult and ult.get("prov"):
+                prov_pendiente = True
+        proximas.append({
+            "serie": serie,
+            "label": ev.get("label", ""),
+            "fuente": ev.get("fuente", ""),
+            "periodo_esperado": ev.get("periodo", ""),
+            "fecha_estimada": ev["fecha"],
+            "prov_pendiente": prov_pendiente,
+        })
     return proximas
 
 # ──────────────────────────────────────────────────────────────────────────────

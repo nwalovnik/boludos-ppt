@@ -30,6 +30,9 @@ jobs:
       - name: Install deps
         run: pip install -r scraper/requirements.txt
 
+      - name: Fetch calendarios oficiales (INDEC PDF + BCRA + ARCA + Hacienda)
+        run: python scraper/fetch_calendars.py || echo "Fallo fetch calendarios, sigo igual"
+
       - name: Run scraper macro
         run: python scraper/scrape.py
 
@@ -49,7 +52,7 @@ jobs:
           git config user.name "macro-bot"
           git config user.email "macro-bot@users.noreply.github.com"
           CHANGES=""
-          for FILE in data.json despidos.json scraper/historical_despidos.json publicaciones_semana.pptx; do
+          for FILE in data.json despidos.json scraper/historical_despidos.json scraper/calendar_oficial.json publicaciones_semana.pptx; do
             if [[ -f "$FILE" ]] && [[ -n "$(git status --porcelain "$FILE")" || -z "$(git ls-files "$FILE")" ]]; then
               git add "$FILE"
               CHANGES="$CHANGES $FILE"

@@ -5,3 +5,4 @@ rarfile>=4.0
 python-pptx>=1.0
 matplotlib>=3.7
 lxml>=4.9
+pypdf>=4.0
