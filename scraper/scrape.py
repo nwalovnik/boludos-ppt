@@ -2411,6 +2411,116 @@ def detect_publicaciones(D_old: dict, D_new: dict) -> list[dict]:
 # ──────────────────────────────────────────────────────────────────────────────
 # Main
 # ──────────────────────────────────────────────────────────────────────────────
+# Calendario forward looking: próximas publicaciones esperadas
+# ──────────────────────────────────────────────────────────────────────────────
+# Series de actualización diaria — no aparecen en el calendario semanal.
+SERIES_DIARIAS = {"tc", "reservas", "embi", "merval", "bm"}
+
+# Periodicidad de cada serie. Las anuales/trimestrales se manejan distinto a las
+# mensuales para calcular el "siguiente periodo esperado".
+SERIE_PERIODICIDAD = {
+    "empresas": "anual",
+    "eph":      "trimestral",
+    "pbi":      "trimestral",
+    # resto: mensual por default
+}
+
+def _siguiente_periodo(periodo: str, periodicidad: str = "mensual") -> str:
+    """Dado un período (YYYY-MM, YYYY, '1T 2026'), devuelve el siguiente."""
+    if periodicidad == "anual":
+        try:
+            return str(int(periodo) + 1)
+        except Exception:
+            return periodo
+    if periodicidad == "trimestral":
+        import re
+        m = re.match(r"(\d)[°ºT]\s*(\d{4})", periodo) or re.match(r"(\d{4})-Q(\d)", periodo)
+        if m:
+            if "-Q" in periodo:
+                y, q = int(m.group(1)), int(m.group(2))
+            else:
+                q, y = int(m.group(1)), int(m.group(2))
+            nq = q + 1; ny = y
+            if nq > 4: nq = 1; ny += 1
+            return f"{nq}°T {ny}"
+        return periodo
+    # mensual: YYYY-MM
+    try:
+        y, m = int(periodo[:4]), int(periodo[5:7])
+        m += 1
+        if m > 12: m = 1; y += 1
+        return f"{y:04d}-{m:02d}"
+    except Exception:
+        return periodo
+
+def _fin_periodo(periodo: str, periodicidad: str = "mensual") -> datetime:
+    """Devuelve el último día del período (datetime UTC)."""
+    from calendar import monthrange
+    if periodicidad == "anual":
+        return datetime(int(periodo), 12, 31, tzinfo=timezone.utc)
+    if periodicidad == "trimestral":
+        import re
+        m = re.match(r"(\d)[°ºT]\s*(\d{4})", periodo)
+        if m:
+            q, y = int(m.group(1)), int(m.group(2))
+            mes = q * 3
+            return datetime(y, mes, monthrange(y, mes)[1], tzinfo=timezone.utc)
+        return datetime.now(timezone.utc)
+    y, m = int(periodo[:4]), int(periodo[5:7])
+    return datetime(y, m, monthrange(y, m)[1], tzinfo=timezone.utc)
+
+def compute_proximas_publicaciones(D: dict, days_ahead: int = 7) -> list[dict]:
+    """Devuelve eventos de publicación esperados en los próximos N días.
+
+    Para cada serie tracked: toma su último período publicado, calcula el siguiente
+    período esperado, y estima su fecha de publicación usando PUB_LAG_DIAS.
+    Filtra a ventana [hoy, hoy+N] y excluye series diarias.
+    """
+    hoy = datetime.now(timezone.utc)
+    cutoff = hoy + timedelta(days=days_ahead)
+    proximas = []
+    for serie, (fuente, fecha_key) in SERIES_TRACK_PUB.items():
+        if serie in SERIES_DIARIAS:
+            continue
+        arr = D.get(serie)
+        if not isinstance(arr, list) or not arr:
+            continue
+        ult = _ultimo_real(arr, fecha_key)
+        if ult is None:
+            continue
+        # Si el último período tiene flag prov, considerarlo como NO publicado oficialmente
+        # → el "siguiente" es ese mismo (esperando oficial)
+        per_ult = str(ult.get(fecha_key, ""))
+        periodicidad = SERIE_PERIODICIDAD.get(serie, "mensual")
+        if ult.get("prov"):
+            per_esperado = per_ult
+        else:
+            per_esperado = _siguiente_periodo(per_ult, periodicidad)
+        try:
+            fin = _fin_periodo(per_esperado, periodicidad)
+        except Exception:
+            continue
+        lag = PUB_LAG_DIAS.get(serie, 30)
+        esperada = fin + timedelta(days=lag)
+        # Si la fecha esperada quedó en el pasado, avanzar al siguiente período
+        # (típico cuando el dato salió pero el scraper aún no lo detectó)
+        while esperada < hoy and per_esperado != per_ult:
+            per_esperado = _siguiente_periodo(per_esperado, periodicidad)
+            fin = _fin_periodo(per_esperado, periodicidad)
+            esperada = fin + timedelta(days=lag)
+        if hoy.date() <= esperada.date() <= cutoff.date():
+            proximas.append({
+                "serie": serie,
+                "label": SERIE_LBL.get(serie, serie),
+                "fuente": fuente,
+                "periodo_esperado": per_esperado,
+                "fecha_estimada": esperada.date().isoformat(),
+                "prov_pendiente": bool(ult.get("prov")),
+            })
+    proximas.sort(key=lambda p: p["fecha_estimada"])
+    return proximas
+
+# ──────────────────────────────────────────────────────────────────────────────
 # Overrides manuales: datos preliminares de notas / consultoras
 # Cada entrada se aplica SOLO si el periodo no existe ya en la serie (no pisa
 # al dato oficial cuando llega). Llevan flag prov:True + fuente:str.
@@ -2512,6 +2622,7 @@ def main() -> int:
         "scraper_version": "1.1",
         "sources": ["INDEC", "BCRA", "OEDE", "Sec.Hacienda", "ArgentinaDatos", "Bluelytics", "Yahoo Finance"],
         "publicaciones": pubs[:50],  # Últimas 50 publicaciones detectadas
+        "proximas": compute_proximas_publicaciones(D, days_ahead=7),
     }
 
     if args.dry_run:

@@ -204,6 +204,20 @@ hr.d{border:none;border-top:.5px solid var(--bd);margin:16px 0}
 .news-text .up{color:var(--red);font-weight:600}
 .news-text .dn{color:var(--grn);font-weight:600}
 @media(max-width:640px){.news-item{grid-template-columns:1fr;gap:6px}.news-source{justify-self:start}}
+/* PRÓXIMAS — agenda futura de publicaciones */
+.next-week{margin-bottom:32px;padding:20px 4px;border-bottom:.5px solid var(--bd)}
+.next-eyebrow{font-size:10.5px;text-transform:uppercase;letter-spacing:.18em;color:var(--tx3);font-weight:600;margin-bottom:14px}
+.next-list{display:flex;flex-direction:column;gap:0}
+.next-item{display:grid;grid-template-columns:84px 130px 1fr 90px;gap:18px;padding:11px 0;border-top:.5px solid var(--bd);align-items:baseline;color:var(--tx2)}
+.next-item:last-child{border-bottom:.5px solid var(--bd)}
+.next-item.today{background:rgba(217,107,67,0.04)}
+.next-day{font-family:var(--font-mono);font-size:11px;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em}
+.next-day.today{color:var(--red);font-weight:600}
+.next-source{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--tx2);font-weight:600;border:.5px solid var(--bd2);padding:3px 8px;border-radius:3px;display:inline-block;justify-self:start;background:var(--surf2)}
+.next-text{font-family:var(--font-serif);font-size:14px;line-height:1.45;color:var(--tx)}
+.next-text .em{font-weight:600}
+.next-period{font-family:var(--font-mono);font-size:10.5px;color:var(--tx3);text-align:right;letter-spacing:.02em}
+@media(max-width:640px){.next-item{grid-template-columns:1fr;gap:4px}.next-source{justify-self:start}.next-period{text-align:left}}
 /* HERO NUMBER editorial */
 .hero{position:relative;padding:32px 4px 24px;border-bottom:.5px solid var(--bd);margin-bottom:32px}
 .hero-eyebrow{font-size:10.5px;text-transform:uppercase;letter-spacing:.18em;color:var(--tx3);font-weight:600;margin-bottom:14px}
@@ -356,6 +370,12 @@ hr.d{border:none;border-top:.5px solid var(--bd);margin:16px 0}
       <a href="publicaciones_semana.pptx" download class="btn news-ppt-btn">&#128206; Descargar PPT</a>
     </div>
     <div class="news-list" id="news-list"></div>
+  </div>
+
+  <!-- PRÓXIMAS 7 DÍAS: agenda futura de publicaciones esperadas -->
+  <div class="next-week" id="next-week-block" style="display:none">
+    <div class="next-eyebrow" id="next-eyebrow">— próximos 7 días en la macro —</div>
+    <div class="next-list" id="next-list"></div>
   </div>
 
   <!-- HERO NUMBER: el dato más reciente publicado -->
@@ -1378,6 +1398,36 @@ function buildNoticiasSemana(){
   }).join("");
 }
 
+// PRÓXIMAS 7 DÍAS — agenda futura
+function buildProximas(){
+  var block=document.getElementById("next-week-block");
+  var list=document.getElementById("next-list");
+  if(!block||!list)return;
+  var prox=(D._meta&&D._meta.proximas)||[];
+  if(!prox.length){block.style.display="none";return;}
+  var hoyIso=new Date().toISOString().slice(0,10);
+  block.style.display="block";
+  list.innerHTML=prox.map(function(p){
+    var f=p.fecha_estimada;
+    var d=new Date(f+"T12:00:00");
+    var isToday=f===hoyIso;
+    var lbl=DIAS_SEM[d.getDay()]+" "+d.getDate()+" "+MESES_LBL[d.getMonth()];
+    var perTxt=p.periodo_esperado;
+    // Bonito para "YYYY-MM"
+    if(/^\d{4}-\d{2}$/.test(perTxt)){
+      var pm=perTxt.split("-");
+      perTxt=MESES_LBL[parseInt(pm[1])-1]+" "+pm[0];
+    }
+    var pendingTxt=p.prov_pendiente?" · esperando oficial (hay preliminar cargado)":"";
+    return "<div class='next-item"+(isToday?" today":"")+"'>"+
+      "<div class='next-day"+(isToday?" today":"")+"'>"+(isToday?"HOY · ":"")+lbl+"</div>"+
+      "<div><span class='next-source'>"+(p.fuente||"")+"</span></div>"+
+      "<div class='next-text'>"+cbEsc(p.label)+pendingTxt+"</div>"+
+      "<div class='next-period'>dato "+perTxt+"</div>"+
+    "</div>";
+  }).join("");
+}
+
 // ════════════════════════════════════════════════════════════════════════
 // HERO + RESUMEN EJECUTIVO + KPIs (Dashboard editorial)
 // ════════════════════════════════════════════════════════════════════════
@@ -1717,6 +1767,7 @@ function buildExecSummary(){
 function buildKPIs(){
   // Construye noticias de la semana + hero + resumen ejecutivo PRIMERO
   try{buildNoticiasSemana();}catch(e){console.warn("Noticias semana error:",e);}
+  try{buildProximas();}catch(e){console.warn("Proximas error:",e);}
   try{buildHero();}catch(e){console.warn("Hero error:",e);}
   try{buildExecSummary();}catch(e){console.warn("Exec summary error:",e);}
 
