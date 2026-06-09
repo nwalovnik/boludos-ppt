@@ -1,9 +1,9 @@
 name: Update macro data daily
 
 on:
-  # 11:30 UTC = 08:30 ART — después de que INDEC suele publicar
+  # 19:30 UTC = 16:30 ART — después del cierre de publicaciones del día
   schedule:
-    - cron: "30 11 * * *"
+    - cron: "30 19 * * *"
   # Permite correr manualmente desde la pestaña Actions
   workflow_dispatch:
 
