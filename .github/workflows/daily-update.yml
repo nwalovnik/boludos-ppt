@@ -1,9 +1,16 @@
 name: Update macro data daily
 
 on:
-  # 19:30 UTC = 16:30 ART — después del cierre de publicaciones del día
+  # Cron de GitHub Actions tiene delays grandes (15-60 min) en horarios :00 y :30.
+  # Disparamos 3 veces para asegurar que el dato del dia se capte:
+  #   19:47 UTC = 16:47 ART (primary, despues del cierre de pubs)
+  #   21:47 UTC = 18:47 ART (backup #1)
+  #   23:47 UTC = 20:47 ART (backup #2)
+  # El workflow solo commitea si hay cambios, así que las corridas extra son no-op.
   schedule:
-    - cron: "30 19 * * *"
+    - cron: "47 19 * * *"
+    - cron: "47 21 * * *"
+    - cron: "47 23 * * *"
   # Permite correr manualmente desde la pestaña Actions
   workflow_dispatch:
 
