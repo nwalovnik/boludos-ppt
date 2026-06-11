@@ -2261,19 +2261,53 @@ PUB_LAG_DIAS = {
     "pbi":      90,   # CCNN trimestral
 }
 
+_CAL_CACHE: list | None = None
+def _calendar_oficial_lookup(serie: str, periodo: str) -> datetime | None:
+    """Busca un evento en calendar_oficial.json que matchee (serie_key, periodo).
+
+    Devuelve datetime de publicación si existe, o None.
+    """
+    global _CAL_CACHE
+    if _CAL_CACHE is None:
+        path = SCRAPER_DIR / "calendar_oficial.json"
+        if not path.exists():
+            _CAL_CACHE = []
+        else:
+            try:
+                _CAL_CACHE = json.loads(path.read_text(encoding="utf-8")).get("eventos", [])
+            except Exception:
+                _CAL_CACHE = []
+    if not _CAL_CACHE:
+        return None
+    for ev in _CAL_CACHE:
+        if ev.get("serie_key") != serie:
+            continue
+        if ev.get("periodo") != periodo:
+            continue
+        try:
+            return datetime.fromisoformat(ev["fecha"]).replace(tzinfo=timezone.utc)
+        except Exception:
+            continue
+    return None
+
 def calcular_fecha_publicacion(serie: str, periodo: str) -> datetime:
     """Devuelve cuándo se publicó oficialmente un período de una serie.
 
     Prioridad:
-      1) SOURCE_LAST_MOD[serie]: fecha REAL desde el header HTTP Last-Modified
-         del archivo INDEC/BCRA/Hacienda que se descargó en este run.
-      2) Heurística PUB_LAG_DIAS como fallback (si la serie no descargó archivo,
-         por ej. APIs sin Last-Modified).
+      1) Calendario oficial (calendar_oficial.json): fecha exacta del PDF INDEC
+         o HTML BCRA para esta (serie, periodo). Es la fuente de verdad.
+      2) SOURCE_LAST_MOD[serie]: header HTTP Last-Modified real del archivo
+         descargado en este run (cuando hay XLSX).
+      3) Heurística PUB_LAG_DIAS como fallback.
     """
     from calendar import monthrange
     import re
     today = datetime.now(timezone.utc)
-    # 1) Last-Modified real del archivo fuente
+    # 1) Calendario oficial
+    cal = _calendar_oficial_lookup(serie, periodo)
+    if cal is not None:
+        return cal
+    # 2) Last-Modified real del archivo fuente
     real = SOURCE_LAST_MOD.get(serie)
     if real is not None:
         return real
