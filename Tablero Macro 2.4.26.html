@@ -845,7 +845,7 @@ hr.d{border:none;border-top:.5px solid var(--bd);margin:16px 0}
       <div class="insight good" style="margin-bottom:0"><strong>Metodología BCRA (contable) &#8212; la que el BCRA considera más apropiada:</strong><br/>RIN = Brutas &minus; pasivos en ME con vencimiento original &gt;1 año disponibles.<br/>Resultado a dic 2025: <strong>USD +2.900M</strong>.<br/>La diferencia (~17.000M) se explica principalmente por los desembolsos del FMI del programa EFF 2025.</div>
     </div>
   </div>
-  <div class="cc" style="margin-bottom:14px"><div class="cc-hd"><div><div class="cc-t">Reservas brutas <span class="breal">BCRA</span></div><div class="cc-s">USD millones &#183; datos diarios</div></div><button class="dl-btn" onclick="dlCSV('reservas')">&#8595; CSV</button></div><div style="position:relative;height:220px"><canvas id="c-rrii-d"></canvas></div></div>
+  <div class="cc" style="margin-bottom:14px"><div class="cc-hd"><div><div class="cc-t">Reservas brutas <span class="breal">BCRA</span></div><div class="cc-s">USD millones &#183; datos diarios</div></div><button class="dl-btn" onclick="dlCSV('rrii_d')">&#8595; CSV</button></div><div style="position:relative;height:220px"><canvas id="c-rrii-d"></canvas></div></div>
 
   <div class="slbl">Reservas brutas vs netas &#183; comparación por metodología</div>
   <div class="info-box">Diferentes cálculos de Reservas Netas. Las series con datos exactos (Brutas, Excl. DEG) vienen directo de la API del BCRA. Las netas con metodología BCRA y FMI se aproximan descontando los <em>pasivos en moneda extranjera</em> estimados de los informes oficiales (encajes USD bancos, Swap China, FMI desembolsos, DEGs y otros). Para los valores exactos del programa EFF, ver el Informe Monetario semanal del BCRA.</div>
@@ -866,15 +866,15 @@ hr.d{border:none;border-top:.5px solid var(--bd);margin:16px 0}
           <button class="tbtn" id="tc-btn-mep" onclick="togTC(this,'mep')">MEP</button>
           <button class="tbtn" id="tc-btn-ccl" onclick="togTC(this,'ccl')">CCL</button>
         </div>
-        <button class="dl-btn" onclick="dlCSV('tc')">&#8595; CSV</button>
+        <button class="dl-btn" onclick="dlCSV('tc_d')">&#8595; CSV</button>
       </div>
     </div>
     <div style="position:relative;height:240px"><canvas id="c-tc-d"></canvas></div>
   </div>
   <div class="slbl">Riesgo pais EMBI <span class="daily-note">&#128197; Diario desde 2015</span></div>
-  <div class="cc"><div class="cc-hd"><div><div class="cc-t">EMBI Argentina <span class="breal">JP Morgan / GDS</span></div><div class="cc-s">Puntos básicos &#183; menor = menor riesgo</div></div><button class="dl-btn" onclick="dlCSV('embi')">&#8595; CSV</button></div><div style="position:relative;height:220px"><canvas id="c-embi-d"></canvas></div></div>
+  <div class="cc"><div class="cc-hd"><div><div class="cc-t">EMBI Argentina <span class="breal">JP Morgan / GDS</span></div><div class="cc-s">Puntos básicos &#183; menor = menor riesgo</div></div><button class="dl-btn" onclick="dlCSV('embi_d')">&#8595; CSV</button></div><div style="position:relative;height:220px"><canvas id="c-embi-d"></canvas></div></div>
   <div class="slbl">MERVAL <span class="daily-note">&#128197; Diario desde 2010</span></div>
-  <div class="cc"><div class="cc-hd"><div><div class="cc-t">MERVAL <span class="breal">BCBA / GDS</span></div><div class="cc-s">Índice bursatil en pesos &#183; datos diarios</div></div><button class="dl-btn" onclick="dlCSV('merval')">&#8595; CSV</button></div><div style="position:relative;height:220px"><canvas id="c-merval-d"></canvas></div></div>
+  <div class="cc"><div class="cc-hd"><div><div class="cc-t">MERVAL <span class="breal">BCBA / GDS</span></div><div class="cc-s">Índice bursatil en pesos &#183; datos diarios</div></div><button class="dl-btn" onclick="dlCSV('merval_d')">&#8595; CSV</button></div><div style="position:relative;height:220px"><canvas id="c-merval-d"></canvas></div></div>
 </div>
 <div id="pg-industria" class="pg">
   <div class="insight"><strong>Industria manufacturera - IPI:</strong> El Índice de Producción Industrial mide la evolución mensual de la producción física de la industria. Seleccioná una rama para ver su historial, peso en la industria, empleo y variación reciente. Fuente: <strong>INDEC</strong>. <span id="ipi-last-date" style="font-weight:500"></span></div>
@@ -2739,6 +2739,11 @@ var CSV_MAP={
   ripte:{g:function(){return D.ripte;},n:"ripte",f:["f","nom","via_r","vm_r"],h:["Fecha","Nominal","VIA_real_pct","VM_real_pct"]},
   rec:{g:function(){return D.rec;},n:"recaudación",f:["f","tot","via","via_r","iva","gan","dex","ss"],h:["Fecha","Total","VIA_nom_pct","VIA_real_pct","IVA","Ganancias","DEX","Seg_Social"]},
   mora:{g:function(){return D.mora;},n:"mora_bcra",f:["f","fam","emp","prov","fuente"],h:["Mes","Familias_pct","Empresas_pct","Preliminar","Fuente"]},
+  // Series DIARIAS (DD.*) — distintas de las mensuales de mismo nombre
+  tc_d:{g:function(){return (window.DD&&DD.tc_d)||[];},n:"tc_diario",f:["f","of","blue","mep","ccl"],h:["Fecha","Oficial","Blue","MEP","CCL"]},
+  rrii_d:{g:function(){return (window.DD&&DD.rrii_d)||[];},n:"reservas_diario_bcra",f:["f","v"],h:["Fecha","Brutas_USDM"]},
+  embi_d:{g:function(){return (window.DD&&DD.embi_d)||[];},n:"embi_diario",f:["f","v"],h:["Fecha","bps"]},
+  merval_d:{g:function(){return (window.DD&&DD.merval_d)||[];},n:"merval_diario",f:["f","v"],h:["Fecha","Merval_pesos"]},
   pobreza:{g:function(){return D.pobreza;},n:"pobreza",f:["p","pob","ind"],h:["Período","Pobreza_pct","Indigencia_pct"]},
   bm:{g:function(){return D.bm;},n:"base_monetaria",f:["f","tot"],h:["Fecha","Total_M$"]},
   merval:{g:function(){return D.merval;},n:"merval",f:["f","v"],h:["Fecha","Merval_$"]},
