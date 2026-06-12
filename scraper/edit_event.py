@@ -95,11 +95,15 @@ def main(argv: list[str] | None = None) -> int:
                 continue
             # Cast tipos basicos
             if k == "empleados":
-                try:
-                    v = int(v)
-                except (TypeError, ValueError):
-                    print(f"  IGNORE empleados invalido: {v!r}")
-                    continue
+                # null = s/d (sin dato); int >= 0 = valor
+                if v is None:
+                    pass  # mantener como None
+                else:
+                    try:
+                        v = int(v)
+                    except (TypeError, ValueError):
+                        print(f"  IGNORE empleados invalido: {v!r}")
+                        continue
             elif k == "cerro":
                 if isinstance(v, str):
                     v = v.lower() in ("si", "sí", "yes", "true", "1")
