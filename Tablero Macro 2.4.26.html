@@ -2719,7 +2719,7 @@ var CSV_MAP={
     g:function(){
       // Pasivos estimados informes BCRA (USD M, constantes hasta nuevo informe)
       var PB=38200, PF=55200;
-      var fuente=(window.DD&&DD.rrii_d&&DD.rrii_d.length)?DD.rrii_d:(D.reservas||[]);
+      var fuente=(typeof DD!=="undefined"&&DD.rrii_d&&DD.rrii_d.length)?DD.rrii_d:(D.reservas||[]);
       var out=fuente.map(function(r){
         var b=(r.v!=null?r.v:r.brutas);
         if(b==null) return null;
@@ -2739,11 +2739,12 @@ var CSV_MAP={
   ripte:{g:function(){return D.ripte;},n:"ripte",f:["f","nom","via_r","vm_r"],h:["Fecha","Nominal","VIA_real_pct","VM_real_pct"]},
   rec:{g:function(){return D.rec;},n:"recaudación",f:["f","tot","via","via_r","iva","gan","dex","ss"],h:["Fecha","Total","VIA_nom_pct","VIA_real_pct","IVA","Ganancias","DEX","Seg_Social"]},
   mora:{g:function(){return D.mora;},n:"mora_bcra",f:["f","fam","emp","prov","fuente"],h:["Mes","Familias_pct","Empresas_pct","Preliminar","Fuente"]},
-  // Series DIARIAS (DD.*) — distintas de las mensuales de mismo nombre
-  tc_d:{g:function(){return (window.DD&&DD.tc_d)||[];},n:"tc_diario",f:["f","of","blue","mep","ccl"],h:["Fecha","Oficial","Blue","MEP","CCL"]},
-  rrii_d:{g:function(){return (window.DD&&DD.rrii_d)||[];},n:"reservas_diario_bcra",f:["f","v"],h:["Fecha","Brutas_USDM"]},
-  embi_d:{g:function(){return (window.DD&&DD.embi_d)||[];},n:"embi_diario",f:["f","v"],h:["Fecha","bps"]},
-  merval_d:{g:function(){return (window.DD&&DD.merval_d)||[];},n:"merval_diario",f:["f","v"],h:["Fecha","Merval_pesos"]},
+  // Series DIARIAS (DD.*) — distintas de las mensuales de mismo nombre.
+  // OJO: DD es const top-level, NO existe window.DD — referenciar DD directo.
+  tc_d:{g:function(){return (typeof DD!=="undefined"&&DD.tc_d)||[];},n:"tc_diario",f:["f","of","blue","mep","ccl"],h:["Fecha","Oficial","Blue","MEP","CCL"]},
+  rrii_d:{g:function(){return (typeof DD!=="undefined"&&DD.rrii_d)||[];},n:"reservas_diario_bcra",f:["f","v"],h:["Fecha","Brutas_USDM"]},
+  embi_d:{g:function(){return (typeof DD!=="undefined"&&DD.embi_d)||[];},n:"embi_diario",f:["f","v"],h:["Fecha","bps"]},
+  merval_d:{g:function(){return (typeof DD!=="undefined"&&DD.merval_d)||[];},n:"merval_diario",f:["f","v"],h:["Fecha","Merval_pesos"]},
   pobreza:{g:function(){return D.pobreza;},n:"pobreza",f:["p","pob","ind"],h:["Período","Pobreza_pct","Indigencia_pct"]},
   bm:{g:function(){return D.bm;},n:"base_monetaria",f:["f","tot"],h:["Fecha","Total_M$"]},
   merval:{g:function(){return D.merval;},n:"merval",f:["f","v"],h:["Fecha","Merval_$"]},
@@ -3234,7 +3235,7 @@ function buildReservasNetas(){
   if(isDaily){
     // Diario: últimos 18 meses para que no quede ilegible
     var co=new Date(Date.now()-540*86400000).toISOString().slice(0,10);
-    serieRes=(window.DD&&DD.rrii_d||[]).filter(function(r){return r.f>=co&&r.v!=null;})
+    serieRes=((typeof DD!=="undefined"&&DD.rrii_d)||[]).filter(function(r){return r.f>=co&&r.v!=null;})
       .map(function(r){return {f:r.f, v:r.v};});
   } else {
     serieRes=D.reservas.filter(function(r){return r.f>="2017-01"&&(r.v!=null||r.brutas!=null);});
@@ -4288,7 +4289,7 @@ function cbBuildAnswer(s, per, ql){
 
   // Caso A: diaria (TC, reservas, EMBI, MERVAL) y pregunta sin período → último valor diario
   if(s.daily && (!per || per.type==="ultimo")){
-    var dd=window.DD && DD[s.daily];
+    var dd=(typeof DD!=="undefined") && DD[s.daily];
     if(dd && dd.length){
       var ult=dd[dd.length-1];
       var v=ult[s.daily_field];
