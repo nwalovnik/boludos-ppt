@@ -54,12 +54,15 @@ jobs:
       - name: Generar PPTX publicaciones de la semana
         run: python scraper/build_slides.py || echo "Sin publicaciones esta semana o sin pubs aún registradas"
 
+      - name: Generar Excel RRII brutas (incremental)
+        run: python scraper/build_rrii_xlsx.py || echo "Fallo RRII xlsx, sigo igual"
+
       - name: Commit & push si cambiaron outputs
         run: |
           git config user.name "macro-bot"
           git config user.email "macro-bot@users.noreply.github.com"
           CHANGES=""
-          for FILE in data.json despidos.json scraper/historical_despidos.json scraper/calendar_oficial.json publicaciones_semana.pptx; do
+          for FILE in data.json despidos.json scraper/historical_despidos.json scraper/calendar_oficial.json publicaciones_semana.pptx rrii_brutas.xlsx; do
             if [[ -f "$FILE" ]] && [[ -n "$(git status --porcelain "$FILE")" || -z "$(git ls-files "$FILE")" ]]; then
               git add "$FILE"
               CHANGES="$CHANGES $FILE"

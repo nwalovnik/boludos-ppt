@@ -29,6 +29,8 @@ def main() -> int:
         print(f"!! scrape.py terminó con código {rc_scrape}; sigo con build_slides igual.")
     # 3) PPTX semanal — puede salir 1 si no hay pubs de esta semana, no es fatal
     run("build_slides.py")
+    # 4) Excel RRII brutas con factores de variación (incremental)
+    run("build_rrii_xlsx.py")
     return 0
 
 
