@@ -502,6 +502,18 @@ hr.d{border:none;border-top:.5px solid var(--bd);margin:16px 0}
   <div class="slbl">Apertura por rubro - var. mensual</div>
   <div class="dtabs" id="ipc-dtabs"></div>
   <div class="cc"><div class="cc-hd"><div><div class="cc-t" id="ipc-dt">Rubro</div><div class="cc-s">Real vs proyectado</div></div></div><div style="position:relative;height:180px"><canvas id="c-ipc-d"></canvas></div></div>
+  <div class="slbl">IPC por división COICOP <span class="daily-note" id="ipc-div-mes"></span></div>
+  <div class="cc">
+    <div class="cc-hd">
+      <div><div class="cc-t" id="ipc-div-t">Variación mensual por división</div><div class="cc-s">12 divisiones COICOP · cobertura Nacional · INDEC</div></div>
+      <div class="toggle-row">
+        <button class="tbtn on" id="ipcdiv-btn-vm" onclick="setIPCDivMode('vm',this)">VM</button>
+        <button class="tbtn" id="ipcdiv-btn-via" onclick="setIPCDivMode('via',this)">VIA</button>
+        <button class="tbtn" id="ipcdiv-btn-acum" onclick="setIPCDivMode('acum',this)">Acum. año</button>
+      </div>
+    </div>
+    <div style="position:relative;height:300px"><canvas id="c-ipc-div"></canvas></div>
+  </div>
   <hr class="d"/>
   <div class="slbl">Acumulado anual seleccionable</div>
   <div class="acum-bar">
@@ -2153,7 +2165,58 @@ function buildPrecios(){
   }
   buildAcum();
   buildMesesCb();
+  buildIPCDiv();
   buildMayoristas();
+}
+
+// ── IPC por división COICOP: barras VM / VIA / Acumulado año ─────────────────
+var IPC_DIV_LBL={
+  "01":"Alimentos y bebidas","02":"Beb. alc. y tabaco","03":"Prendas de vestir",
+  "04":"Vivienda y serv.","05":"Equip. hogar","06":"Salud","07":"Transporte",
+  "08":"Comunicación","09":"Recreación","10":"Educación","11":"Restaurantes",
+  "12":"Varios"};
+var IPC_DIV_MODE="vm";
+function setIPCDivMode(m,el){
+  IPC_DIV_MODE=m;
+  document.querySelectorAll("#ipcdiv-btn-vm,#ipcdiv-btn-via,#ipcdiv-btn-acum").forEach(function(b){b.classList.remove("on");});
+  if(el)el.classList.add("on");
+  buildIPCDiv();
+}
+function buildIPCDiv(){
+  var c=document.getElementById("c-ipc-div");if(!c)return;
+  // Último mes real con desglose div
+  var conDiv=(D.ipc||[]).filter(function(r){return !r.proj&&r.div&&r.div["01"];});
+  if(!conDiv.length)return;
+  var ult=conDiv[conDiv.length-1];
+  var anio=ult.f.split("-")[0];
+  // Base diciembre del año anterior para acumulado
+  var dic=conDiv.filter(function(r){return r.f===(parseInt(anio)-1)+"-12";})[0];
+  var titEl=document.getElementById("ipc-div-t");
+  var mesEl=document.getElementById("ipc-div-mes");
+  if(mesEl)mesEl.textContent="📅 dato "+lblMes(ult.f);
+  var modos={
+    vm:{t:"Variación mensual por división · "+lblMes(ult.f),get:function(cod){return (ult.div[cod]||{}).vm;}},
+    via:{t:"Variación interanual por división · "+lblMes(ult.f),get:function(cod){return (ult.div[cod]||{}).via;}},
+    acum:{t:"Acumulado "+anio+" por división (vs dic-"+(parseInt(anio)-1)+")",get:function(cod){
+      if(!dic)return null;
+      var n0=(dic.div[cod]||{}).n, n1=(ult.div[cod]||{}).n;
+      return (n0&&n1)?((n1/n0-1)*100):null;
+    }}
+  };
+  var modo=modos[IPC_DIV_MODE]||modos.vm;
+  if(titEl)titEl.textContent=modo.t;
+  // Ordenar divisiones por valor descendente
+  var datos=Object.keys(IPC_DIV_LBL).map(function(cod){
+    return {cod:cod,l:IPC_DIV_LBL[cod],v:modo.get(cod)};
+  }).filter(function(d){return d.v!=null;});
+  datos.sort(function(a,b){return b.v-a.v;});
+  // Referencia: nivel general
+  var gen=IPC_DIV_MODE==="vm"?ult.vm:IPC_DIV_MODE==="via"?ult.via:
+    (dic&&dic.n&&ult.n?((ult.n/dic.n-1)*100):null);
+  var cols=datos.map(function(d){return (gen!=null&&d.v>gen)?C.red+"cc":C.orange+"99";});
+  mk("c-ipc-div",datos.map(function(d){return d.l;}),[
+    bar("Variación %",datos.map(function(d){return Math.round(d.v*10)/10;}),C.red,{backgroundColor:cols})
+  ],{type:"bar",xt:13,leg:false,yf:function(v){return v+"%";},extra:{scales:{x:{ticks:{maxRotation:60,minRotation:45,autoSkip:false,font:{size:9.5},color:TK},grid:{display:false},border:{display:false}}}}});
 }
 
 function buildMayoristas(){

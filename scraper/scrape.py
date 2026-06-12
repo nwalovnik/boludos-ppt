@@ -285,6 +285,92 @@ def update_ipc(D: dict) -> int:
 
     return nuevos
 
+# Divisiones COICOP del IPC → labels cortos para charts
+IPC_DIV_LBL = {
+    "01": "Alimentos y bebidas",
+    "02": "Bebidas alc. y tabaco",
+    "03": "Prendas de vestir",
+    "04": "Vivienda y servicios",
+    "05": "Equip. del hogar",
+    "06": "Salud",
+    "07": "Transporte",
+    "08": "Comunicación",
+    "09": "Recreación y cultura",
+    "10": "Educación",
+    "11": "Restaurantes y hoteles",
+    "12": "Bienes y serv. varios",
+}
+# Mapeo división COICOP → campos legacy del schema D.ipc (drill por rubro del HTML)
+IPC_DIV_LEGACY = {"01": "alim_vm", "03": "vest", "04": "viv", "06": "salud",
+                  "07": "transp", "10": "educ", "11": "rest"}
+
+def update_ipc_divisiones(D: dict) -> int:
+    """IPC por división COICOP desde el CSV oficial INDEC (cobertura Nacional).
+
+    Fuente: serie_ipc_divisiones.csv — se actualiza el mismo día que el IPC.
+    Guarda en cada registro D.ipc[f].div = {"01": {vm, via, n}, ...} desde 2025-01
+    (suficiente para acumulados del año en curso) y rellena los campos legacy
+    (alim_vm, vest, viv, ...) que la API ya no trae.
+    """
+    arr = D.setdefault("ipc", [])
+    url = f"{INDEC_XLS_BASE}/serie_ipc_divisiones.csv"
+    try:
+        r = http_get(url, serie="ipc")
+        text = r.content.decode("utf-8", errors="replace")
+    except Exception as e:
+        log(f"IPC divisiones CSV falló: {e}", "warn")
+        return 0
+
+    def _f(v):
+        v = v.strip().replace(",", ".")
+        if not v or v.upper() == "NA":
+            return None
+        try:
+            return float(v)
+        except ValueError:
+            return None
+
+    por_mes: dict[str, dict] = {}
+    for raw in text.strip().split("\n")[1:]:
+        p = [x.strip() for x in raw.split(";")]
+        if len(p) < 8:
+            continue
+        cod, desc, clasif, per, idx, vm, via, reg = p[:8]
+        if reg != "Nacional" or "COICOP" not in clasif or cod not in IPC_DIV_LBL:
+            continue
+        if len(per) != 6 or not per.isdigit():
+            continue
+        f = f"{per[:4]}-{per[4:6]}"
+        if f < "2025-01":
+            continue
+        d = {}
+        n_v, vm_v, via_v = _f(idx), _f(vm), _f(via)
+        if n_v is not None:   d["n"] = round(n_v, 2)
+        if vm_v is not None:  d["vm"] = round(vm_v, 2)
+        if via_v is not None: d["via"] = round(via_v, 2)
+        if d:
+            por_mes.setdefault(f, {})[cod] = d
+
+    actualizados = 0
+    for f, divs in por_mes.items():
+        rec = next((x for x in arr if x.get("f") == f), None)
+        if rec is None or rec.get("proj"):
+            continue
+        rec["div"] = divs
+        # Rellenar campos legacy (drill por rubro) si faltan
+        for cod, campo in IPC_DIV_LEGACY.items():
+            vm_v = divs.get(cod, {}).get("vm")
+            if vm_v is not None and rec.get(campo) is None:
+                rec[campo] = vm_v
+        via_alim = divs.get("01", {}).get("via")
+        if via_alim is not None and rec.get("alim_via") is None:
+            rec["alim_via"] = via_alim
+        actualizados += 1
+    if actualizados:
+        ult = max(por_mes.keys())
+        log(f"IPC divisiones (CSV oficial): {actualizados} meses con desglose COICOP (último {ult})", "ok")
+    return actualizados
+
 def update_emae(D: dict) -> int:
     arr = D.setdefault("emae", [])
     nuevos = 0
@@ -2609,6 +2695,7 @@ def main() -> int:
 
     # Actualizar cada bloque (cada uno maneja sus propios errores)
     update_ipc(D)
+    update_ipc_divisiones(D)  # desglose COICOP oficial (CSV, mismo dia que el IPC)
     # EMAE / IPI / UCI: primero API series (rápido), después XLS oficial (más fresco — pisa la API)
     update_emae(D)
     update_emae_xls(D)
