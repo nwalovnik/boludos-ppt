@@ -1416,6 +1416,13 @@
    "serie_key": null
   },
   {
+   "fecha": "2026-06-19",
+   "fuente": "BCRA",
+   "label": "Informe sobre Bancos",
+   "periodo": "",
+   "serie_key": "mora"
+  },
+  {
    "fecha": "2026-06-22",
    "fuente": "INDEC",
    "label": "Mercado de trabajo. Tasas e indicadores socioeconómicos. Primer trimestre de 2026",
@@ -1710,6 +1717,13 @@
    "serie_key": null
   },
   {
+   "fecha": "2026-07-24",
+   "fuente": "BCRA",
+   "label": "Informe sobre Bancos",
+   "periodo": "",
+   "serie_key": "mora"
+  },
+  {
    "fecha": "2026-07-27",
    "fuente": "INDEC",
    "label": "Estadísticas de turismo internacional. Junio y segundo trimestre de 2026",
@@ -1869,6 +1883,13 @@
    "label": "Boletín Estadístico",
    "periodo": "",
    "serie_key": null
+  },
+  {
+   "fecha": "2026-08-14",
+   "fuente": "BCRA",
+   "label": "Informe sobre Bancos",
+   "periodo": "",
+   "serie_key": "mora"
   },
   {
    "fecha": "2026-08-18",
@@ -2172,6 +2193,13 @@
    "serie_key": "bc"
   },
   {
+   "fecha": "2026-09-18",
+   "fuente": "BCRA",
+   "label": "Informe sobre Bancos",
+   "periodo": "",
+   "serie_key": "mora"
+  },
+  {
    "fecha": "2026-09-21",
    "fuente": "INDEC",
    "label": "Encuesta de tendencia de negocios. Supermercados y autoservicios mayoristas. Expectativas septiembre-noviembre de 2026",
@@ -2389,6 +2417,13 @@
    "serie_key": null
   },
   {
+   "fecha": "2026-10-15",
+   "fuente": "BCRA",
+   "label": "Encuesta de Condiciones Crediticias (ECC)",
+   "periodo": "",
+   "serie_key": null
+  },
+  {
    "fecha": "2026-10-16",
    "fuente": "INDEC",
    "label": "Valorización mensual de la canasta de crianza de la primera infancia, la niñez y la adolescencia. Septiembre de 2026",
@@ -2408,6 +2443,13 @@
    "label": "Índice del costo de la construcción (ICC). Septiembre de 2026",
    "periodo": "2026-09",
    "serie_key": null
+  },
+  {
+   "fecha": "2026-10-16",
+   "fuente": "BCRA",
+   "label": "Informe sobre Bancos",
+   "periodo": "",
+   "serie_key": "mora"
   },
   {
    "fecha": "2026-10-19",
@@ -2625,6 +2667,13 @@
    "label": "Boletín Estadístico",
    "periodo": "",
    "serie_key": null
+  },
+  {
+   "fecha": "2026-11-13",
+   "fuente": "BCRA",
+   "label": "Informe sobre Bancos",
+   "periodo": "",
+   "serie_key": "mora"
   },
   {
    "fecha": "2026-11-16",
@@ -2926,6 +2975,13 @@
    "label": "Mercado de trabajo. Tasas e indicadores socioeconómicos. Tercer trimestre de 2026",
    "periodo": "3°T 2026",
    "serie_key": "eph"
+  },
+  {
+   "fecha": "2026-12-18",
+   "fuente": "BCRA",
+   "label": "Informe sobre Bancos",
+   "periodo": "",
+   "serie_key": "mora"
   },
   {
    "fecha": "2026-12-21",
