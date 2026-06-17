@@ -1,12 +1,47 @@
 {
- "generated_at": "2026-06-16",
+ "generated_at": "2026-06-17",
  "eventos": [
+  {
+   "fecha": "2026-01-06",
+   "fuente": "INDEC",
+   "label": "Encuesta Nacional a Grandes Empresas. Año 2024",
+   "periodo": "2024",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-01-07",
+   "fuente": "INDEC",
+   "label": "Índice de producción industrial minero (IPI minero). Noviembre de 2025",
+   "periodo": "2025-11",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-01-07",
+   "fuente": "INDEC",
+   "label": "Índice de producción industrial pesquero (IPI pesquero). Noviembre de 2025",
+   "periodo": "2025-11",
+   "serie_key": null
+  },
   {
    "fecha": "2026-01-07",
    "fuente": "BCRA",
    "label": "Relevamiento de Expectativas de Mercado (REM)",
    "periodo": "",
    "serie_key": null
+  },
+  {
+   "fecha": "2026-01-08",
+   "fuente": "INDEC",
+   "label": "Índice de producción industrial manufacturero (IPI manufacturero). Noviembre de 2025",
+   "periodo": "2025-11",
+   "serie_key": "ipi"
+  },
+  {
+   "fecha": "2026-01-08",
+   "fuente": "INDEC",
+   "label": "Indicadores de coyuntura de la actividad de la construcción. Noviembre de 2025",
+   "periodo": "2025-11",
+   "serie_key": "isac"
   },
   {
    "fecha": "2026-01-08",
@@ -23,10 +58,115 @@
    "serie_key": null
   },
   {
+   "fecha": "2026-01-12",
+   "fuente": "INDEC",
+   "label": "Indicador sintético de servicios públicos (ISSP). Octubre de 2025",
+   "periodo": "2025-10",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-01-13",
+   "fuente": "INDEC",
+   "label": "Índice de precios al consumidor (IPC). Cobertura nacional. Diciembre de 2025",
+   "periodo": "2025-12",
+   "serie_key": "ipc"
+  },
+  {
+   "fecha": "2026-01-13",
+   "fuente": "INDEC",
+   "label": "Valorización mensual de la canasta básica alimentaria (CBA) y de la canasta básica total (CBT). Diciembre de 2025",
+   "periodo": "2025-12",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-01-14",
+   "fuente": "INDEC",
+   "label": "Utilización de la capacidad instalada en la industria (UCII). Noviembre de 2025",
+   "periodo": "2025-11",
+   "serie_key": "uci"
+  },
+  {
+   "fecha": "2026-01-14",
+   "fuente": "INDEC",
+   "label": "Índices de patentamientos. Cuarto trimestre de 2025",
+   "periodo": "4°T 2025",
+   "serie_key": null
+  },
+  {
    "fecha": "2026-01-14",
    "fuente": "BCRA",
    "label": "Boletín Estadístico",
    "periodo": "",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-01-15",
+   "fuente": "INDEC",
+   "label": "Valorización mensual de la canasta de crianza de la primera infancia, la niñez y la adolescencia. Diciembre de 2025",
+   "periodo": "2025-12",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-01-19",
+   "fuente": "INDEC",
+   "label": "Índice del costo de la construcción (ICC). Diciembre de 2025",
+   "periodo": "2025-12",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-01-19",
+   "fuente": "INDEC",
+   "label": "Sistema de índices de precios mayoristas (SIPM). Diciembre de 2025",
+   "periodo": "2025-12",
+   "serie_key": "ipim"
+  },
+  {
+   "fecha": "2026-01-20",
+   "fuente": "INDEC",
+   "label": "Intercambio comercial argentino (ICA). Bienes. Diciembre de 2025",
+   "periodo": "2025-12",
+   "serie_key": "bc"
+  },
+  {
+   "fecha": "2026-01-20",
+   "fuente": "INDEC",
+   "label": "Encuesta de ocupación hotelera (EOH). Noviembre de 2025",
+   "periodo": "2025-11",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-01-21",
+   "fuente": "INDEC",
+   "label": "Cuenta de generación del ingreso e insumo de mano de obra. Tercer trimestre de 2025",
+   "periodo": "3°T 2025",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-01-21",
+   "fuente": "INDEC",
+   "label": "Estimador mensual de actividad económica (EMAE). Noviembre de 2025",
+   "periodo": "2025-11",
+   "serie_key": "emae"
+  },
+  {
+   "fecha": "2026-01-22",
+   "fuente": "INDEC",
+   "label": "Encuesta de supermercados. Noviembre de 2025",
+   "periodo": "2025-11",
+   "serie_key": "super"
+  },
+  {
+   "fecha": "2026-01-22",
+   "fuente": "INDEC",
+   "label": "Encuesta de autoservicios mayoristas. Noviembre de 2025",
+   "periodo": "2025-11",
+   "serie_key": "mayor"
+  },
+  {
+   "fecha": "2026-01-22",
+   "fuente": "INDEC",
+   "label": "Encuesta nacional de centros de compras. Noviembre de 2025",
+   "periodo": "2025-11",
    "serie_key": null
   },
   {
@@ -38,16 +178,58 @@
   },
   {
    "fecha": "2026-01-23",
+   "fuente": "INDEC",
+   "label": "Índice de salarios. Noviembre de 2025",
+   "periodo": "2025-11",
+   "serie_key": "salarios"
+  },
+  {
+   "fecha": "2026-01-23",
+   "fuente": "INDEC",
+   "label": "Encuesta de tendencia de negocios. Supermercados y autoservicios mayoristas. Expectativas enero-marzo de 2026",
+   "periodo": "2026-03",
+   "serie_key": "mayor"
+  },
+  {
+   "fecha": "2026-01-23",
+   "fuente": "INDEC",
+   "label": "Encuesta de tendencia de negocios. Industria manufacturera. Expectativas enero-marzo de 2026",
+   "periodo": "2026-03",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-01-23",
    "fuente": "BCRA",
    "label": "Informe sobre Bancos",
    "periodo": "",
    "serie_key": "mora"
   },
   {
+   "fecha": "2026-01-26",
+   "fuente": "INDEC",
+   "label": "Estadísticas de turismo internacional. Diciembre, cuarto trimestre y año 2025",
+   "periodo": "2025",
+   "serie_key": "turismo"
+  },
+  {
+   "fecha": "2026-01-28",
+   "fuente": "INDEC",
+   "label": "INDEC Informa",
+   "periodo": "",
+   "serie_key": null
+  },
+  {
    "fecha": "2026-01-29",
    "fuente": "BCRA",
    "label": "Informe sobre Deuda Externa Privada",
    "periodo": "",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-01-30",
+   "fuente": "INDEC",
+   "label": "Dotación de personal de la administración pública nacional, empresas y sociedades. Diciembre de 2025",
+   "periodo": "2025-12",
    "serie_key": null
   },
   {
@@ -61,6 +243,27 @@
    "fecha": "2026-01-30",
    "fuente": "BCRA",
    "label": "Informe de Pagos Minoristas",
+   "periodo": "",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-02-03",
+   "fuente": "INDEC",
+   "label": "Índices de precios y cantidades del comercio exterior. Cuarto trimestre de 2025",
+   "periodo": "4°T 2025",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-02-04",
+   "fuente": "INDEC",
+   "label": "Bases de microdatos de la Encuesta Permanente de Hogares. Tercer trimestre de 2025",
+   "periodo": "3°T 2025",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-02-05",
+   "fuente": "INDEC",
+   "label": "Argentine Foreign Trade Statistics. Preliminary data for 2025",
    "periodo": "",
    "serie_key": null
   },
@@ -80,9 +283,79 @@
   },
   {
    "fecha": "2026-02-06",
+   "fuente": "INDEC",
+   "label": "Índice de producción industrial manufacturero (IPI manufacturero). Diciembre de 2025",
+   "periodo": "2025-12",
+   "serie_key": "ipi"
+  },
+  {
+   "fecha": "2026-02-06",
+   "fuente": "INDEC",
+   "label": "Indicadores de coyuntura de la actividad de la construcción. Diciembre de 2025",
+   "periodo": "2025-12",
+   "serie_key": "isac"
+  },
+  {
+   "fecha": "2026-02-06",
    "fuente": "BCRA",
    "label": "Informe Monetario Mensual",
    "periodo": "",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-02-09",
+   "fuente": "INDEC",
+   "label": "Índice de producción industrial minero (IPI minero). Diciembre de 2025",
+   "periodo": "2025-12",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-02-10",
+   "fuente": "INDEC",
+   "label": "Índice de precios al consumidor (IPC). Cobertura nacional. Enero de 2026",
+   "periodo": "2026-01",
+   "serie_key": "ipc"
+  },
+  {
+   "fecha": "2026-02-10",
+   "fuente": "INDEC",
+   "label": "Índice de producción industrial pesquero (IPI pesquero). Diciembre de 2025",
+   "periodo": "2025-12",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-02-11",
+   "fuente": "INDEC",
+   "label": "Indicador sintético de servicios públicos (ISSP). Noviembre de 2025",
+   "periodo": "2025-11",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-02-12",
+   "fuente": "INDEC",
+   "label": "Valorización mensual de la canasta básica alimentaria (CBA) y de la canasta básica total (CBT). Enero de 2026",
+   "periodo": "2026-01",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-02-12",
+   "fuente": "INDEC",
+   "label": "Índice de salarios. Diciembre de 2025",
+   "periodo": "2025-12",
+   "serie_key": "salarios"
+  },
+  {
+   "fecha": "2026-02-12",
+   "fuente": "INDEC",
+   "label": "Utilización de la capacidad instalada en la industria (UCII). Diciembre de 2025",
+   "periodo": "2025-12",
+   "serie_key": "uci"
+  },
+  {
+   "fecha": "2026-02-13",
+   "fuente": "INDEC",
+   "label": "Valorización mensual de la canasta de crianza de la primera infancia, la niñez y la adolescencia. Enero de 2026",
+   "periodo": "2026-01",
    "serie_key": null
   },
   {
@@ -93,11 +366,116 @@
    "serie_key": null
   },
   {
+   "fecha": "2026-02-18",
+   "fuente": "INDEC",
+   "label": "Encuesta permanente de hogares (EPH) total urbano. Principales tasas del tercer trimestre de 2025",
+   "periodo": "3°T 2025",
+   "serie_key": "eph"
+  },
+  {
+   "fecha": "2026-02-19",
+   "fuente": "INDEC",
+   "label": "Encuesta permanente de hogares (EPH) total urbano. Evolución de la distribución del ingreso. Tercer trimestre de 2025",
+   "periodo": "3°T 2025",
+   "serie_key": "eph"
+  },
+  {
+   "fecha": "2026-02-19",
+   "fuente": "INDEC",
+   "label": "Índice del costo de la construcción (ICC). Enero de 2026",
+   "periodo": "2026-01",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-02-19",
+   "fuente": "INDEC",
+   "label": "Sistema de índices de precios mayoristas (SIPM). Enero de 2026",
+   "periodo": "2026-01",
+   "serie_key": "ipim"
+  },
+  {
+   "fecha": "2026-02-19",
+   "fuente": "INDEC",
+   "label": "Intercambio comercial argentino (ICA). Bienes. Enero de 2026",
+   "periodo": "2026-01",
+   "serie_key": "bc"
+  },
+  {
+   "fecha": "2026-02-20",
+   "fuente": "INDEC",
+   "label": "EPH Total urbano. Bases de microdatos del tercer trimestre de 2025",
+   "periodo": "3°T 2025",
+   "serie_key": "eph"
+  },
+  {
    "fecha": "2026-02-20",
    "fuente": "BCRA",
    "label": "Informe Sobre Bancos",
    "periodo": "",
    "serie_key": "mora"
+  },
+  {
+   "fecha": "2026-02-23",
+   "fuente": "INDEC",
+   "label": "Encuesta de tendencia de negocios. Supermercados y autoservicios mayoristas. Expectativas febrero-abril de 2026",
+   "periodo": "2026-04",
+   "serie_key": "mayor"
+  },
+  {
+   "fecha": "2026-02-23",
+   "fuente": "INDEC",
+   "label": "Encuesta de tendencia de negocios. Industria manufacturera. Expectativas febrero-abril de 2026",
+   "periodo": "2026-04",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-02-24",
+   "fuente": "INDEC",
+   "label": "Estimador mensual de actividad económica (EMAE). Diciembre de 2025",
+   "periodo": "2025-12",
+   "serie_key": "emae"
+  },
+  {
+   "fecha": "2026-02-25",
+   "fuente": "INDEC",
+   "label": "Encuesta de supermercados. Diciembre de 2025",
+   "periodo": "2025-12",
+   "serie_key": "super"
+  },
+  {
+   "fecha": "2026-02-25",
+   "fuente": "INDEC",
+   "label": "Encuesta de autoservicios mayoristas. Diciembre de 2025",
+   "periodo": "2025-12",
+   "serie_key": "mayor"
+  },
+  {
+   "fecha": "2026-02-25",
+   "fuente": "INDEC",
+   "label": "Encuesta nacional de centros de compras. Diciembre de 2025",
+   "periodo": "2025-12",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-02-25",
+   "fuente": "INDEC",
+   "label": "Encuesta de comercios de electrodomésticos y artículos para el hogar. Cuarto trimestre de 2025",
+   "periodo": "4°T 2025",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-02-26",
+   "fuente": "INDEC",
+   "label": "Estadísticas de turismo internacional. Enero de 2026",
+   "periodo": "2026-01",
+   "serie_key": "turismo"
+  },
+  {
+   "fecha": "2026-02-27",
+   "fuente": "INDEC",
+   "label": "Dotación de personal de la administración pública nacional, empresas y sociedades. Enero de 2026",
+   "periodo": "2026-01",
+   "serie_key": null
   },
   {
    "fecha": "2026-02-27",
@@ -111,6 +489,27 @@
    "fuente": "BCRA",
    "label": "Informe de Pagos Minoristas",
    "periodo": "",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-03-04",
+   "fuente": "INDEC",
+   "label": "Complejos exportadores. Año 2025",
+   "periodo": "2025",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-03-05",
+   "fuente": "INDEC",
+   "label": "Índice de producción industrial pesquero (IPI pesquero). Enero de 2026",
+   "periodo": "2026-01",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-03-05",
+   "fuente": "INDEC",
+   "label": "Índice de producción industrial minero (IPI minero). Enero de 2026",
+   "periodo": "2026-01",
    "serie_key": null
   },
   {
@@ -122,10 +521,66 @@
   },
   {
    "fecha": "2026-03-06",
+   "fuente": "INDEC",
+   "label": "Índice de producción industrial manufacturero (IPI manufacturero). Enero de 2026",
+   "periodo": "2026-01",
+   "serie_key": "ipi"
+  },
+  {
+   "fecha": "2026-03-06",
+   "fuente": "INDEC",
+   "label": "Indicadores de coyuntura de la actividad de la construcción. Enero de 2026",
+   "periodo": "2026-01",
+   "serie_key": "isac"
+  },
+  {
+   "fecha": "2026-03-06",
    "fuente": "BCRA",
    "label": "Informe Monetario Mensual",
    "periodo": "",
    "serie_key": null
+  },
+  {
+   "fecha": "2026-03-10",
+   "fuente": "INDEC",
+   "label": "Origen provincial de las exportaciones. Año 2025",
+   "periodo": "2025",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-03-11",
+   "fuente": "INDEC",
+   "label": "Indicador sintético de servicios públicos (ISSP). Diciembre de 2025",
+   "periodo": "2025-12",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-03-11",
+   "fuente": "INDEC",
+   "label": "Accesos a internet. Cuarto trimestre de 2025",
+   "periodo": "4°T 2025",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-03-12",
+   "fuente": "INDEC",
+   "label": "Índice de precios al consumidor (IPC). Cobertura nacional. Febrero de 2026",
+   "periodo": "2026-02",
+   "serie_key": "ipc"
+  },
+  {
+   "fecha": "2026-03-12",
+   "fuente": "INDEC",
+   "label": "Valorización mensual de la canasta básica alimentaria (CBA) y de la canasta básica total (CBT). Febrero de 2026",
+   "periodo": "2026-02",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-03-13",
+   "fuente": "INDEC",
+   "label": "Utilización de la capacidad instalada en la industria (UCII). Enero de 2026",
+   "periodo": "2026-01",
+   "serie_key": "uci"
   },
   {
    "fecha": "2026-03-13",
@@ -135,11 +590,130 @@
    "serie_key": null
   },
   {
+   "fecha": "2026-03-16",
+   "fuente": "INDEC",
+   "label": "Valorización mensual de la canasta de crianza de la primera infancia, la niñez y la adolescencia. Febrero de 2026",
+   "periodo": "2026-02",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-03-17",
+   "fuente": "INDEC",
+   "label": "Índice del costo de la construcción (ICC). Febrero de 2026",
+   "periodo": "2026-02",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-03-17",
+   "fuente": "INDEC",
+   "label": "Sistema de índices de precios mayoristas (SIPM). Febrero de 2026",
+   "periodo": "2026-02",
+   "serie_key": "ipim"
+  },
+  {
+   "fecha": "2026-03-18",
+   "fuente": "INDEC",
+   "label": "Mercado de trabajo. Tasas e indicadores socioeconómicos. Cuarto trimestre de 2025",
+   "periodo": "4°T 2025",
+   "serie_key": "eph"
+  },
+  {
+   "fecha": "2026-03-19",
+   "fuente": "INDEC",
+   "label": "Intercambio comercial argentino (ICA). Bienes. Febrero de 2026",
+   "periodo": "2026-02",
+   "serie_key": "bc"
+  },
+  {
+   "fecha": "2026-03-19",
+   "fuente": "INDEC",
+   "label": "Encuesta de tendencia de negocios. Supermercados y autoservicios mayoristas. Expectativas marzo-mayo de 2026",
+   "periodo": "2026-05",
+   "serie_key": "mayor"
+  },
+  {
+   "fecha": "2026-03-19",
+   "fuente": "INDEC",
+   "label": "Encuesta de tendencia de negocios. Industria manufacturera. Expectativas marzo-mayo de 2026",
+   "periodo": "2026-05",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-03-20",
+   "fuente": "INDEC",
+   "label": "Informe de avance del nivel de actividad. Cuarto trimestre de 2025",
+   "periodo": "4°T 2025",
+   "serie_key": "pbi"
+  },
+  {
+   "fecha": "2026-03-20",
+   "fuente": "INDEC",
+   "label": "Encuesta de supermercados. Enero de 2026",
+   "periodo": "2026-01",
+   "serie_key": "super"
+  },
+  {
+   "fecha": "2026-03-20",
+   "fuente": "INDEC",
+   "label": "Encuesta de autoservicios mayoristas. Enero de 2026",
+   "periodo": "2026-01",
+   "serie_key": "mayor"
+  },
+  {
+   "fecha": "2026-03-20",
+   "fuente": "INDEC",
+   "label": "Encuesta nacional de centros de compras. Enero de 2026",
+   "periodo": "2026-01",
+   "serie_key": null
+  },
+  {
    "fecha": "2026-03-20",
    "fuente": "BCRA",
    "label": "Informe sobre Bancos",
    "periodo": "",
    "serie_key": "mora"
+  },
+  {
+   "fecha": "2026-03-25",
+   "fuente": "INDEC",
+   "label": "Industria farmacéutica en la Argentina. Cuarto trimestre de 2025",
+   "periodo": "4°T 2025",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-03-25",
+   "fuente": "INDEC",
+   "label": "Estadísticas de turismo internacional. Febrero de 2026",
+   "periodo": "2026-02",
+   "serie_key": "turismo"
+  },
+  {
+   "fecha": "2026-03-25",
+   "fuente": "INDEC",
+   "label": "Índice de salarios. Enero de 2026",
+   "periodo": "2026-01",
+   "serie_key": "salarios"
+  },
+  {
+   "fecha": "2026-03-26",
+   "fuente": "INDEC",
+   "label": "Estimador mensual de actividad económica (EMAE). Enero de 2026",
+   "periodo": "2026-01",
+   "serie_key": "emae"
+  },
+  {
+   "fecha": "2026-03-26",
+   "fuente": "INDEC",
+   "label": "Informe de la industria de maquinaria agrícola. Cuarto trimestre de 2025",
+   "periodo": "4°T 2025",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-03-27",
+   "fuente": "INDEC",
+   "label": "Balanza de pagos, posición de inversión internacional y deuda externa. Cuarto trimestre de 2025",
+   "periodo": "4°T 2025",
+   "serie_key": null
   },
   {
    "fecha": "2026-03-27",
@@ -156,6 +730,48 @@
    "serie_key": null
   },
   {
+   "fecha": "2026-03-30",
+   "fuente": "INDEC",
+   "label": "Indicadores del sector energético. Cuarto trimestre de 2025",
+   "periodo": "4°T 2025",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-03-31",
+   "fuente": "INDEC",
+   "label": "Incidencia de la pobreza y la indigencia en 31 aglomerados urbanos. Segundo semestre de 2025",
+   "periodo": "",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-03-31",
+   "fuente": "INDEC",
+   "label": "Dotación de personal de la administración pública nacional, empresas y sociedades. Febrero de 2026",
+   "periodo": "2026-02",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-04-06",
+   "fuente": "INDEC",
+   "label": "Evolución de la distribución del ingreso (EPH). Cuarto trimestre de 2025",
+   "periodo": "4°T 2025",
+   "serie_key": "eph"
+  },
+  {
+   "fecha": "2026-04-07",
+   "fuente": "INDEC",
+   "label": "Índice de producción industrial pesquero (IPI pesquero). Febrero de 2026",
+   "periodo": "2026-02",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-04-08",
+   "fuente": "INDEC",
+   "label": "Índice de producción industrial minero (IPI minero). Febrero de 2026",
+   "periodo": "2026-02",
+   "serie_key": null
+  },
+  {
    "fecha": "2026-04-08",
    "fuente": "BCRA",
    "label": "Relevamiento de Expectativas de Mercado (REM)",
@@ -164,9 +780,58 @@
   },
   {
    "fecha": "2026-04-09",
+   "fuente": "INDEC",
+   "label": "Índice de producción industrial manufacturero (IPI manufacturero). Febrero de 2026",
+   "periodo": "2026-02",
+   "serie_key": "ipi"
+  },
+  {
+   "fecha": "2026-04-09",
+   "fuente": "INDEC",
+   "label": "Indicadores de coyuntura de la actividad de la construcción. Febrero de 2026",
+   "periodo": "2026-02",
+   "serie_key": "isac"
+  },
+  {
+   "fecha": "2026-04-09",
    "fuente": "BCRA",
    "label": "Informe Monetario Mensual",
    "periodo": "",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-04-10",
+   "fuente": "INDEC",
+   "label": "Indicador sintético de servicios públicos (ISSP). Enero de 2026",
+   "periodo": "2026-01",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-04-13",
+   "fuente": "INDEC",
+   "label": "Índices de patentamientos. Primer trimestre de 2026",
+   "periodo": "1°T 2026",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-04-13",
+   "fuente": "INDEC",
+   "label": "Mercado de trabajo. Indicadores de informalidad laboral (EPH). Cuarto trimestre de 2025",
+   "periodo": "4°T 2025",
+   "serie_key": "eph"
+  },
+  {
+   "fecha": "2026-04-14",
+   "fuente": "INDEC",
+   "label": "Índice de precios al consumidor (IPC). Cobertura nacional. Marzo de 2026",
+   "periodo": "2026-03",
+   "serie_key": "ipc"
+  },
+  {
+   "fecha": "2026-04-14",
+   "fuente": "INDEC",
+   "label": "Valorización mensual de la canasta básica alimentaria (CBA) y de la canasta básica total (CBT). Marzo de 2026",
+   "periodo": "2026-03",
    "serie_key": null
   },
   {
@@ -177,10 +842,122 @@
    "serie_key": null
   },
   {
+   "fecha": "2026-04-15",
+   "fuente": "INDEC",
+   "label": "Cuenta de generación del ingreso e insumo de mano de obra. Cuarto trimestre de 2025",
+   "periodo": "4°T 2025",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-04-16",
+   "fuente": "INDEC",
+   "label": "Sistema de índices de precios mayoristas (SIPM). Marzo de 2026",
+   "periodo": "2026-03",
+   "serie_key": "ipim"
+  },
+  {
+   "fecha": "2026-04-16",
+   "fuente": "INDEC",
+   "label": "Índice del costo de la construcción (ICC). Marzo de 2026",
+   "periodo": "2026-03",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-04-16",
+   "fuente": "INDEC",
+   "label": "Valorización mensual de la canasta de crianza de la primera infancia, la niñez y la adolescencia. Marzo de 2026",
+   "periodo": "2026-03",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-04-17",
+   "fuente": "INDEC",
+   "label": "Índice de salarios. Febrero de 2026",
+   "periodo": "2026-02",
+   "serie_key": "salarios"
+  },
+  {
+   "fecha": "2026-04-17",
+   "fuente": "INDEC",
+   "label": "Utilización de la capacidad instalada en la industria (UCII). Febrero de 2026",
+   "periodo": "2026-02",
+   "serie_key": "uci"
+  },
+  {
+   "fecha": "2026-04-20",
+   "fuente": "INDEC",
+   "label": "Intercambio comercial argentino (ICA). Bienes. Marzo de 2026",
+   "periodo": "2026-03",
+   "serie_key": "bc"
+  },
+  {
+   "fecha": "2026-04-21",
+   "fuente": "INDEC",
+   "label": "Encuesta de tendencia de negocios. Supermercados y autoservicios mayoristas. Expectativas abril-junio de 2026",
+   "periodo": "2026-06",
+   "serie_key": "mayor"
+  },
+  {
+   "fecha": "2026-04-21",
+   "fuente": "INDEC",
+   "label": "Encuesta de tendencia de negocios. Industria manufacturera. Expectativas abril-junio de 2026",
+   "periodo": "2026-06",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-04-22",
+   "fuente": "INDEC",
+   "label": "Indicadores de condiciones de vida de los hogares (EPH). Segundo semestre de 2025",
+   "periodo": "",
+   "serie_key": "eph"
+  },
+  {
+   "fecha": "2026-04-22",
+   "fuente": "INDEC",
+   "label": "Estimador mensual de actividad económica (EMAE). Febrero de 2026",
+   "periodo": "2026-02",
+   "serie_key": "emae"
+  },
+  {
+   "fecha": "2026-04-23",
+   "fuente": "INDEC",
+   "label": "Encuesta de supermercados. Febrero de 2026",
+   "periodo": "2026-02",
+   "serie_key": "super"
+  },
+  {
+   "fecha": "2026-04-23",
+   "fuente": "INDEC",
+   "label": "Encuesta de autoservicios mayoristas. Febrero de 2026",
+   "periodo": "2026-02",
+   "serie_key": "mayor"
+  },
+  {
+   "fecha": "2026-04-23",
+   "fuente": "INDEC",
+   "label": "Encuesta nacional de centros de compras. Febrero de 2026",
+   "periodo": "2026-02",
+   "serie_key": null
+  },
+  {
    "fecha": "2026-04-23",
    "fuente": "BCRA",
    "label": "Encuesta de Condiciones Crediticias (ECC)",
    "periodo": "",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-04-24",
+   "fuente": "INDEC",
+   "label": "Estadísticas de turismo internacional. Marzo y primer trimestre de 2026",
+   "periodo": "1°T 2026",
+   "serie_key": "turismo"
+  },
+  {
+   "fecha": "2026-04-24",
+   "fuente": "INDEC",
+   "label": "Bases de microdatos de la Encuesta Permanente de Hogares. Cuarto trimestre de 2025",
+   "periodo": "4°T 2025",
    "serie_key": null
   },
   {
@@ -196,6 +973,34 @@
    "label": "Informe sobre Bancos",
    "periodo": "",
    "serie_key": "mora"
+  },
+  {
+   "fecha": "2026-04-27",
+   "fuente": "INDEC",
+   "label": "Índices de precios y cantidades del comercio exterior. Primer trimestre de 2026",
+   "periodo": "1°T 2026",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-04-28",
+   "fuente": "INDEC",
+   "label": "INDEC Informa",
+   "periodo": "",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-04-29",
+   "fuente": "INDEC",
+   "label": "Argentine Foreign Trade Statistics. Preliminary data for the first quarter of 2026",
+   "periodo": "",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-04-30",
+   "fuente": "INDEC",
+   "label": "Dotación de personal de la administración pública nacional, empresas y sociedades. Marzo de 2026",
+   "periodo": "2026-03",
+   "serie_key": null
   },
   {
    "fecha": "2026-04-30",
@@ -219,6 +1024,34 @@
    "serie_key": null
   },
   {
+   "fecha": "2026-05-05",
+   "fuente": "INDEC",
+   "label": "Índice de producción industrial pesquero (IPI pesquero). Marzo de 2026",
+   "periodo": "2026-03",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-05-06",
+   "fuente": "INDEC",
+   "label": "Índice de producción industrial minero (IPI minero). Marzo de 2026",
+   "periodo": "2026-03",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-05-07",
+   "fuente": "INDEC",
+   "label": "Índice de producción industrial manufacturero (IPI manufacturero). Marzo de 2026",
+   "periodo": "2026-03",
+   "serie_key": "ipi"
+  },
+  {
+   "fecha": "2026-05-07",
+   "fuente": "INDEC",
+   "label": "Indicadores de coyuntura de la actividad de la construcción. Marzo de 2026",
+   "periodo": "2026-03",
+   "serie_key": "isac"
+  },
+  {
    "fecha": "2026-05-07",
    "fuente": "BCRA",
    "label": "Informe sobre Inversión Extranjera Directa",
@@ -240,10 +1073,38 @@
    "serie_key": null
   },
   {
+   "fecha": "2026-05-12",
+   "fuente": "INDEC",
+   "label": "Indicador sintético de servicios públicos (ISSP). Febrero de 2026",
+   "periodo": "2026-02",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-05-13",
+   "fuente": "INDEC",
+   "label": "Utilización de la capacidad instalada en la industria (UCII). Marzo de 2026",
+   "periodo": "2026-03",
+   "serie_key": "uci"
+  },
+  {
    "fecha": "2026-05-13",
    "fuente": "BCRA",
    "label": "Informe de Política Monetaria (IPOM)",
    "periodo": "",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-05-14",
+   "fuente": "INDEC",
+   "label": "Índice de precios al consumidor (IPC). Cobertura nacional. Abril de 2026",
+   "periodo": "2026-04",
+   "serie_key": "ipc"
+  },
+  {
+   "fecha": "2026-05-14",
+   "fuente": "INDEC",
+   "label": "Valorización mensual de la canasta básica alimentaria (CBA) y de la canasta básica total (CBT). Abril de 2026",
+   "periodo": "2026-04",
    "serie_key": null
   },
   {
@@ -268,11 +1129,116 @@
    "serie_key": null
   },
   {
+   "fecha": "2026-05-18",
+   "fuente": "INDEC",
+   "label": "Valorización mensual de la canasta de crianza de la primera infancia, la niñez y la adolescencia. Abril de 2026",
+   "periodo": "2026-04",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-05-18",
+   "fuente": "INDEC",
+   "label": "Índice de salarios. Marzo de 2026",
+   "periodo": "2026-03",
+   "serie_key": "salarios"
+  },
+  {
+   "fecha": "2026-05-19",
+   "fuente": "INDEC",
+   "label": "Índice del costo de la construcción (ICC). Abril de 2026",
+   "periodo": "2026-04",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-05-19",
+   "fuente": "INDEC",
+   "label": "Sistema de índices de precios mayoristas (SIPM). Abril de 2026",
+   "periodo": "2026-04",
+   "serie_key": "ipim"
+  },
+  {
+   "fecha": "2026-05-20",
+   "fuente": "INDEC",
+   "label": "Intercambio comercial argentino (ICA). Bienes. Abril de 2026",
+   "periodo": "2026-04",
+   "serie_key": "bc"
+  },
+  {
+   "fecha": "2026-05-21",
+   "fuente": "INDEC",
+   "label": "Estimador mensual de actividad económica (EMAE). Marzo de 2026",
+   "periodo": "2026-03",
+   "serie_key": "emae"
+  },
+  {
+   "fecha": "2026-05-21",
+   "fuente": "INDEC",
+   "label": "Encuesta de tendencia de negocios. Supermercados y autoservicios mayoristas. Expectativas mayo-julio de 2026",
+   "periodo": "2026-07",
+   "serie_key": "mayor"
+  },
+  {
+   "fecha": "2026-05-21",
+   "fuente": "INDEC",
+   "label": "Encuesta de tendencia de negocios. Industria manufacturera. Expectativas mayo-julio de 2026",
+   "periodo": "2026-07",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-05-22",
+   "fuente": "INDEC",
+   "label": "Encuesta de supermercados. Marzo de 2026",
+   "periodo": "2026-03",
+   "serie_key": "super"
+  },
+  {
+   "fecha": "2026-05-22",
+   "fuente": "INDEC",
+   "label": "Encuesta de autoservicios mayoristas. Marzo de 2026",
+   "periodo": "2026-03",
+   "serie_key": "mayor"
+  },
+  {
+   "fecha": "2026-05-22",
+   "fuente": "INDEC",
+   "label": "Encuesta nacional de centros de compras. Marzo de 2026",
+   "periodo": "2026-03",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-05-22",
+   "fuente": "INDEC",
+   "label": "Encuesta de comercios de electrodomésticos y artículos para el hogar. Primer trimestre de 2026",
+   "periodo": "1°T 2026",
+   "serie_key": null
+  },
+  {
    "fecha": "2026-05-22",
    "fuente": "BCRA",
    "label": "Informe sobre Bancos",
    "periodo": "",
    "serie_key": "mora"
+  },
+  {
+   "fecha": "2026-05-26",
+   "fuente": "INDEC",
+   "label": "Estadísticas de turismo internacional. Abril de 2026",
+   "periodo": "2026-04",
+   "serie_key": "turismo"
+  },
+  {
+   "fecha": "2026-05-28",
+   "fuente": "INDEC",
+   "label": "Informe de la industria de maquinaria agrícola. Primer trimestre de 2026",
+   "periodo": "1°T 2026",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-05-29",
+   "fuente": "INDEC",
+   "label": "Dotación de personal de la administración pública nacional, empresas y sociedades. Abril de 2026",
+   "periodo": "2026-04",
+   "serie_key": null
   },
   {
    "fecha": "2026-05-29",
@@ -304,9 +1270,72 @@
   },
   {
    "fecha": "2026-06-05",
+   "fuente": "INDEC",
+   "label": "Accesos a internet. Primer trimestre de 2026",
+   "periodo": "1°T 2026",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-06-05",
+   "fuente": "INDEC",
+   "label": "Sistema integrado de estadísticas sociales (SIES). Actualización de fuentes a junio de 2026",
+   "periodo": "2026-06",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-06-05",
    "fuente": "BCRA",
    "label": "Informe Monetario Mensual",
    "periodo": "",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-06-08",
+   "fuente": "INDEC",
+   "label": "Índice de producción industrial minero (IPI minero). Abril de 2026",
+   "periodo": "2026-04",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-06-08",
+   "fuente": "INDEC",
+   "label": "Índice de producción industrial pesquero (IPI pesquero). Abril de 2026",
+   "periodo": "2026-04",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-06-09",
+   "fuente": "INDEC",
+   "label": "Índice de producción industrial manufacturero (IPI manufacturero). Abril de 2026",
+   "periodo": "2026-04",
+   "serie_key": "ipi"
+  },
+  {
+   "fecha": "2026-06-09",
+   "fuente": "INDEC",
+   "label": "Indicadores de coyuntura de la actividad de la construcción. Abril de 2026",
+   "periodo": "2026-04",
+   "serie_key": "isac"
+  },
+  {
+   "fecha": "2026-06-10",
+   "fuente": "INDEC",
+   "label": "Indicador sintético de servicios públicos (ISSP). Marzo de 2026",
+   "periodo": "2026-03",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-06-11",
+   "fuente": "INDEC",
+   "label": "Índice de precios al consumidor (IPC). Cobertura nacional. Mayo de 2026",
+   "periodo": "2026-05",
+   "serie_key": "ipc"
+  },
+  {
+   "fecha": "2026-06-11",
+   "fuente": "INDEC",
+   "label": "Valorización mensual de la canasta básica alimentaria (CBA) y de la canasta básica total (CBT). Mayo de 2026",
+   "periodo": "2026-05",
    "serie_key": null
   },
   {
@@ -317,11 +1346,144 @@
    "serie_key": null
   },
   {
+   "fecha": "2026-06-16",
+   "fuente": "INDEC",
+   "label": "Utilización de la capacidad instalada en la industria (UCII). Abril de 2026",
+   "periodo": "2026-04",
+   "serie_key": "uci"
+  },
+  {
+   "fecha": "2026-06-16",
+   "fuente": "INDEC",
+   "label": "Valorización mensual de la canasta de crianza de la primera infancia, la niñez y la adolescencia. Mayo de 2026",
+   "periodo": "2026-05",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-06-17",
+   "fuente": "INDEC",
+   "label": "Sistema de índices de precios mayoristas (SIPM). Mayo de 2026",
+   "periodo": "2026-05",
+   "serie_key": "ipim"
+  },
+  {
+   "fecha": "2026-06-17",
+   "fuente": "INDEC",
+   "label": "Índice del costo de la construcción (ICC). Mayo de 2026",
+   "periodo": "2026-05",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-06-18",
+   "fuente": "INDEC",
+   "label": "Intercambio comercial argentino (ICA). Bienes. Mayo de 2026",
+   "periodo": "2026-05",
+   "serie_key": "bc"
+  },
+  {
+   "fecha": "2026-06-18",
+   "fuente": "INDEC",
+   "label": "Encuesta de tendencia de negocios. Supermercados y autoservicios mayoristas. Expectativas junio-agosto de 2026",
+   "periodo": "2026-08",
+   "serie_key": "mayor"
+  },
+  {
+   "fecha": "2026-06-18",
+   "fuente": "INDEC",
+   "label": "Encuesta de tendencia de negocios. Industria manufacturera. Expectativas junio-agosto de 2026",
+   "periodo": "2026-08",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-06-19",
+   "fuente": "INDEC",
+   "label": "Encuesta de supermercados. Abril de 2026",
+   "periodo": "2026-04",
+   "serie_key": "super"
+  },
+  {
+   "fecha": "2026-06-19",
+   "fuente": "INDEC",
+   "label": "Encuesta de autoservicios mayoristas. Abril de 2026",
+   "periodo": "2026-04",
+   "serie_key": "mayor"
+  },
+  {
+   "fecha": "2026-06-19",
+   "fuente": "INDEC",
+   "label": "Encuesta nacional de centros de compras. Abril de 2026",
+   "periodo": "2026-04",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-06-22",
+   "fuente": "INDEC",
+   "label": "Mercado de trabajo. Tasas e indicadores socioeconómicos. Primer trimestre de 2026",
+   "periodo": "1°T 2026",
+   "serie_key": "eph"
+  },
+  {
    "fecha": "2026-06-22",
    "fuente": "Hacienda",
    "label": "Resultado fiscal SPNF (IMIG)",
    "periodo": "2026-05",
    "serie_key": "fiscal"
+  },
+  {
+   "fecha": "2026-06-23",
+   "fuente": "INDEC",
+   "label": "Informe de avance del nivel de actividad. Primer trimestre de 2026",
+   "periodo": "1°T 2026",
+   "serie_key": "pbi"
+  },
+  {
+   "fecha": "2026-06-23",
+   "fuente": "INDEC",
+   "label": "Índice de salarios. Abril de 2026",
+   "periodo": "2026-04",
+   "serie_key": "salarios"
+  },
+  {
+   "fecha": "2026-06-23",
+   "fuente": "INDEC",
+   "label": "Cuadros de oferta y utilización. Año 2023",
+   "periodo": "2023",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-06-24",
+   "fuente": "INDEC",
+   "label": "Balanza de pagos, posición de inversión internacional y deuda externa. Primer trimestre de 2026",
+   "periodo": "1°T 2026",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-06-24",
+   "fuente": "INDEC",
+   "label": "Industria farmacéutica en la Argentina. Primer trimestre de 2026",
+   "periodo": "1°T 2026",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-06-25",
+   "fuente": "INDEC",
+   "label": "Evolución de la distribución del ingreso (EPH). Primer trimestre de 2026",
+   "periodo": "1°T 2026",
+   "serie_key": "eph"
+  },
+  {
+   "fecha": "2026-06-25",
+   "fuente": "INDEC",
+   "label": "Estadísticas de turismo internacional. Mayo de 2026",
+   "periodo": "2026-05",
+   "serie_key": "turismo"
+  },
+  {
+   "fecha": "2026-06-26",
+   "fuente": "INDEC",
+   "label": "INDEC Informa",
+   "periodo": "",
+   "serie_key": null
   },
   {
    "fecha": "2026-06-26",
@@ -334,6 +1496,34 @@
    "fecha": "2026-06-26",
    "fuente": "BCRA",
    "label": "Informe de Pagos Minoristas",
+   "periodo": "",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-06-29",
+   "fuente": "INDEC",
+   "label": "Estimador mensual de actividad económica (EMAE). Abril de 2026",
+   "periodo": "2026-04",
+   "serie_key": "emae"
+  },
+  {
+   "fecha": "2026-06-30",
+   "fuente": "INDEC",
+   "label": "Indicadores del sector energético. Primer trimestre de 2026",
+   "periodo": "1°T 2026",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-06-30",
+   "fuente": "INDEC",
+   "label": "Dotación de personal de la administración pública nacional, empresas y sociedades. Mayo de 2026",
+   "periodo": "2026-05",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-06-30",
+   "fuente": "INDEC",
+   "label": "Actualizado al 2/03/2026 CALENDARIO DE DIFUSIÓN. Primer semestre de 2026",
    "periodo": "",
    "serie_key": null
   },
@@ -353,9 +1543,58 @@
   },
   {
    "fecha": "2026-07-07",
+   "fuente": "INDEC",
+   "label": "Índice de producción industrial pesquero (IPI pesquero). Mayo de 2026",
+   "periodo": "2026-05",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-07-07",
+   "fuente": "INDEC",
+   "label": "Índice de producción industrial minero (IPI minero). Mayo de 2026",
+   "periodo": "2026-05",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-07-07",
    "fuente": "BCRA",
    "label": "Informe Monetario Mensual",
    "periodo": "",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-07-08",
+   "fuente": "INDEC",
+   "label": "Índice de producción industrial manufacturero (IPI manufacturero). Mayo de 2026",
+   "periodo": "2026-05",
+   "serie_key": "ipi"
+  },
+  {
+   "fecha": "2026-07-08",
+   "fuente": "INDEC",
+   "label": "Indicadores de coyuntura de la actividad de la construcción. Mayo de 2026",
+   "periodo": "2026-05",
+   "serie_key": "isac"
+  },
+  {
+   "fecha": "2026-07-13",
+   "fuente": "INDEC",
+   "label": "Indicador sintético de servicios públicos (ISSP). Abril de 2026",
+   "periodo": "2026-04",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-07-14",
+   "fuente": "INDEC",
+   "label": "Índice de precios al consumidor (IPC). Cobertura nacional. Junio de 2026",
+   "periodo": "2026-06",
+   "serie_key": "ipc"
+  },
+  {
+   "fecha": "2026-07-14",
+   "fuente": "INDEC",
+   "label": "Valorización mensual de la canasta básica alimentaria (CBA) y de la canasta básica total (CBT). Junio de 2026",
+   "periodo": "2026-06",
    "serie_key": null
   },
   {
@@ -366,6 +1605,76 @@
    "serie_key": null
   },
   {
+   "fecha": "2026-07-15",
+   "fuente": "INDEC",
+   "label": "Utilización de la capacidad instalada en la industria (UCII). Mayo de 2026",
+   "periodo": "2026-05",
+   "serie_key": "uci"
+  },
+  {
+   "fecha": "2026-07-16",
+   "fuente": "INDEC",
+   "label": "Valorización mensual de la canasta de crianza de la primera infancia, la niñez y la adolescencia. Junio de 2026",
+   "periodo": "2026-06",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-07-16",
+   "fuente": "INDEC",
+   "label": "Cuenta de generación del ingreso e insumo de mano de obra. Primer trimestre de 2026",
+   "periodo": "1°T 2026",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-07-17",
+   "fuente": "INDEC",
+   "label": "Sistema de índices de precios mayoristas (SIPM). Junio de 2026",
+   "periodo": "2026-06",
+   "serie_key": "ipim"
+  },
+  {
+   "fecha": "2026-07-17",
+   "fuente": "INDEC",
+   "label": "Índice del costo de la construcción (ICC). Junio de 2026",
+   "periodo": "2026-06",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-07-20",
+   "fuente": "INDEC",
+   "label": "Intercambio comercial argentino (ICA). Bienes. Junio de 2026",
+   "periodo": "2026-06",
+   "serie_key": "bc"
+  },
+  {
+   "fecha": "2026-07-20",
+   "fuente": "INDEC",
+   "label": "Índice de salarios. Mayo de 2026",
+   "periodo": "2026-05",
+   "serie_key": "salarios"
+  },
+  {
+   "fecha": "2026-07-22",
+   "fuente": "INDEC",
+   "label": "Estimador mensual de actividad económica (EMAE). Mayo de 2026",
+   "periodo": "2026-05",
+   "serie_key": "emae"
+  },
+  {
+   "fecha": "2026-07-22",
+   "fuente": "INDEC",
+   "label": "Encuesta de tendencia de negocios. Supermercados y autoservicios mayoristas. Expectativas julio-septiembre de 2026",
+   "periodo": "2026-09",
+   "serie_key": "mayor"
+  },
+  {
+   "fecha": "2026-07-22",
+   "fuente": "INDEC",
+   "label": "Encuesta de tendencia de negocios. Industria manufacturera. Expectativas julio-septiembre de 2026",
+   "periodo": "2026-09",
+   "serie_key": null
+  },
+  {
    "fecha": "2026-07-22",
    "fuente": "Hacienda",
    "label": "Resultado fiscal SPNF (IMIG)",
@@ -373,10 +1682,66 @@
    "serie_key": "fiscal"
   },
   {
+   "fecha": "2026-07-23",
+   "fuente": "INDEC",
+   "label": "Encuesta de supermercados. Mayo de 2026",
+   "periodo": "2026-05",
+   "serie_key": "super"
+  },
+  {
+   "fecha": "2026-07-23",
+   "fuente": "INDEC",
+   "label": "Encuesta de autoservicios mayoristas. Mayo de 2026",
+   "periodo": "2026-05",
+   "serie_key": "mayor"
+  },
+  {
+   "fecha": "2026-07-23",
+   "fuente": "INDEC",
+   "label": "Encuesta nacional de centros de compras. Mayo de 2026",
+   "periodo": "2026-05",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-07-24",
+   "fuente": "INDEC",
+   "label": "Índices de patentamientos. Segundo trimestre de 2026",
+   "periodo": "2°T 2026",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-07-27",
+   "fuente": "INDEC",
+   "label": "Estadísticas de turismo internacional. Junio y segundo trimestre de 2026",
+   "periodo": "2°T 2026",
+   "serie_key": "turismo"
+  },
+  {
+   "fecha": "2026-07-29",
+   "fuente": "INDEC",
+   "label": "INDEC Informa",
+   "periodo": "",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-07-30",
+   "fuente": "INDEC",
+   "label": "Índices de precios y cantidades del comercio exterior. Segundo trimestre de 2026",
+   "periodo": "2°T 2026",
+   "serie_key": null
+  },
+  {
    "fecha": "2026-07-30",
    "fuente": "BCRA",
    "label": "Informe sobre Deuda Externa Privada",
    "periodo": "",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-07-31",
+   "fuente": "INDEC",
+   "label": "Dotación de personal de la administración pública nacional, empresas y sociedades. Junio de 2026",
+   "periodo": "2026-06",
    "serie_key": null
   },
   {
@@ -395,10 +1760,38 @@
   },
   {
    "fecha": "2026-08-03",
+   "fuente": "INDEC",
+   "label": "Bases de microdatos de la Encuesta Permanente de Hogares. Primer trimestre de 2026",
+   "periodo": "1°T 2026",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-08-03",
    "fuente": "ARCA",
    "label": "Recaudación tributaria nacional",
    "periodo": "2026-07",
    "serie_key": "rec"
+  },
+  {
+   "fecha": "2026-08-04",
+   "fuente": "INDEC",
+   "label": "Argentine Foreign Trade Statistics. Merchandise. Preliminary data for the first half of 2026",
+   "periodo": "",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-08-06",
+   "fuente": "INDEC",
+   "label": "Índice de producción industrial minero (IPI minero). Junio de 2026",
+   "periodo": "2026-06",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-08-06",
+   "fuente": "INDEC",
+   "label": "Índice de producción industrial pesquero (IPI pesquero). Junio de 2026",
+   "periodo": "2026-06",
+   "serie_key": null
   },
   {
    "fecha": "2026-08-06",
@@ -416,10 +1809,59 @@
   },
   {
    "fecha": "2026-08-07",
+   "fuente": "INDEC",
+   "label": "Índice de producción industrial manufacturero (IPI manufacturero). Junio de 2026",
+   "periodo": "2026-06",
+   "serie_key": "ipi"
+  },
+  {
+   "fecha": "2026-08-07",
+   "fuente": "INDEC",
+   "label": "Indicadores de coyuntura de la actividad de la construcción. Junio de 2026",
+   "periodo": "2026-06",
+   "serie_key": "isac"
+  },
+  {
+   "fecha": "2026-08-07",
    "fuente": "BCRA",
    "label": "Informe Monetario Mensual",
    "periodo": "",
    "serie_key": null
+  },
+  {
+   "fecha": "2026-08-11",
+   "fuente": "INDEC",
+   "label": "Indicador sintético de servicios públicos (ISSP). Mayo de 2026",
+   "periodo": "2026-05",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-08-12",
+   "fuente": "INDEC",
+   "label": "Cuenta satélite de cultura. Valor agregado bruto, comercio exterior, puestos de trabajo, generación del ingreso y consumo privado cultural. Año 2025",
+   "periodo": "2025",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-08-13",
+   "fuente": "INDEC",
+   "label": "Índice de precios al consumidor (IPC). Cobertura nacional. Julio de 2026",
+   "periodo": "2026-07",
+   "serie_key": "ipc"
+  },
+  {
+   "fecha": "2026-08-13",
+   "fuente": "INDEC",
+   "label": "Valorización mensual de la canasta básica alimentaria (CBA) y de la canasta básica total (CBT). Julio de 2026",
+   "periodo": "2026-07",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-08-14",
+   "fuente": "INDEC",
+   "label": "Utilización de la capacidad instalada en la industria (UCII). Junio de 2026",
+   "periodo": "2026-06",
+   "serie_key": "uci"
   },
   {
    "fecha": "2026-08-14",
@@ -429,11 +1871,137 @@
    "serie_key": null
   },
   {
+   "fecha": "2026-08-18",
+   "fuente": "INDEC",
+   "label": "Valorización mensual de la canasta de crianza de la primera infancia, la niñez y la adolescencia. Julio de 2026",
+   "periodo": "2026-07",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-08-18",
+   "fuente": "INDEC",
+   "label": "Sistema de índices de precios mayoristas (SIPM). Julio de 2026",
+   "periodo": "2026-07",
+   "serie_key": "ipim"
+  },
+  {
+   "fecha": "2026-08-18",
+   "fuente": "INDEC",
+   "label": "Índice del costo de la construcción (ICC). Julio de 2026",
+   "periodo": "2026-07",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-08-19",
+   "fuente": "INDEC",
+   "label": "Encuesta de tendencia de negocios. Supermercados y autoservicios mayoristas. Expectativas agosto-octubre de 2026",
+   "periodo": "2026-10",
+   "serie_key": "mayor"
+  },
+  {
+   "fecha": "2026-08-19",
+   "fuente": "INDEC",
+   "label": "Encuesta de tendencia de negocios. Industria manufacturera. Expectativas agosto-octubre de 2026",
+   "periodo": "2026-10",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-08-20",
+   "fuente": "INDEC",
+   "label": "Intercambio comercial argentino (ICA). Bienes. Julio de 2026",
+   "periodo": "2026-07",
+   "serie_key": "bc"
+  },
+  {
+   "fecha": "2026-08-20",
+   "fuente": "INDEC",
+   "label": "Estimador mensual de actividad económica (EMAE). Junio de 2026",
+   "periodo": "2026-06",
+   "serie_key": "emae"
+  },
+  {
+   "fecha": "2026-08-20",
+   "fuente": "INDEC",
+   "label": "Índice de salarios. Junio de 2026",
+   "periodo": "2026-06",
+   "serie_key": "salarios"
+  },
+  {
+   "fecha": "2026-08-21",
+   "fuente": "INDEC",
+   "label": "Encuesta de supermercados. Junio de 2026",
+   "periodo": "2026-06",
+   "serie_key": "super"
+  },
+  {
+   "fecha": "2026-08-21",
+   "fuente": "INDEC",
+   "label": "Encuesta de autoservicios mayoristas. Junio de 2026",
+   "periodo": "2026-06",
+   "serie_key": "mayor"
+  },
+  {
+   "fecha": "2026-08-21",
+   "fuente": "INDEC",
+   "label": "Encuesta nacional de centros de compras. Junio de 2026",
+   "periodo": "2026-06",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-08-21",
+   "fuente": "INDEC",
+   "label": "Encuesta de comercios de electrodomésticos y artículos para el hogar. Segundo trimestre de 2026",
+   "periodo": "2°T 2026",
+   "serie_key": null
+  },
+  {
    "fecha": "2026-08-22",
    "fuente": "Hacienda",
    "label": "Resultado fiscal SPNF (IMIG)",
    "periodo": "2026-07",
    "serie_key": "fiscal"
+  },
+  {
+   "fecha": "2026-08-24",
+   "fuente": "INDEC",
+   "label": "Cuenta de energía. Flujos físicos. Año 2023",
+   "periodo": "2023",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-08-25",
+   "fuente": "INDEC",
+   "label": "Estadísticas de turismo internacional. Julio de 2026",
+   "periodo": "2026-07",
+   "serie_key": "turismo"
+  },
+  {
+   "fecha": "2026-08-25",
+   "fuente": "INDEC",
+   "label": "Remuneración al trabajo asalariado, ingreso mixto e insumo de la mano de obra, por sexo y tramos de edad. Año 2025",
+   "periodo": "2025",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-08-26",
+   "fuente": "INDEC",
+   "label": "Complejos exportadores. Primer semestre de 2026",
+   "periodo": "",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-08-27",
+   "fuente": "INDEC",
+   "label": "Ingreso nacional y ahorro nacional. Año 2025",
+   "periodo": "2025",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-08-28",
+   "fuente": "INDEC",
+   "label": "Informe de la industria de maquinaria agrícola. Segundo trimestre de 2026",
+   "periodo": "2°T 2026",
+   "serie_key": null
   },
   {
    "fecha": "2026-08-28",
@@ -450,6 +2018,13 @@
    "serie_key": null
   },
   {
+   "fecha": "2026-08-31",
+   "fuente": "INDEC",
+   "label": "Dotación de personal de la administración pública nacional, empresas y sociedades. Julio de 2026",
+   "periodo": "2026-07",
+   "serie_key": null
+  },
+  {
    "fecha": "2026-09-01",
    "fuente": "ARCA",
    "label": "Recaudación tributaria nacional",
@@ -457,10 +2032,59 @@
    "serie_key": "rec"
   },
   {
+   "fecha": "2026-09-02",
+   "fuente": "INDEC",
+   "label": "Origen provincial de las exportaciones. Bienes. Primer semestre de 2026",
+   "periodo": "",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-09-02",
+   "fuente": "INDEC",
+   "label": "Accesos a internet. Segundo trimestre de 2026",
+   "periodo": "2°T 2026",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-09-03",
+   "fuente": "INDEC",
+   "label": "Índice de producción industrial pesquero (IPI pesquero). Julio de 2026",
+   "periodo": "2026-07",
+   "serie_key": null
+  },
+  {
    "fecha": "2026-09-04",
    "fuente": "BCRA",
    "label": "Relevamiento de Expectativas de Mercado (REM)",
    "periodo": "",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-09-08",
+   "fuente": "INDEC",
+   "label": "Índice de producción industrial manufacturero (IPI manufacturero). Julio de 2026",
+   "periodo": "2026-07",
+   "serie_key": "ipi"
+  },
+  {
+   "fecha": "2026-09-08",
+   "fuente": "INDEC",
+   "label": "Indicadores de coyuntura de la actividad de la construcción. Julio de 2026",
+   "periodo": "2026-07",
+   "serie_key": "isac"
+  },
+  {
+   "fecha": "2026-09-09",
+   "fuente": "INDEC",
+   "label": "Indicador sintético de servicios públicos (ISSP). Junio de 2026",
+   "periodo": "2026-06",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-09-09",
+   "fuente": "INDEC",
+   "label": "Índice de producción industrial minero (IPI minero). Julio de 2026",
+   "periodo": "2026-07",
    "serie_key": null
   },
   {
@@ -471,6 +2095,27 @@
    "serie_key": null
   },
   {
+   "fecha": "2026-09-10",
+   "fuente": "INDEC",
+   "label": "Índice de precios al consumidor (IPC). Cobertura nacional. Agosto de 2026",
+   "periodo": "2026-08",
+   "serie_key": "ipc"
+  },
+  {
+   "fecha": "2026-09-10",
+   "fuente": "INDEC",
+   "label": "Valorización mensual de la canasta básica alimentaria (CBA) y de la canasta básica total (CBT). Agosto de 2026",
+   "periodo": "2026-08",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-09-14",
+   "fuente": "INDEC",
+   "label": "Valorización mensual de la canasta de crianza de la primera infancia, la niñez y la adolescencia. Agosto de 2026",
+   "periodo": "2026-08",
+   "serie_key": null
+  },
+  {
    "fecha": "2026-09-14",
    "fuente": "BCRA",
    "label": "Boletín Estadístico",
@@ -478,11 +2123,123 @@
    "serie_key": null
   },
   {
+   "fecha": "2026-09-15",
+   "fuente": "INDEC",
+   "label": "Utilización de la capacidad instalada en la industria (UCII). Julio de 2026",
+   "periodo": "2026-07",
+   "serie_key": "uci"
+  },
+  {
+   "fecha": "2026-09-16",
+   "fuente": "INDEC",
+   "label": "Índice del costo de la construcción (ICC). Agosto de 2026",
+   "periodo": "2026-08",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-09-16",
+   "fuente": "INDEC",
+   "label": "Sistema de índices de precios mayoristas (SIPM). Agosto de 2026",
+   "periodo": "2026-08",
+   "serie_key": "ipim"
+  },
+  {
+   "fecha": "2026-09-17",
+   "fuente": "INDEC",
+   "label": "Informe de avance del nivel de actividad. Segundo trimestre de 2026",
+   "periodo": "2°T 2026",
+   "serie_key": "pbi"
+  },
+  {
+   "fecha": "2026-09-17",
+   "fuente": "INDEC",
+   "label": "Mercado de trabajo. Tasas e indicadores socioeconómicos. Segundo trimestre de 2026",
+   "periodo": "2°T 2026",
+   "serie_key": "eph"
+  },
+  {
+   "fecha": "2026-09-17",
+   "fuente": "INDEC",
+   "label": "Industria farmacéutica en la Argentina. Segundo trimestre de 2026",
+   "periodo": "2°T 2026",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-09-18",
+   "fuente": "INDEC",
+   "label": "Intercambio comercial argentino (ICA). Bienes. Agosto de 2026",
+   "periodo": "2026-08",
+   "serie_key": "bc"
+  },
+  {
+   "fecha": "2026-09-21",
+   "fuente": "INDEC",
+   "label": "Encuesta de tendencia de negocios. Supermercados y autoservicios mayoristas. Expectativas septiembre-noviembre de 2026",
+   "periodo": "2026-11",
+   "serie_key": "mayor"
+  },
+  {
+   "fecha": "2026-09-21",
+   "fuente": "INDEC",
+   "label": "Encuesta de tendencia de negocios. Industria manufacturera. Expectativas septiembre-noviembre de 2026",
+   "periodo": "2026-11",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-09-22",
+   "fuente": "INDEC",
+   "label": "Índice de salarios. Julio de 2026",
+   "periodo": "2026-07",
+   "serie_key": "salarios"
+  },
+  {
    "fecha": "2026-09-22",
    "fuente": "Hacienda",
    "label": "Resultado fiscal SPNF (IMIG)",
    "periodo": "2026-08",
    "serie_key": "fiscal"
+  },
+  {
+   "fecha": "2026-09-23",
+   "fuente": "INDEC",
+   "label": "Encuesta de supermercados. Julio de 2026",
+   "periodo": "2026-07",
+   "serie_key": "super"
+  },
+  {
+   "fecha": "2026-09-23",
+   "fuente": "INDEC",
+   "label": "Encuesta de autoservicios mayoristas. Julio de 2026",
+   "periodo": "2026-07",
+   "serie_key": "mayor"
+  },
+  {
+   "fecha": "2026-09-23",
+   "fuente": "INDEC",
+   "label": "Encuesta nacional de centros de compras. Julio de 2026",
+   "periodo": "2026-07",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-09-24",
+   "fuente": "INDEC",
+   "label": "Estimador mensual de actividad económica (EMAE). Julio de 2026",
+   "periodo": "2026-07",
+   "serie_key": "emae"
+  },
+  {
+   "fecha": "2026-09-24",
+   "fuente": "INDEC",
+   "label": "Incidencia de la pobreza y de la indigencia en 31 algomerados urbanos. Primer semestre de 2026",
+   "periodo": "",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-09-25",
+   "fuente": "INDEC",
+   "label": "Estadísticas de turismo internacional. Agosto de 2026",
+   "periodo": "2026-08",
+   "serie_key": "turismo"
   },
   {
    "fecha": "2026-09-25",
@@ -499,11 +2256,53 @@
    "serie_key": null
   },
   {
+   "fecha": "2026-09-28",
+   "fuente": "INDEC",
+   "label": "Estadísticas de productos industriales (EPI) Indicadores del sector energético. Segundo trimestre de 2026",
+   "periodo": "2°T 2026",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-09-29",
+   "fuente": "INDEC",
+   "label": "Balanza de pagos, posición de inversión internacional y deuda externa. Segundo trimestre de 2026",
+   "periodo": "2°T 2026",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-09-30",
+   "fuente": "INDEC",
+   "label": "Dotación de personal de la administración pública nacional, empresas y sociedades. Agosto de 2026",
+   "periodo": "2026-08",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-09-30",
+   "fuente": "INDEC",
+   "label": "Dosier estadístico de personas mayores 2026 Actualizado al 20/02/2026 CALENDARIO DE DIFUSIÓN. Segundo semestre de 2026",
+   "periodo": "",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-10-01",
+   "fuente": "INDEC",
+   "label": "Evolución de la distribución del ingreso (EPH). Segundo trimestre de 2026",
+   "periodo": "2°T 2026",
+   "serie_key": "eph"
+  },
+  {
    "fecha": "2026-10-01",
    "fuente": "ARCA",
    "label": "Recaudación tributaria nacional",
    "periodo": "2026-09",
    "serie_key": "rec"
+  },
+  {
+   "fecha": "2026-10-06",
+   "fuente": "INDEC",
+   "label": "Índice de producción industrial pesquero (IPI pesquero). Agosto de 2026",
+   "periodo": "2026-08",
+   "serie_key": null
   },
   {
    "fecha": "2026-10-06",
@@ -514,9 +2313,51 @@
   },
   {
    "fecha": "2026-10-07",
+   "fuente": "INDEC",
+   "label": "Índice de producción industrial manufacturero (IPI manufacturero). Agosto de 2026",
+   "periodo": "2026-08",
+   "serie_key": "ipi"
+  },
+  {
+   "fecha": "2026-10-07",
+   "fuente": "INDEC",
+   "label": "Indicadores de coyuntura de la actividad de la construcción. Agosto de 2026",
+   "periodo": "2026-08",
+   "serie_key": "isac"
+  },
+  {
+   "fecha": "2026-10-07",
    "fuente": "BCRA",
    "label": "Informe Monetario Mensual",
    "periodo": "",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-10-08",
+   "fuente": "INDEC",
+   "label": "Índice de producción industrial minero (IPI minero). Agosto de 2026",
+   "periodo": "2026-08",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-10-08",
+   "fuente": "INDEC",
+   "label": "Indicador sintético de servicios públicos (ISSP). Julio de 2026",
+   "periodo": "2026-07",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-10-13",
+   "fuente": "INDEC",
+   "label": "Índice de precios al consumidor (IPC). Cobertura nacional. Septiembre de 2026",
+   "periodo": "2026-09",
+   "serie_key": "ipc"
+  },
+  {
+   "fecha": "2026-10-13",
+   "fuente": "INDEC",
+   "label": "Índices de patentamientos. Tercer trimestre de 2026",
+   "periodo": "3°T 2026",
    "serie_key": null
   },
   {
@@ -527,10 +2368,129 @@
    "serie_key": null
   },
   {
+   "fecha": "2026-10-15",
+   "fuente": "INDEC",
+   "label": "Valorización mensual de la canasta básica alimentaria (CBA) y de la canasta básica total (CBT). Septiembre de 2026",
+   "periodo": "2026-09",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-10-15",
+   "fuente": "INDEC",
+   "label": "Utilización de la capacidad instalada en la industria (UCII). Agosto de 2026",
+   "periodo": "2026-08",
+   "serie_key": "uci"
+  },
+  {
+   "fecha": "2026-10-15",
+   "fuente": "INDEC",
+   "label": "Cuenta de generación del ingreso e insumo de mano de obra. Segundo trimestre de 2026",
+   "periodo": "2°T 2026",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-10-16",
+   "fuente": "INDEC",
+   "label": "Valorización mensual de la canasta de crianza de la primera infancia, la niñez y la adolescencia. Septiembre de 2026",
+   "periodo": "2026-09",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-10-16",
+   "fuente": "INDEC",
+   "label": "Sistema de índices de precios mayoristas (SIPM). Septiembre de 2026",
+   "periodo": "2026-09",
+   "serie_key": "ipim"
+  },
+  {
+   "fecha": "2026-10-16",
+   "fuente": "INDEC",
+   "label": "Índice del costo de la construcción (ICC). Septiembre de 2026",
+   "periodo": "2026-09",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-10-19",
+   "fuente": "INDEC",
+   "label": "Intercambio comercial argentino (ICA). Bienes. Septiembre de 2026",
+   "periodo": "2026-09",
+   "serie_key": "bc"
+  },
+  {
+   "fecha": "2026-10-20",
+   "fuente": "INDEC",
+   "label": "Encuesta de tendencia de negocios. Supermercados y autoservicios mayoristas. Expectativas octubre-diciembre de 2026",
+   "periodo": "2026-12",
+   "serie_key": "mayor"
+  },
+  {
+   "fecha": "2026-10-20",
+   "fuente": "INDEC",
+   "label": "Encuesta de tendencia de negocios. Industria manufacturera. Expectativas octubre-diciembre de 2026",
+   "periodo": "2026-12",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-10-21",
+   "fuente": "INDEC",
+   "label": "Estimador mensual de actividad económica (EMAE). Agosto de 2026",
+   "periodo": "2026-08",
+   "serie_key": "emae"
+  },
+  {
+   "fecha": "2026-10-21",
+   "fuente": "INDEC",
+   "label": "Índice de salarios. Agosto de 2026",
+   "periodo": "2026-08",
+   "serie_key": "salarios"
+  },
+  {
+   "fecha": "2026-10-22",
+   "fuente": "INDEC",
+   "label": "Encuesta de supermercados. Agosto de 2026",
+   "periodo": "2026-08",
+   "serie_key": "super"
+  },
+  {
+   "fecha": "2026-10-22",
+   "fuente": "INDEC",
+   "label": "Encuesta de autoservicios mayoristas. Agosto de 2026",
+   "periodo": "2026-08",
+   "serie_key": "mayor"
+  },
+  {
+   "fecha": "2026-10-22",
+   "fuente": "INDEC",
+   "label": "Encuesta nacional de centros de compras. Agosto de 2026",
+   "periodo": "2026-08",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-10-26",
+   "fuente": "INDEC",
+   "label": "Estadísticas de turismo internacional. Septiembre y tercer trimestre de 2026",
+   "periodo": "3°T 2026",
+   "serie_key": "turismo"
+  },
+  {
+   "fecha": "2026-10-28",
+   "fuente": "INDEC",
+   "label": "INDEC Informa",
+   "periodo": "",
+   "serie_key": null
+  },
+  {
    "fecha": "2026-10-29",
    "fuente": "BCRA",
    "label": "Informe sobre Deuda Externa Privada",
    "periodo": "",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-10-30",
+   "fuente": "INDEC",
+   "label": "Dotación de personal de la administración pública nacional, empresas y sociedades. Septiembre de 2026",
+   "periodo": "2026-09",
    "serie_key": null
   },
   {
@@ -555,6 +2515,34 @@
    "serie_key": null
   },
   {
+   "fecha": "2026-11-03",
+   "fuente": "INDEC",
+   "label": "Índices de precios y cantidades del comercio exterior. Tercer trimestre de 2026",
+   "periodo": "3°T 2026",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-11-04",
+   "fuente": "INDEC",
+   "label": "Indicadores de condiciones de vida de los hogares (EPH). Primer semestre de 2026",
+   "periodo": "",
+   "serie_key": "eph"
+  },
+  {
+   "fecha": "2026-11-04",
+   "fuente": "INDEC",
+   "label": "Bases de microdatos de la Encuesta Permanente de Hogares. Segundo trimestre de 2026",
+   "periodo": "2°T 2026",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-11-05",
+   "fuente": "INDEC",
+   "label": "Índice de producción industrial pesquero (IPI pesquero). Septiembre de 2026",
+   "periodo": "2026-09",
+   "serie_key": null
+  },
+  {
    "fecha": "2026-11-05",
    "fuente": "BCRA",
    "label": "Informe sobre Inversión Extranjera Directa",
@@ -569,11 +2557,67 @@
    "serie_key": null
   },
   {
+   "fecha": "2026-11-06",
+   "fuente": "INDEC",
+   "label": "Índice de producción industrial minero (IPI minero). Septiembre de 2026",
+   "periodo": "2026-09",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-11-09",
+   "fuente": "INDEC",
+   "label": "Índice de producción industrial manufacturero (IPI manufacturero). Septiembre de 2026",
+   "periodo": "2026-09",
+   "serie_key": "ipi"
+  },
+  {
+   "fecha": "2026-11-09",
+   "fuente": "INDEC",
+   "label": "Indicadores de coyuntura de la actividad de la construcción. Septiembre de 2026",
+   "periodo": "2026-09",
+   "serie_key": "isac"
+  },
+  {
    "fecha": "2026-11-09",
    "fuente": "BCRA",
    "label": "Informe Monetario Mensual",
    "periodo": "",
    "serie_key": null
+  },
+  {
+   "fecha": "2026-11-11",
+   "fuente": "INDEC",
+   "label": "Indicador sintético de servicios públicos (ISSP). Agosto de 2026",
+   "periodo": "2026-08",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-11-12",
+   "fuente": "INDEC",
+   "label": "Índice de precios al consumidor (IPC). Cobertura nacional. Octubre de 2026",
+   "periodo": "2026-10",
+   "serie_key": "ipc"
+  },
+  {
+   "fecha": "2026-11-12",
+   "fuente": "INDEC",
+   "label": "Valorización mensual de la canasta básica alimentaria (CBA) y de la canasta básica total (CBT). Octubre de 2026",
+   "periodo": "2026-10",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-11-13",
+   "fuente": "INDEC",
+   "label": "Índice de salarios. Septiembre de 2026",
+   "periodo": "2026-09",
+   "serie_key": "salarios"
+  },
+  {
+   "fecha": "2026-11-13",
+   "fuente": "INDEC",
+   "label": "Utilización de la capacidad instalada en la industria (UCII). Septiembre de 2026",
+   "periodo": "2026-09",
+   "serie_key": "uci"
   },
   {
    "fecha": "2026-11-13",
@@ -583,11 +2627,123 @@
    "serie_key": null
   },
   {
+   "fecha": "2026-11-16",
+   "fuente": "INDEC",
+   "label": "Valorización mensual de la canasta de crianza de la primera infancia, la niñez y la adolescencia. Octubre de 2026",
+   "periodo": "2026-10",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-11-17",
+   "fuente": "INDEC",
+   "label": "Índice del costo de la construcción (ICC). Octubre de 2026",
+   "periodo": "2026-10",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-11-17",
+   "fuente": "INDEC",
+   "label": "Sistema de índices de precios mayoristas (SIPM). Octubre de 2026",
+   "periodo": "2026-10",
+   "serie_key": "ipim"
+  },
+  {
+   "fecha": "2026-11-18",
+   "fuente": "INDEC",
+   "label": "Dosier estadístico en conmemoración del Día Mundial del Niño. Sexta edición",
+   "periodo": "",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-11-19",
+   "fuente": "INDEC",
+   "label": "Intercambio comercial argentino (ICA). Bienes. Octubre de 2026",
+   "periodo": "2026-10",
+   "serie_key": "bc"
+  },
+  {
+   "fecha": "2026-11-19",
+   "fuente": "INDEC",
+   "label": "Encuesta de tendencia de negocios. Supermercados y autoservicios mayoristas. Expectativas noviembre 2026",
+   "periodo": "",
+   "serie_key": "mayor"
+  },
+  {
+   "fecha": "2026-11-19",
+   "fuente": "INDEC",
+   "label": "-enero 2027",
+   "periodo": "",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-11-19",
+   "fuente": "INDEC",
+   "label": "Encuesta de tendencia de negocios. Industria manufacturera. Expectativas noviembre 2026",
+   "periodo": "",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-11-19",
+   "fuente": "INDEC",
+   "label": "-enero 2027",
+   "periodo": "",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-11-24",
+   "fuente": "INDEC",
+   "label": "Estimador mensual de actividad económica (EMAE). Septiembre de 2026",
+   "periodo": "2026-09",
+   "serie_key": "emae"
+  },
+  {
+   "fecha": "2026-11-25",
+   "fuente": "INDEC",
+   "label": "Encuesta de supermercados. Septiembre de 2026",
+   "periodo": "2026-09",
+   "serie_key": "super"
+  },
+  {
+   "fecha": "2026-11-25",
+   "fuente": "INDEC",
+   "label": "Encuesta nacional de centros de compras. Septiembre de 2026",
+   "periodo": "2026-09",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-11-25",
+   "fuente": "INDEC",
+   "label": "Encuesta de autoservicios mayoristas. Septiembre de 2026",
+   "periodo": "2026-09",
+   "serie_key": "mayor"
+  },
+  {
+   "fecha": "2026-11-25",
+   "fuente": "INDEC",
+   "label": "Encuesta de comercios de electrodomésticos y artículos para el hogar. Tercer trimestre de 2026",
+   "periodo": "3°T 2026",
+   "serie_key": null
+  },
+  {
    "fecha": "2026-11-26",
    "fuente": "BCRA",
    "label": "Informe sobre Proveedores No Financieros de Crédito",
    "periodo": "",
    "serie_key": null
+  },
+  {
+   "fecha": "2026-11-27",
+   "fuente": "INDEC",
+   "label": "Informe de la industria de maquinaria agrícola. Tercer trimestre de 2026",
+   "periodo": "3°T 2026",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-11-27",
+   "fuente": "INDEC",
+   "label": "Estadísticas de turismo internacional. Octubre de 2026",
+   "periodo": "2026-10",
+   "serie_key": "turismo"
   },
   {
    "fecha": "2026-11-27",
@@ -604,6 +2760,83 @@
    "serie_key": null
   },
   {
+   "fecha": "2026-11-30",
+   "fuente": "INDEC",
+   "label": "Dotación de personal de la administración pública nacional, empresas y sociedades. Octubre 2026",
+   "periodo": "",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-12-02",
+   "fuente": "INDEC",
+   "label": "Sistema integrado de estadísticas sociales (SIES). Actualización de fuentes a diciembre de 2026",
+   "periodo": "2026-12",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-12-03",
+   "fuente": "INDEC",
+   "label": "Formación bruta de capital fijo del sector gobierno general. Año 2025",
+   "periodo": "2025",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-12-03",
+   "fuente": "INDEC",
+   "label": "Cuentas por sectores institucionales. Sector gobierno general. Año 2025",
+   "periodo": "2025",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-12-03",
+   "fuente": "INDEC",
+   "label": "Cuentas por sectores institucionales. Sector sociedades financieras. Subsectores banco central, sociedades de depósito excepto el banco central y fondos del mercado monetario. Año 2025",
+   "periodo": "2025",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-12-03",
+   "fuente": "INDEC",
+   "label": "Cuentas por sectores institucionales. El resto del mundo. Año 2025",
+   "periodo": "2025",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-12-04",
+   "fuente": "INDEC",
+   "label": "Accesos a internet. Tercer trimestre de 2026",
+   "periodo": "3°T 2026",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-12-04",
+   "fuente": "INDEC",
+   "label": "Índice de producción industrial pesquero (IPI pesquero). Octubre de 2026",
+   "periodo": "2026-10",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-12-09",
+   "fuente": "INDEC",
+   "label": "Índice de producción industrial manufacturero (IPI manufacturero). Octubre de 2026",
+   "periodo": "2026-10",
+   "serie_key": "ipi"
+  },
+  {
+   "fecha": "2026-12-09",
+   "fuente": "INDEC",
+   "label": "Índice de producción industrial minero (IPI minero). Octubre de 2026",
+   "periodo": "2026-10",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-12-09",
+   "fuente": "INDEC",
+   "label": "Indicadores de coyuntura de la actividad de la construcción. Octubre de 2026",
+   "periodo": "2026-10",
+   "serie_key": "isac"
+  },
+  {
    "fecha": "2026-12-09",
    "fuente": "BCRA",
    "label": "Informe Monetario Mensual",
@@ -611,10 +2844,192 @@
    "serie_key": null
   },
   {
+   "fecha": "2026-12-10",
+   "fuente": "INDEC",
+   "label": "Indicador sintético de servicios públicos (ISSP). Septiembre de 2026",
+   "periodo": "2026-09",
+   "serie_key": null
+  },
+  {
    "fecha": "2026-12-14",
    "fuente": "BCRA",
    "label": "Boletín Estadístico",
    "periodo": "",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-12-15",
+   "fuente": "INDEC",
+   "label": "Índice de precios al consumidor (IPC). Cobertura nacional. Noviembre de 2026",
+   "periodo": "2026-11",
+   "serie_key": "ipc"
+  },
+  {
+   "fecha": "2026-12-15",
+   "fuente": "INDEC",
+   "label": "Valorización mensual de la canasta básica alimentaria (CBA) y de la canasta básica total (CBT). Noviembre de 2026",
+   "periodo": "2026-11",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-12-16",
+   "fuente": "INDEC",
+   "label": "Utilización de la capacidad instalada en la industria (UCII). Octubre de 2026",
+   "periodo": "2026-10",
+   "serie_key": "uci"
+  },
+  {
+   "fecha": "2026-12-16",
+   "fuente": "INDEC",
+   "label": "Informe de avance del nivel de actividad. Tercer trimestre de 2026",
+   "periodo": "3°T 2026",
+   "serie_key": "pbi"
+  },
+  {
+   "fecha": "2026-12-16",
+   "fuente": "INDEC",
+   "label": "Índice de salarios. Octubre de 2026",
+   "periodo": "2026-10",
+   "serie_key": "salarios"
+  },
+  {
+   "fecha": "2026-12-17",
+   "fuente": "INDEC",
+   "label": "Valorización mensual de la canasta de crianza de la primera infancia, la niñez y la adolescencia. Noviembre de 2026",
+   "periodo": "2026-11",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-12-17",
+   "fuente": "INDEC",
+   "label": "Índice del costo de la construcción (ICC). Noviembre de 2026",
+   "periodo": "2026-11",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-12-17",
+   "fuente": "INDEC",
+   "label": "Sistema de índices de precios mayoristas (SIPM). Noviembre de 2026",
+   "periodo": "2026-11",
+   "serie_key": "ipim"
+  },
+  {
+   "fecha": "2026-12-18",
+   "fuente": "INDEC",
+   "label": "Intercambio comercial argentino (ICA). Bienes. Noviembre de 2026",
+   "periodo": "2026-11",
+   "serie_key": "bc"
+  },
+  {
+   "fecha": "2026-12-18",
+   "fuente": "INDEC",
+   "label": "Mercado de trabajo. Tasas e indicadores socioeconómicos. Tercer trimestre de 2026",
+   "periodo": "3°T 2026",
+   "serie_key": "eph"
+  },
+  {
+   "fecha": "2026-12-21",
+   "fuente": "INDEC",
+   "label": "Industria farmacéutica en la Argentina. Tercer trimestre de 2026",
+   "periodo": "3°T 2026",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-12-21",
+   "fuente": "INDEC",
+   "label": "Indicadores del sector energético. Tercer trimestre de 2026",
+   "periodo": "3°T 2026",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-12-21",
+   "fuente": "INDEC",
+   "label": "Estimador mensual de actividad económica (EMAE). Octubre de 2026",
+   "periodo": "2026-10",
+   "serie_key": "emae"
+  },
+  {
+   "fecha": "2026-12-22",
+   "fuente": "INDEC",
+   "label": "Balanza de pagos, posición de inversión internacional y deuda externa. Tercer trimestre de 2026",
+   "periodo": "3°T 2026",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-12-22",
+   "fuente": "INDEC",
+   "label": "Encuesta de tendencia de negocios. Supermercados y autoservicios mayoristas. Expectativas diciembre 2026",
+   "periodo": "",
+   "serie_key": "mayor"
+  },
+  {
+   "fecha": "2026-12-22",
+   "fuente": "INDEC",
+   "label": "-febrero 2027",
+   "periodo": "",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-12-22",
+   "fuente": "INDEC",
+   "label": "Encuesta de tendencia de negocios. Industria manufacturera. Expectativas diciembre 2026",
+   "periodo": "",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-12-22",
+   "fuente": "INDEC",
+   "label": "-febrero 2027",
+   "periodo": "",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-12-23",
+   "fuente": "INDEC",
+   "label": "Evolución de la distribución del ingreso (EPH). Tercer trimestre de 2026",
+   "periodo": "3°T 2026",
+   "serie_key": "eph"
+  },
+  {
+   "fecha": "2026-12-23",
+   "fuente": "INDEC",
+   "label": "Estadísticas de turismo internacional. Noviembre de 2026",
+   "periodo": "2026-11",
+   "serie_key": "turismo"
+  },
+  {
+   "fecha": "2026-12-28",
+   "fuente": "INDEC",
+   "label": "Encuesta de supermercados. Octubre de 2026",
+   "periodo": "2026-10",
+   "serie_key": "super"
+  },
+  {
+   "fecha": "2026-12-28",
+   "fuente": "INDEC",
+   "label": "Encuesta de autoservicios mayoristas. Octubre de 2026",
+   "periodo": "2026-10",
+   "serie_key": "mayor"
+  },
+  {
+   "fecha": "2026-12-28",
+   "fuente": "INDEC",
+   "label": "Encuesta nacional de centros de compras. Octubre de 2026",
+   "periodo": "2026-10",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-12-29",
+   "fuente": "INDEC",
+   "label": "Estadísticas de productos industriales (EPI)",
+   "periodo": "",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-12-30",
+   "fuente": "INDEC",
+   "label": "Dotación de personal de la administración pública nacional, empresas y sociedades. Noviembre de 2026",
+   "periodo": "2026-11",
    "serie_key": null
   },
   {
