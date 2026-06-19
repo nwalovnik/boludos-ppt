@@ -1166,6 +1166,36 @@ def update_daily_series(D: dict) -> int:
     except Exception as e:
         log(f"MERVAL diaria falló: {e}", "warn")
 
+    # === Índices internacionales (Yahoo Finance) — Dow Jones y S&P 500 ===
+    # Para comparar el MERVAL con benchmarks globales. Guardamos valor crudo en
+    # puntos; el HTML normaliza a base 100 para comparar performance relativa.
+    for key, simbolo, nombre in [("dji_d", "%5EDJI", "Dow Jones"), ("spx_d", "%5EGSPC", "S&P 500")]:
+        try:
+            url = f"https://query1.finance.yahoo.com/v8/finance/chart/{simbolo}"
+            data = get_json(url, params={"interval": "1d", "range": "2y"},
+                            headers={**HEADERS, "User-Agent": "Mozilla/5.0"})
+            result = data["chart"]["result"][0]
+            ts = result["timestamp"]
+            closes = result["indicators"]["quote"][0]["close"]
+            arr = D.setdefault(key, [])
+            existing = {r["f"]: i for i, r in enumerate(arr) if "f" in r}
+            for t, c in zip(ts, closes):
+                if c is None:
+                    continue
+                f = datetime.fromtimestamp(t, tz=timezone.utc).strftime("%Y-%m-%d")
+                v = round(float(c), 2)
+                if f in existing:
+                    arr[existing[f]]["v"] = v
+                else:
+                    arr.append({"f": f, "v": v})
+                    existing[f] = len(arr) - 1
+            arr.sort(key=lambda x: x["f"])
+            D[key] = arr[-365:]
+            if D[key]:
+                log(f"{nombre} diaria: último {D[key][-1]['f']} = {D[key][-1]['v']:,.0f}", "ok")
+        except Exception as e:
+            log(f"{nombre} diaria falló: {e}", "warn")
+
     return nuevos
 
 def update_empresas(D: dict) -> int:
@@ -1260,17 +1290,23 @@ def update_fiscal_hacienda(D: dict) -> int:
         if pub_m > 12:
             pub_m -= 12
             pub_y += 1
-        # SOLO formato corto (mes_yy.xlsx) — el formato largo tiene #REF! rotos
-        # El formato corto tiene hojas 'Mes' y 'Acumulado' con valores limpios
+        # Formato corto (mes_yy.xlsx) — hojas 'Mes' y 'Acumulado' con valores limpios.
+        # INDEC/Hacienda guarda el archivo bajo /files/{pub_y}/{pub_m}/ (subdir del mes
+        # de PUBLICACIÓN). Probamos ese path primero y el legacy sin subdir como fallback.
         bytes_xlsx = None
-        url = f"{BASE}/{mes_es}_{y % 100:02d}.xlsx"
-        try:
-            resp = requests.get(url, timeout=10, headers={**HEADERS, "User-Agent": "Mozilla/5.0"})
-            if resp.status_code == 200 and len(resp.content) > 5000 and resp.content[:2] == b"PK":
-                bytes_xlsx = resp.content
-                _record_last_modified("fiscal", resp)
-        except Exception:
-            pass
+        url_candidatas = [
+            f"{BASE}/{pub_y}/{pub_m:02d}/{mes_es}_{y % 100:02d}.xlsx",
+            f"{BASE}/{mes_es}_{y % 100:02d}.xlsx",
+        ]
+        for url in url_candidatas:
+            try:
+                resp = requests.get(url, timeout=10, headers={**HEADERS, "User-Agent": "Mozilla/5.0"})
+                if resp.status_code == 200 and len(resp.content) > 5000 and resp.content[:2] == b"PK":
+                    bytes_xlsx = resp.content
+                    _record_last_modified("fiscal", resp)
+                    break
+            except Exception:
+                continue
         if bytes_xlsx:
             if parse_y_mergear(bytes_xlsx, y, m):
                 continue
@@ -1577,19 +1613,29 @@ def update_ica_xls(D: dict) -> int:
         sh = wb.sheet_by_name("c1")
         meses_idx = {"enero":1,"febrero":2,"marzo":3,"abril":4,"mayo":5,"junio":6,
                      "julio":7,"agosto":8,"septiembre":9,"octubre":10,"noviembre":11,"diciembre":12}
-        # Detectar año actual del header (R5 col 2 → "2026e" o similar)
+        # Detectar año actual/prev del header. INDEC cambió la fila del header
+        # (antes R5, ahora R6: "Período | 2026e | 2025* | ..."). Escaneamos R4-R8
+        # y nos quedamos con la fila que tenga el año en col 2.
         anio_actual = None
         anio_prev = None
-        for c in range(2, sh.ncols):
-            v = sh.cell_value(5, c)
-            if isinstance(v, str):
-                digits = "".join(ch for ch in v if ch.isdigit())
-                if len(digits) == 4 and digits.startswith("20"):
-                    if anio_actual is None:
-                        anio_actual = int(digits)
-                    elif anio_prev is None:
-                        anio_prev = int(digits)
-                        break
+        for hdr_row in range(4, 9):
+            cand_act = cand_prev = None
+            for c in range(2, sh.ncols):
+                v = sh.cell_value(hdr_row, c)
+                if isinstance(v, str):
+                    digits = "".join(ch for ch in v if ch.isdigit())
+                    if len(digits) == 4 and digits.startswith("20"):
+                        if cand_act is None:
+                            cand_act = int(digits)
+                        elif cand_prev is None:
+                            cand_prev = int(digits)
+                            break
+            # La fila válida tiene el año en la columna 2 (Expo año actual)
+            if cand_act is not None:
+                v2 = sh.cell_value(hdr_row, 2)
+                if isinstance(v2, str) and "20" in "".join(ch for ch in v2 if ch.isdigit())[:2]:
+                    anio_actual, anio_prev = cand_act, cand_prev
+                    break
         if anio_actual is None:
             log("ICA XLS: no detecté año actual en header", "warn")
             return 0
@@ -1598,8 +1644,8 @@ def update_ica_xls(D: dict) -> int:
         # Col 2 = Expo año actual, col 3 = Expo año prev
         # Col 6 = Impo año actual, col 7 = Impo año prev
         # Col 10 = Saldo año actual, col 11 = Saldo año prev
-        # Filas 12-23 = meses Enero-Diciembre
-        for row_idx in range(12, 24):
+        # Filas con meses Enero-Diciembre (la fila exacta varía; detectamos por label).
+        for row_idx in range(11, 26):
             mes_label = str(sh.cell_value(row_idx, 1)).strip().lower()
             if mes_label not in meses_idx:
                 continue
@@ -2370,6 +2416,11 @@ def _calendar_oficial_lookup(serie: str, periodo: str) -> datetime | None:
             continue
         if ev.get("periodo") != periodo:
             continue
+        # Solo confiamos en calendarios OFICIALES (INDEC PDF, BCRA HTML). Las
+        # entradas de Hacienda/ARCA son estimaciones propias — para esas usamos
+        # el Last-Modified real del archivo (paso 2 de calcular_fecha_publicacion).
+        if ev.get("fuente") in ("Hacienda", "ARCA"):
+            return None
         try:
             return datetime.fromisoformat(ev["fecha"]).replace(tzinfo=timezone.utc)
         except Exception:

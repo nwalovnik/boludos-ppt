@@ -403,7 +403,12 @@ hr.d{border:none;border-top:.5px solid var(--bd);margin:16px 0}
       <label>Empresa</label>
       <input type="text" id="ed-empresa">
       <label>Empleados</label>
-      <input type="number" id="ed-empleados" min="0">
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="number" id="ed-empleados" min="0" style="flex:1">
+        <label style="display:flex;align-items:center;gap:5px;font-size:11px;text-transform:none;letter-spacing:0;color:var(--tx2);font-weight:400;margin:0;text-transform:uppercase;letter-spacing:.05em">
+          <input type="checkbox" id="ed-empleados-sd" onchange="toggleEmpleadosSd()" style="width:auto"> s/d
+        </label>
+      </div>
       <label>Tipo</label>
       <select id="ed-tipo">
         <option value="despido">Despido</option>
@@ -411,11 +416,14 @@ hr.d{border:none;border-top:.5px solid var(--bd);margin:16px 0}
         <option value="cierre">Cierre</option>
       </select>
       <label>Rubro</label>
-      <input type="text" id="ed-rubro">
+      <div>
+        <select id="ed-rubro" onchange="toggleRubroOtro()" style="margin-bottom:4px"></select>
+        <input type="text" id="ed-rubro-otro" placeholder="Especificar (rubro Otro)..." style="display:none">
+      </div>
       <label>Provincia</label>
-      <input type="text" id="ed-provincia">
+      <select id="ed-provincia" onchange="toggleMunicipio()"></select>
       <label>Municipio</label>
-      <input type="text" id="ed-municipio">
+      <select id="ed-municipio"><option value="">—</option></select>
       <label>Sector</label>
       <select id="ed-sector">
         <option value="Sector Privado">Privado</option>
@@ -742,8 +750,10 @@ function renderTabla(){
                 '<span class="tag-tipo tag-desp">Despido</span>';
     var estadoTag='';
     if(r.estado==='Pendiente revisión')estadoTag='<span class="tag-fuente tag-pend">⏳ Pendiente</span>';
-    var empClass=r.empleados>0?'td-emp':'td-emp cero';
-    var empTxt=r.empleados>0?r.empleados.toLocaleString('es'):'—';
+    var emp = r.empleados;
+    var empSd = (emp === null || emp === undefined);
+    var empClass = empSd ? 'td-emp cero' : (emp > 0 ? 'td-emp' : 'td-emp cero');
+    var empTxt = empSd ? 's/d' : (emp > 0 ? emp.toLocaleString('es') : '0');
     var link=r.url?'<a href="'+r.url+'" target="_blank">&#8599;</a>':'';
     var rid = r.id || '';
     var editedBadge = r.edited ? ' <span style="font-size:9px;color:var(--grn);font-weight:600">✓</span>' : '';
@@ -804,22 +814,36 @@ function buildNuevas(){
     c.innerHTML='<div style="color:var(--tx2);font-size:13px;padding:20px 0">No hay noticias nuevas en los últimos 7 días.</div>';
     return;
   }
-  var html='<div class="info-box"><b>'+NUEVOS.length+' noticias detectadas en los últimos 7 días.</b> Estas están marcadas como "Pendiente revisión" en la tabla — revisalas y confirmá o eliminá las que no correspondan.</div>';
+  var html='<div class="info-box"><b>'+NUEVOS.length+' noticias detectadas en los últimos 7 días.</b> Revisalas y confirmá, editá o eliminá según corresponda.</div>';
   NUEVOS.forEach(function(r,i){
+    var rid = r.id || '';
+    var emp = r.empleados;
+    var empSd = (emp === null || emp === undefined);
+    var empBlock = empSd ? '<div style="font-size:12px;color:var(--tx3)">s/d</div>' :
+                   (emp > 0 ? '<div style="font-size:18px;font-weight:700;color:var(--red)">'+emp.toLocaleString('es')+'</div><div style="font-size:10px;color:var(--tx3)">empleos</div>' :
+                              '<div style="font-size:14px;color:var(--tx2)">0</div>');
+    var acciones = rid ?
+      '<div class="row-acts" style="margin-top:8px">'+
+        '<button class="row-btn" title="Editar" onclick="abrirEditarPorId(\''+rid+'\')">✎</button>'+
+        '<button class="row-btn row-btn-del" title="Eliminar" onclick="confirmarEliminar(\''+rid+'\')">✕</button>'+
+      '</div>' : '';
     html+='<div class="cc" style="margin-bottom:8px">'+
       '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">'+
-      '<div>'+
+      '<div style="flex:1">'+
         '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">'+
           '<span style="font-size:13px;font-weight:600">'+esc(r.empresa||'Sin empresa')+'</span>'+
           (function(){var t=r.tipo||'despido';return t==='suspensión'?'<span class="tag-tipo tag-susp">Suspensión</span>':t==='cierre'?'<span class="tag-tipo tag-cierre">Cierre</span>':'<span class="tag-tipo tag-desp">Despido</span>';}())+
         '</div>'+
         '<div style="font-size:11px;color:var(--tx2);margin-top:2px">'+
           (r.fecha||'')+(r.provincia?' · '+esc(r.provincia):'')+(r.rubro?' · '+esc(r.rubro):'')+'</div>'+
-        (r.comentario?'<div style="font-size:12px;color:var(--tx);margin-top:6px;line-height:1.5">'+esc(r.comentario.slice(0,200))+'</div>':'')+'</div>'+
+        (r.comentario?'<div style="font-size:12px;color:var(--tx);margin-top:6px;line-height:1.5">'+esc(r.comentario.slice(0,200))+'</div>':'')+
+        (r.url?'<div style="margin-top:8px"><a href="'+r.url+'" target="_blank" style="font-size:11px;color:var(--acc)">Ver noticia &#8599;</a></div>':'')+
+      '</div>'+
       '<div style="text-align:right;flex-shrink:0">'+
-        (r.empleados>0?'<div style="font-size:18px;font-weight:700;color:var(--red)">'+r.empleados.toLocaleString('es')+'</div><div style="font-size:10px;color:var(--tx3)">empleos</div>':'<div style="font-size:12px;color:var(--tx3)">sin dato</div>')+
+        empBlock+
+        acciones+
       '</div></div>'+
-      (r.url?'<div style="margin-top:8px"><a href="'+r.url+'" target="_blank" style="font-size:11px;color:var(--acc)">Ver noticia &#8599;</a></div>':'')+'</div>';
+    '</div>';
   });
   c.innerHTML=html;
 }
@@ -1279,6 +1303,98 @@ function generarInforme(){
 // ── Editar/Eliminar evento ──────────────────────────────────────────────────
 var EDIT_TARGET = null;
 
+// ── Listas canónicas para los dropdowns del modal ───────────────────────────
+var RUBROS_CANON = [
+  'Agro','Agrícola','Alimentos y bebidas','Alimento Balanceado','Ascensores',
+  'Automotriz','Autopartes','APN','Calzado','Comercio mayorista o minorista',
+  'Comercio','Construcción','e-commerce','Educación','Electrodomésticos, línea blanca',
+  'Energía','Estado Nacional','Farmacéutica','Gastronomía','Herramientas manuales',
+  'Hotelería','Industria del vidrio','Insumos eléctricos','Línea blanca-Metalmecánica',
+  'Logística','Materiales eléctricos','Medios de comunicación','Metalúrgica/Metalmecánica',
+  'Pesca','Petroquímica','Química/Petroquímica','Salud','Sector Público',
+  'Sector Público/Salud','Seguros','Tecnología','Textil','Tejidos Industriales',
+  'Transporte','Transporte y logística','Turismo','Yerba Mate','Otro'
+];
+
+var PROVINCIAS_CANON = [
+  'Buenos Aires','Capital Federal','Catamarca','Chaco','Chubut','Córdoba','Corrientes',
+  'Dato a nivel nacional','Entre Ríos','Formosa','Jujuy','La Pampa','La Rioja',
+  'Mendoza','Misiones','Neuquén','Río Negro','Salta','San Juan','San Luis',
+  'Santa Cruz','Santa Fe','Santiago del Estero','Tierra del Fuego','Tucumán'
+];
+
+// 135 municipios PBA (oficial)
+var MUNICIPIOS_PBA = [
+  'Adolfo Alsina','Adolfo Gonzales Chaves','Alberti','Almirante Brown','Arrecifes',
+  'Avellaneda','Ayacucho','Azul','Bahía Blanca','Balcarce','Baradero','Benito Juárez',
+  'Berazategui','Berisso','Bolívar','Bragado','Brandsen','Campana','Cañuelas',
+  'Capitán Sarmiento','Carlos Casares','Carlos Tejedor','Carmen de Areco','Castelli',
+  'Chacabuco','Chascomús','Chivilcoy','Colón','Coronel de Marina Leonardo Rosales',
+  'Coronel Dorrego','Coronel Pringles','Coronel Suárez','Daireaux','Dolores',
+  'Ensenada','Escobar','Esteban Echeverría','Exaltación de la Cruz','Ezeiza',
+  'Florencio Varela','Florentino Ameghino','General Alvarado','General Alvear',
+  'General Arenales','General Belgrano','General Guido','General Juan Madariaga',
+  'General La Madrid','General Las Heras','General Lavalle','General Paz',
+  'General Pinto','General Pueyrredón','General Rodríguez','General San Martín',
+  'General Viamonte','General Villegas','Guaminí','Hipólito Yrigoyen','Hurlingham',
+  'Ituzaingó','José C. Paz','Junín','La Costa','La Matanza','La Plata','Lanús',
+  'Laprida','Las Flores','Leandro N. Alem','Lezama','Lincoln','Lobería','Lobos',
+  'Lomas de Zamora','Luján','Magdalena','Maipú','Malvinas Argentinas','Mar Chiquita',
+  'Marcos Paz','Mercedes','Merlo','Monte','Monte Hermoso','Moreno','Morón',
+  'Navarro','Necochea','Nueve de Julio','Olavarría','Patagones','Pehuajó',
+  'Pellegrini','Pergamino','Pila','Pilar','Pinamar','Presidente Perón','Puán',
+  'Punta Indio','Quilmes','Ramallo','Rauch','Rivadavia','Rojas','Roque Pérez',
+  'Saavedra','Saladillo','Salliqueló','Salto','San Andrés de Giles','San Antonio de Areco',
+  'San Cayetano','San Fernando','San Isidro','San Miguel','San Nicolás','San Pedro',
+  'San Vicente','Suipacha','Tandil','Tapalqué','Tigre','Tordillo','Tornquist',
+  'Trenque Lauquen','Tres Arroyos','Tres de Febrero','Tres Lomas','Veinticinco de Mayo',
+  'Vicente López','Villa Gesell','Villarino','Zárate'
+];
+
+function _llenarSelect(sel, opciones, valActual){
+  sel.innerHTML = '<option value="">—</option>' + opciones.map(function(o){
+    var esc_o = o.replace(/"/g,'&quot;');
+    return '<option value="'+esc_o+'">'+esc_o+'</option>';
+  }).join('');
+  if(valActual){
+    // si el valor actual no esta en la lista, lo agregamos para no perderlo
+    var existe = Array.from(sel.options).some(function(o){return o.value === valActual;});
+    if(!existe){
+      var opt = document.createElement('option');
+      opt.value = valActual; opt.textContent = valActual + ' (custom)';
+      sel.appendChild(opt);
+    }
+    sel.value = valActual;
+  }
+}
+
+function toggleEmpleadosSd(){
+  var sd = document.getElementById('ed-empleados-sd').checked;
+  var inp = document.getElementById('ed-empleados');
+  inp.disabled = sd;
+  if(sd){ inp.dataset.prev = inp.value; inp.value = ''; }
+  else if(inp.dataset.prev) inp.value = inp.dataset.prev;
+}
+
+function toggleRubroOtro(){
+  var sel = document.getElementById('ed-rubro');
+  var inp = document.getElementById('ed-rubro-otro');
+  inp.style.display = (sel.value === 'Otro') ? '' : 'none';
+}
+
+function toggleMunicipio(){
+  var prov = document.getElementById('ed-provincia').value;
+  var muni = document.getElementById('ed-municipio');
+  var actual = EDIT_TARGET ? (EDIT_TARGET.municipio||'') : '';
+  if(prov === 'Buenos Aires'){
+    _llenarSelect(muni, MUNICIPIOS_PBA, actual);
+    muni.disabled = false;
+  } else {
+    muni.innerHTML = '<option value="">—</option>';
+    muni.disabled = true;
+  }
+}
+
 function findEvById(id){
   for(var i=0;i<D.length;i++) if(D[i].id === id) return D[i];
   return null;
@@ -1291,11 +1407,22 @@ function abrirEditarPorId(id){
   document.getElementById('edit-id-disp').textContent = 'ID: '+id+' · fuente: '+(ev.fuente||'manual');
   document.getElementById('ed-fecha').value      = (ev.fecha||'').slice(0,10);
   document.getElementById('ed-empresa').value    = ev.empresa||'';
-  document.getElementById('ed-empleados').value  = ev.empleados||0;
+  // Empleados con soporte s/d: null/undefined = s/d, número = valor
+  var empSd = ev.empleados === null || ev.empleados === undefined;
+  document.getElementById('ed-empleados-sd').checked = empSd;
+  var inpEmp = document.getElementById('ed-empleados');
+  inpEmp.value = empSd ? '' : (ev.empleados);
+  inpEmp.disabled = empSd;
   document.getElementById('ed-tipo').value       = ev.tipo||'despido';
-  document.getElementById('ed-rubro').value      = ev.rubro||'';
-  document.getElementById('ed-provincia').value  = ev.provincia||'';
-  document.getElementById('ed-municipio').value  = ev.municipio||'';
+
+  // Dropdowns canónicos
+  _llenarSelect(document.getElementById('ed-rubro'), RUBROS_CANON, ev.rubro||'');
+  toggleRubroOtro();
+  document.getElementById('ed-rubro-otro').value = '';
+
+  _llenarSelect(document.getElementById('ed-provincia'), PROVINCIAS_CANON, ev.provincia||'');
+  toggleMunicipio(); // setea municipio basado en provincia
+
   document.getElementById('ed-sector').value     = ev.sector||'Sector Privado';
   document.getElementById('ed-estado').value     = ev.estado||'';
   document.getElementById('ed-cerro').value      = ev.cerro ? 'true' : 'false';
@@ -1317,14 +1444,27 @@ function guardarEdicion(){
 
   // Construir patch solo con campos que cambiaron
   var orig = EDIT_TARGET;
+  // Empleados: s/d checkbox → null; sino el numero (acepta 0)
+  var empSd = document.getElementById('ed-empleados-sd').checked;
+  var empVal;
+  if(empSd) empVal = null;
+  else {
+    var n = parseInt(document.getElementById('ed-empleados').value, 10);
+    empVal = isNaN(n) ? null : n;
+  }
+  // Rubro: si es "Otro", usar el input libre
+  var rubroSel = document.getElementById('ed-rubro').value;
+  var rubroOtro = document.getElementById('ed-rubro-otro').value.trim();
+  var rubroFinal = (rubroSel === 'Otro' && rubroOtro) ? rubroOtro : rubroSel;
+
   var nuevos = {
     fecha:      document.getElementById('ed-fecha').value,
     empresa:    document.getElementById('ed-empresa').value.trim(),
-    empleados:  parseInt(document.getElementById('ed-empleados').value, 10) || 0,
+    empleados:  empVal,
     tipo:       document.getElementById('ed-tipo').value,
-    rubro:      document.getElementById('ed-rubro').value.trim(),
-    provincia:  document.getElementById('ed-provincia').value.trim(),
-    municipio:  document.getElementById('ed-municipio').value.trim(),
+    rubro:      rubroFinal,
+    provincia:  document.getElementById('ed-provincia').value,
+    municipio:  document.getElementById('ed-municipio').value,
     sector:     document.getElementById('ed-sector').value,
     estado:     document.getElementById('ed-estado').value.trim(),
     cerro:      document.getElementById('ed-cerro').value === 'true',
@@ -1332,7 +1472,14 @@ function guardarEdicion(){
   };
   var patch = {};
   Object.keys(nuevos).forEach(function(k){
-    if(nuevos[k] !== (orig[k]===undefined ? '' : orig[k])) patch[k] = nuevos[k];
+    var origVal = orig[k];
+    // Normalizar undefined/null para empleados como nulls comparables
+    if(k === 'empleados'){
+      var oN = (origVal === null || origVal === undefined) ? null : origVal;
+      if(nuevos[k] !== oN) patch[k] = nuevos[k];
+    } else if(nuevos[k] !== (origVal===undefined ? '' : origVal)) {
+      patch[k] = nuevos[k];
+    }
   });
   if(!Object.keys(patch).length){ toast('Sin cambios'); cerrarEditar(); return; }
 

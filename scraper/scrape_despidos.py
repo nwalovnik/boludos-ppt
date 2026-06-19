@@ -836,7 +836,7 @@ def extraer_empresa(titulo: str, cuerpo: str = "") -> str:
     return "Sin identificar"
 
 
-def extraer_empleados(titulo: str, cuerpo: str = "") -> int:
+def extraer_empleados(titulo: str, cuerpo: str = "") -> int | None:
     """Extrae cantidad de empleados afectados. Cap en MAX_EMPLEADOS_AUTO.
 
     Estrategia:
@@ -873,7 +873,7 @@ def extraer_empleados(titulo: str, cuerpo: str = "") -> int:
                     return n
             except ValueError:
                 pass
-    return 1
+    return None  # s/d (sin dato extraible)
 
 
 def detectar_tipo(texto: str) -> str:
@@ -1055,7 +1055,8 @@ def _mejor(a: dict, b: dict) -> dict:
     if pa != pb:
         return a if pa > pb else b
     # Misma prioridad: el de mas empleados
-    return a if a.get("empleados", 0) >= b.get("empleados", 0) else b
+    # None se trata como 0 al comparar (preferimos un evento con cifra real)
+    return a if (a.get("empleados") or 0) >= (b.get("empleados") or 0) else b
 
 
 def deduplicar(eventos: list[dict]) -> list[dict]:
@@ -1388,11 +1389,14 @@ def main(argv: list[str] | None = None) -> int:
         elif empresa_new == "Sin identificar" and es_blacklist(empresa_old):
             ev["empresa"] = "Sin identificar"
             relaboreados += 1
-        # Empleados: si era el default 1, intentar recalcular del comentario
+        # Empleados: si era el default 1 (legacy), intentar recalcular del comentario.
+        # Si el extractor nuevo no encuentra cifra, dejamos None (s/d).
         if ev.get("empleados") == 1:
             new_emp = extraer_empleados(coment, "")
-            if new_emp > 1:
+            if new_emp is not None and new_emp > 1:
                 ev["empleados"] = new_emp
+            else:
+                ev["empleados"] = None  # s/d
         sobrevivientes.append(ev)
     eventos_auto_previos = sobrevivientes
     log(f"Eventos auto del bedrock re-procesados: {relaboreados}")
