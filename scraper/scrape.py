@@ -1166,6 +1166,36 @@ def update_daily_series(D: dict) -> int:
     except Exception as e:
         log(f"MERVAL diaria falló: {e}", "warn")
 
+    # === Índices internacionales (Yahoo Finance) — Dow Jones y S&P 500 ===
+    # Para comparar el MERVAL con benchmarks globales. Guardamos valor crudo en
+    # puntos; el HTML normaliza a base 100 para comparar performance relativa.
+    for key, simbolo, nombre in [("dji_d", "%5EDJI", "Dow Jones"), ("spx_d", "%5EGSPC", "S&P 500")]:
+        try:
+            url = f"https://query1.finance.yahoo.com/v8/finance/chart/{simbolo}"
+            data = get_json(url, params={"interval": "1d", "range": "2y"},
+                            headers={**HEADERS, "User-Agent": "Mozilla/5.0"})
+            result = data["chart"]["result"][0]
+            ts = result["timestamp"]
+            closes = result["indicators"]["quote"][0]["close"]
+            arr = D.setdefault(key, [])
+            existing = {r["f"]: i for i, r in enumerate(arr) if "f" in r}
+            for t, c in zip(ts, closes):
+                if c is None:
+                    continue
+                f = datetime.fromtimestamp(t, tz=timezone.utc).strftime("%Y-%m-%d")
+                v = round(float(c), 2)
+                if f in existing:
+                    arr[existing[f]]["v"] = v
+                else:
+                    arr.append({"f": f, "v": v})
+                    existing[f] = len(arr) - 1
+            arr.sort(key=lambda x: x["f"])
+            D[key] = arr[-365:]
+            if D[key]:
+                log(f"{nombre} diaria: último {D[key][-1]['f']} = {D[key][-1]['v']:,.0f}", "ok")
+        except Exception as e:
+            log(f"{nombre} diaria falló: {e}", "warn")
+
     return nuevos
 
 def update_empresas(D: dict) -> int:
