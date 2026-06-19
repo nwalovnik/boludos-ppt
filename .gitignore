@@ -16,3 +16,4 @@ scraper/_tmp_*
 !.dev.vars.example
 .env*
 !.env.example
+_indec_cal.pdf
