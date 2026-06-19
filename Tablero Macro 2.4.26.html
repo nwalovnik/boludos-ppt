@@ -887,9 +887,9 @@ hr.d{border:none;border-top:.5px solid var(--bd);margin:16px 0}
   <div class="cc"><div class="cc-hd"><div><div class="cc-t">EMBI Argentina <span class="breal">JP Morgan / GDS</span></div><div class="cc-s">Puntos básicos &#183; menor = menor riesgo</div></div><button class="dl-btn" onclick="dlCSV('embi_d')">&#8595; CSV</button></div><div style="position:relative;height:220px"><canvas id="c-embi-d"></canvas></div></div>
   <div class="slbl">MERVAL <span class="daily-note">&#128197; Diario desde 2010</span></div>
   <div class="cc"><div class="cc-hd"><div><div class="cc-t">MERVAL <span class="breal">BCBA / GDS</span></div><div class="cc-s">Índice bursatil en pesos &#183; datos diarios</div></div><button class="dl-btn" onclick="dlCSV('merval_d')">&#8595; CSV</button></div><div style="position:relative;height:220px"><canvas id="c-merval-d"></canvas></div></div>
-  <div class="slbl">MERVAL vs índices internacionales <span class="daily-note">&#128197; Base 100 al inicio del período</span></div>
-  <div class="info-box">Comparación de <strong>performance relativa</strong>: las tres series se normalizan a base 100 en la primera fecha visible, para comparar evolución pese a las distintas escalas y monedas. El MERVAL está en pesos (incluye efecto inflación/devaluación); Dow Jones y S&P 500 en dólares. Fuente: <strong>Yahoo Finance</strong>.</div>
-  <div class="cc"><div class="cc-hd"><div><div class="cc-t">MERVAL · Dow Jones · S&amp;P 500 <span class="breal">Yahoo Finance</span></div><div class="cc-s">Base 100 · performance relativa diaria</div></div><div style="display:flex;gap:6px"><button class="dl-btn" onclick="dlCSV('indices_int')">&#8595; CSV</button></div></div><div style="position:relative;height:260px"><canvas id="c-indices-int"></canvas></div></div>
+  <div class="slbl">MERVAL vs índices internacionales <span class="daily-note">&#128197; Valores reales · doble eje</span></div>
+  <div class="info-box">Comparación con benchmarks globales en <strong>valores reales</strong>. El <strong>MERVAL</strong> (en pesos) se lee en el eje izquierdo; <strong>Dow Jones</strong> y <strong>S&P 500</strong> (en puntos) en el eje derecho. El MERVAL en pesos incluye el efecto de inflación y devaluación. Fuente: <strong>Yahoo Finance</strong>.</div>
+  <div class="cc"><div class="cc-hd"><div><div class="cc-t">MERVAL · Dow Jones · S&amp;P 500 <span class="breal">Yahoo Finance</span></div><div class="cc-s">Eje izq: MERVAL ($) · eje der: índices USA (puntos)</div></div><div style="display:flex;gap:6px"><button class="dl-btn" onclick="dlCSV('indices_int')">&#8595; CSV</button></div></div><div style="position:relative;height:260px"><canvas id="c-indices-int"></canvas></div></div>
 </div>
 <div id="pg-industria" class="pg">
   <div class="insight"><strong>Industria manufacturera - IPI:</strong> El Índice de Producción Industrial mide la evolución mensual de la producción física de la industria. Seleccioná una rama para ver su historial, peso en la industria, empleo y variación reciente. Fuente: <strong>INDEC</strong>. <span id="ipi-last-date" style="font-weight:500"></span></div>
@@ -3395,32 +3395,34 @@ function buildExternoFin(){
   buildReservasNetas();
 }
 
-// ── MERVAL vs índices internacionales: normalizado a base 100 ──────────────
+// ── MERVAL vs índices internacionales: valores reales, doble eje ───────────
+// MERVAL en pesos (eje izquierdo) · Dow Jones + S&P 500 en puntos (eje derecho)
 function buildIndicesInt(){
   var c=document.getElementById("c-indices-int");if(!c)return;
   var mv=getDaily((typeof DD!=="undefined"&&DD.merval_d)||[],FIN_DIAS);
   var dj=getDaily((typeof DD!=="undefined"&&DD.dji_d)||[],FIN_DIAS);
   var sp=getDaily((typeof DD!=="undefined"&&DD.spx_d)||[],FIN_DIAS);
   if(!mv.length||(!dj.length&&!sp.length))return;
-  // Eje de fechas común = unión ordenada
+  // Eje de fechas común = unión ordenada, con forward-fill (feriados US vs AR)
   var fechas={};
   [mv,dj,sp].forEach(function(s){s.forEach(function(r){fechas[r.f]=1;});});
   var labels=Object.keys(fechas).sort();
-  // Normalizar cada serie a base 100 en su primer valor disponible, con forward-fill
-  function norm(serie){
+  function ffill(serie){
     var map={};serie.forEach(function(r){if(r.v!=null)map[r.f]=r.v;});
-    var base=null,last=null,out=[];
-    labels.forEach(function(f){
-      if(map[f]!=null){last=map[f];if(base==null)base=map[f];}
-      out.push((base!=null&&last!=null)?Math.round((last/base)*1000)/10:null);
-    });
+    var last=null,out=[];
+    labels.forEach(function(f){ if(map[f]!=null)last=map[f]; out.push(last); });
     return out;
   }
   var sets=[];
-  if(mv.length)sets.push(line("MERVAL ($)",norm(mv),C.purple,{pointRadius:0,borderWidth:1.75}));
-  if(dj.length)sets.push(line("Dow Jones (USD)",norm(dj),C.blue,{pointRadius:0,borderWidth:1.5}));
-  if(sp.length)sets.push(line("S&P 500 (USD)",norm(sp),C.green,{pointRadius:0,borderWidth:1.5}));
-  mk("c-indices-int",labels,sets,{leg:true,xt:8,yf:function(v){return v+"";}});
+  // MERVAL: guardado en miles ($K). Mostramos en pesos enteros.
+  if(mv.length)sets.push(line("MERVAL ($)",ffill(mv).map(function(v){return v!=null?v*1000:null;}),C.purple,{pointRadius:0,borderWidth:1.75,yAxisID:"y"}));
+  if(dj.length)sets.push(line("Dow Jones (pts)",ffill(dj),C.blue,{pointRadius:0,borderWidth:1.5,yAxisID:"y2"}));
+  if(sp.length)sets.push(line("S&P 500 (pts)",ffill(sp),C.green,{pointRadius:0,borderWidth:1.5,yAxisID:"y2"}));
+  mk("c-indices-int",labels,sets,{leg:true,xt:8,
+    yf:function(v){return "$"+fmtN(v/1000,0)+"K";},
+    extra:{scales:{y2:{type:"linear",display:true,position:"right",
+      ticks:{color:TK,font:{size:10},callback:function(v){return fmtN(v,0)+" pts";}},
+      grid:{drawOnChartArea:false}}}}});
 }
 
 // ── Base monetaria mejorada ───────────────────────────────────────────────────
