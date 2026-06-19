@@ -1139,60 +1139,48 @@ def update_daily_series(D: dict) -> int:
     except Exception as e:
         log(f"EMBI diaria falló: {e}", "warn")
 
-    # === MERVAL diaria (Yahoo Finance) — últimos 365 días ===
-    try:
-        url = "https://query1.finance.yahoo.com/v8/finance/chart/%5EMERV"
-        data = get_json(url, params={"interval": "1d", "range": "2y"},
-                        headers={**HEADERS, "User-Agent": "Mozilla/5.0"})
-        result = data["chart"]["result"][0]
-        ts = result["timestamp"]
-        closes = result["indicators"]["quote"][0]["close"]
-        arr = D.setdefault("merval_d", [])
-        existing = {r["f"]: i for i, r in enumerate(arr) if "f" in r}
-        for t, c in zip(ts, closes):
-            if c is None:
-                continue
-            f = datetime.fromtimestamp(t, tz=timezone.utc).strftime("%Y-%m-%d")
-            v = round(float(c) / 1000, 2)  # mismas unidades que el bedrock (miles)
-            if f in existing:
-                arr[existing[f]]["v"] = v
-            else:
-                arr.append({"f": f, "v": v})
-                existing[f] = len(arr) - 1
-        arr.sort(key=lambda x: x["f"])
-        D["merval_d"] = arr[-365:]
-        if D["merval_d"]:
-            log(f"MERVAL diaria: último {D['merval_d'][-1]['f']} = {D['merval_d'][-1]['v']}K", "ok")
-    except Exception as e:
-        log(f"MERVAL diaria falló: {e}", "warn")
-
-    # === Índices internacionales (Yahoo Finance) — Dow Jones y S&P 500 ===
-    # Para comparar el MERVAL con benchmarks globales. Guardamos valor crudo en
-    # puntos; el HTML normaliza a base 100 para comparar performance relativa.
-    for key, simbolo, nombre in [("dji_d", "%5EDJI", "Dow Jones"), ("spx_d", "%5EGSPC", "S&P 500")]:
+    # === Índices bursátiles diarios (Yahoo Finance) — histórico completo desde 2002 ===
+    # MERVAL + Dow Jones + S&P 500. Incremental: si ya hay histórico (vía continuidad
+    # desde data.json previo), solo pedimos los últimos meses; si está vacío o corto,
+    # bajamos todo desde 2002-01-01 con period1/period2.
+    BOLSA_DESDE = datetime(2002, 1, 1, tzinfo=timezone.utc)
+    for key, simbolo, nombre, escala in [
+        ("merval_d", "%5EMERV", "MERVAL", 1000.0),   # MERVAL en miles (compat. bedrock)
+        ("dji_d",    "%5EDJI",  "Dow Jones", 1.0),
+        ("spx_d",    "%5EGSPC", "S&P 500", 1.0),
+    ]:
         try:
+            arr = D.setdefault(key, [])
+            tiene_historico = len(arr) > 400 and arr[0].get("f", "9") <= "2003"
             url = f"https://query1.finance.yahoo.com/v8/finance/chart/{simbolo}"
-            data = get_json(url, params={"interval": "1d", "range": "2y"},
-                            headers={**HEADERS, "User-Agent": "Mozilla/5.0"})
+            if tiene_historico:
+                params = {"interval": "1d", "range": "3mo"}  # solo refrescar lo reciente
+            else:
+                params = {"interval": "1d",
+                          "period1": int(BOLSA_DESDE.timestamp()),
+                          "period2": int(datetime.now(timezone.utc).timestamp())}
+            data = get_json(url, params=params, headers={**HEADERS, "User-Agent": "Mozilla/5.0"})
             result = data["chart"]["result"][0]
             ts = result["timestamp"]
             closes = result["indicators"]["quote"][0]["close"]
-            arr = D.setdefault(key, [])
             existing = {r["f"]: i for i, r in enumerate(arr) if "f" in r}
             for t, c in zip(ts, closes):
                 if c is None:
                     continue
                 f = datetime.fromtimestamp(t, tz=timezone.utc).strftime("%Y-%m-%d")
-                v = round(float(c), 2)
+                v = round(float(c) / escala, 2)
                 if f in existing:
                     arr[existing[f]]["v"] = v
                 else:
                     arr.append({"f": f, "v": v})
                     existing[f] = len(arr) - 1
             arr.sort(key=lambda x: x["f"])
-            D[key] = arr[-365:]
+            # Conservar desde 2002 en adelante (sin cap de 365)
+            D[key] = [r for r in arr if r.get("f", "") >= "2002-01-01"]
             if D[key]:
-                log(f"{nombre} diaria: último {D[key][-1]['f']} = {D[key][-1]['v']:,.0f}", "ok")
+                ult = D[key][-1]
+                vista = f"{ult['v']}K" if key == "merval_d" else f"{ult['v']:,.0f}"
+                log(f"{nombre} diaria: {len(D[key])} días (desde {D[key][0]['f']}), último {ult['f']} = {vista}", "ok")
         except Exception as e:
             log(f"{nombre} diaria falló: {e}", "warn")
 
