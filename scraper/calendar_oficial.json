@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-06-22",
+ "generated_at": "2026-06-23",
  "eventos": [
   {
    "fecha": "2026-01-06",
@@ -1428,13 +1428,6 @@
    "label": "Mercado de trabajo. Tasas e indicadores socioeconómicos. Primer trimestre de 2026",
    "periodo": "1°T 2026",
    "serie_key": "eph"
-  },
-  {
-   "fecha": "2026-06-22",
-   "fuente": "Hacienda",
-   "label": "Resultado fiscal SPNF (IMIG)",
-   "periodo": "2026-05",
-   "serie_key": "fiscal"
   },
   {
    "fecha": "2026-06-23",
