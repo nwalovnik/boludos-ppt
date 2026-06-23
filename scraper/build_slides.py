@@ -523,6 +523,46 @@ def tpl_default(p, D):
     bullets = [f"{k}: {fmt_n(v, 2)}" for k, v in list(d.items())[:5]]
     return titulo, lede, bullets, None, None
 
+def tpl_eph(p, D):
+    """Mercado de trabajo EPH (trimestral): desocupación, actividad, empleo."""
+    d = p["datos"]
+    per = p["periodo"]
+    arr = D.get("eph", [])
+    arr_v = [r for r in arr if r.get("td") is not None]
+    td = d.get("td", 0)
+    act = d.get("act", 0)
+    emp = d.get("emp", 0)
+    titulo = f"MERCADO DE TRABAJO {per.upper()}: DESOCUPACIÓN {td}%"
+    # Comparación interanual (mismo trimestre año anterior)
+    import re
+    mq = re.match(r"(\d\w+ t\.) (\d{4})", per)
+    delta_str = ""
+    if mq:
+        per_ia = f"{mq.group(1)} {int(mq.group(2)) - 1}"
+        ref = next((r for r in arr_v if r.get("p") == per_ia), None)
+        if ref and ref.get("td") is not None:
+            dlt = td - ref["td"]
+            signo = "+" if dlt >= 0 else ""
+            delta_str = f" Vs {per_ia}: {signo}{dlt:.1f} pp ({ref['td']}%)."
+    lede = (f"La tasa de desocupación se ubicó en {td}% de la PEA en el {per}. "
+            f"Tasa de actividad: {act}%; tasa de empleo: {emp}%.{delta_str} "
+            f"Cobertura: 31 aglomerados urbanos (EPH-INDEC).")
+    bullets = [
+        f"Desocupación: {td}% de la población económicamente activa",
+        f"Actividad: {act}% de la población total",
+        f"Empleo: {emp}% de la población total",
+        "Fuente: INDEC, Encuesta Permanente de Hogares (EPH)",
+    ]
+    chart = line_chart(arr_v, "p", ["td", "act", "emp"],
+                       ["Desocupación", "Actividad", "Empleo"],
+                       [ROJO_HX, CYAN_HX, "#1E4A8A"],
+                       title="Tasas EPH (%)",
+                       y_fmt=lambda x, p: f"{x:.0f}%", n_meses=12)
+    tabla = [["Trimestre", "Desoc. %", "Activ. %", "Empleo %"]]
+    for r in arr_v[-6:][::-1]:
+        tabla.append([r.get("p", ""), f"{r.get('td')}%", f"{r.get('act')}%", f"{r.get('emp')}%"])
+    return titulo, lede, bullets, chart, tabla
+
 TEMPLATES = {
     "ipc": tpl_ipc,
     "ipim": tpl_ipim, "ipib": tpl_ipim, "ipp": tpl_ipim,
@@ -535,6 +575,7 @@ TEMPLATES = {
     "mora": tpl_mora,
     "rec": tpl_rec,
     "turismo": tpl_turismo,
+    "eph": tpl_eph,
 }
 
 # ──────────────────────────────────────────────────────────────────────────────

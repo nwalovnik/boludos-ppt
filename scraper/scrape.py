@@ -58,7 +58,9 @@ INDEC_SERIES = {
     "ica_pp":    "74.3_IEPP_0_M_35",
     "ica_moi":   "74.3_IEMOI_0_M_46",
     "ica_cye":   "74.3_IECE_0_M_35",
-    "eph_des":   "45.2_ECTDT_0_T_33",
+    "eph_des":   "45.2_ECTDT_0_T_33",   # Tasa desocupación total (EPH continua)
+    "eph_act":   "43.2_ECTAT_0_T_33",   # Tasa actividad total
+    "eph_emp":   "44.2_ECTET_0_T_30",   # Tasa empleo total
     "ripte":     "158.1_REPTE_0_0_5",
     "rec":       "172.3_TL_RECAION_M_0_0_17",
     "bm":        "90.1_BMT_0_0_20",
@@ -924,6 +926,64 @@ def update_salarios_csv(D: dict) -> int:
     except Exception as e:
         log(f"Salarios CSV falló: {e}", "warn")
     return nuevos
+
+def update_eph(D: dict) -> int:
+    """EPH mercado de trabajo (trimestral): tasas de actividad, empleo y desocupación.
+
+    Schema: D.eph = [{p: '1er t. 2026', td, act, emp}] (tasas en %).
+    Fuente: API datos.gob.ar (EPH continua, total 31 aglomerados). La API trae
+    fracciones (0.078 = 7.8%) → ×100. OJO: la API tiene rezago de semanas para
+    el trimestre recién publicado; EPH_OVERRIDE inyecta el último dato oficial
+    (de la web INDEC) hasta que la API lo incorpore.
+    """
+    QLBL = {1: "1er t.", 4: "2do t.", 7: "3er t.", 10: "4to t."}
+    arr = D.setdefault("eph", [])
+    nuevos = 0
+    try:
+        ids = [INDEC_SERIES["eph_des"], INDEC_SERIES["eph_act"], INDEC_SERIES["eph_emp"]]
+        data = fetch_indec(ids, last=24)
+        for row in data:
+            if not row[0]:
+                continue
+            y, m = int(row[0][:4]), int(row[0][5:7])
+            if m not in QLBL:
+                continue
+            p = f"{QLBL[m]} {y}"
+            td = round(float(row[1]) * 100, 1) if row[1] is not None else None
+            act = round(float(row[2]) * 100, 1) if row[2] is not None else None
+            emp = round(float(row[3]) * 100, 1) if row[3] is not None else None
+            rec = next((x for x in arr if x.get("p") == p), None)
+            new = {"p": p}
+            if td is not None:  new["td"] = td
+            if act is not None: new["act"] = act
+            if emp is not None: new["emp"] = emp
+            if rec is None:
+                arr.append(new)
+                nuevos += 1
+            else:
+                rec.update({k: v for k, v in new.items() if k != "p"})
+        # Override del último trimestre oficial (web INDEC) si la API aún no lo trae
+        for ov in EPH_OVERRIDE:
+            if not any(x.get("p") == ov["p"] for x in arr):
+                arr.append(dict(ov))
+                nuevos += 1
+        # Orden cronológico por (año, trimestre)
+        qord = {"1er t.": 1, "2do t.": 2, "3er t.": 3, "4to t.": 4}
+        def _key(r):
+            parts = r["p"].rsplit(" ", 1)
+            return (int(parts[1]), qord.get(parts[0], 0))
+        arr.sort(key=_key)
+        if arr:
+            log(f"EPH: actualizado (último {arr[-1]['p']}, td={arr[-1].get('td')}%)", "ok")
+    except Exception as e:
+        log(f"EPH falló: {e}", "warn")
+    return nuevos
+
+# Último trimestre EPH oficial (web INDEC) hasta que la API datos.gob.ar lo incorpore.
+# Cuando la API lo traiga, sobrescribe estos valores automáticamente.
+EPH_OVERRIDE = [
+    {"p": "1er t. 2026", "td": 7.8, "act": 48.6, "emp": 44.8},
+]
 
 def update_empleo(D: dict) -> int:
     """Empleo SIPA total + privado. Schema histórico: {f, tot, priv} (valores en unidades, no miles).
@@ -2351,8 +2411,10 @@ def _ultimo_real(arr: list, fecha_key: str) -> dict | None:
     candidatos = [r for r in arr if not r.get("proj") and r.get(fecha_key) is not None]
     if not candidatos:
         return None
-    # Ordenar por el campo de fecha (string compare funciona para 'YYYY-MM' y años)
-    candidatos.sort(key=lambda r: str(r.get(fecha_key)))
+    # Ordenar por período normalizado: 'YYYY-MM' y 'YYYY' funcionan como string,
+    # pero los trimestres ('4to t. 2025' vs '1er t. 2026') requieren normalizar a
+    # 'YYYY-Qn' para no ordenar alfabéticamente (4>1 daría Q4-2025 > Q1-2026).
+    candidatos.sort(key=lambda r: _norm_periodo(str(r.get(fecha_key))))
     return candidatos[-1]
 
 # Heurística: días después del FIN de período en que se publica oficialmente la serie
@@ -2381,6 +2443,31 @@ PUB_LAG_DIAS = {
     "pbi":      90,   # CCNN trimestral
 }
 
+def _norm_periodo(p: str) -> str:
+    """Normaliza períodos a forma canónica para comparar entre fuentes.
+
+    'YYYY-MM' → igual. Trimestres ('1er t. 2026', '1°T 2026', '1T 2026',
+    'primer trimestre 2026') → 'YYYY-Qn'. Años sueltos → 'YYYY'.
+    """
+    import re
+    p = (p or "").strip().lower()
+    if re.match(r"^\d{4}-\d{2}$", p):
+        return p
+    m = re.search(r"(\d{4})", p)
+    if not m:
+        return p
+    y = m.group(1)
+    qmap = {"1er": 1, "1°": 1, "1": 1, "primer": 1,
+            "2do": 2, "2°": 2, "2": 2, "segundo": 2,
+            "3er": 3, "3°": 3, "3": 3, "tercer": 3,
+            "4to": 4, "4°": 4, "4": 4, "cuarto": 4}
+    mq = re.search(r"(1er|2do|3er|4to|primer|segundo|tercer|cuarto|[1-4]°|[1-4])\s*(?:t\.?|trim|°t)", p)
+    if mq and ("t" in p or "trim" in p or "°" in p):
+        q = qmap.get(mq.group(1))
+        if q:
+            return f"{y}-Q{q}"
+    return p
+
 _CAL_CACHE: list | None = None
 def _calendar_oficial_lookup(serie: str, periodo: str) -> datetime | None:
     """Busca un evento en calendar_oficial.json que matchee (serie_key, periodo).
@@ -2399,10 +2486,11 @@ def _calendar_oficial_lookup(serie: str, periodo: str) -> datetime | None:
                 _CAL_CACHE = []
     if not _CAL_CACHE:
         return None
+    periodo_norm = _norm_periodo(periodo)
     for ev in _CAL_CACHE:
         if ev.get("serie_key") != serie:
             continue
-        if ev.get("periodo") != periodo:
+        if _norm_periodo(ev.get("periodo", "")) != periodo_norm:
             continue
         # Solo confiamos en calendarios OFICIALES (INDEC PDF, BCRA HTML). Las
         # entradas de Hacienda/ARCA son estimaciones propias — para esas usamos
@@ -2752,6 +2840,7 @@ def main() -> int:
     update_salarios_csv(D)  # complementa: CSV oficial más fresco que la API series
     update_comercio_interior(D)  # Supermercados + Autoservicios mayoristas
     update_empleo(D)
+    update_eph(D)
     update_empresas(D)
     update_fiscal_indec(D)
     update_fiscal_hacienda(D)  # complementa: fiscal Hacienda llega antes que IMIG INDEC
