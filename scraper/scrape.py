@@ -985,6 +985,50 @@ EPH_OVERRIDE = [
     {"p": "1er t. 2026", "td": 7.8, "act": 48.6, "emp": 44.8},
 ]
 
+# Indigencia semestral oficial (web INDEC) — la API datos.gob.ar no expone una serie
+# nacional continua confiable de indigencia; estos valores se mergean por período.
+POBREZA_IND_OVERRIDE = {"2 2025": 6.3}
+
+def update_pobreza(D: dict) -> int:
+    """Pobreza e indigencia (personas, % total 31 aglomerados), semestral.
+
+    Fuente pobreza: API datos.gob.ar (64.2_POBLACION_NUA_0_0_34_74 = % personas pobres).
+    Convención de fechas API → label bedrock:
+      Y-07-01  → '1 Y' (1er semestre Y)   ·   (Y+1)-01-01 → '2 Y' (2do semestre Y)
+    Indigencia: POBREZA_IND_OVERRIDE (web INDEC) por período nuevo.
+    Schema: D.pobreza=[{p, pob, ind}]
+    """
+    arr = D.setdefault("pobreza", [])
+    nuevos = 0
+    try:
+        data = fetch_indec("64.2_POBLACION_NUA_0_0_34_74", last=12)
+        for row in data:
+            if not row[0] or row[1] is None:
+                continue
+            y, m = int(row[0][:4]), int(row[0][5:7])
+            if m == 7:
+                p = f"1 {y}"
+            elif m == 1:
+                p = f"2 {y - 1}"
+            else:
+                continue
+            pob = round(float(row[1]) * 100, 1)
+            rec = next((x for x in arr if x.get("p") == p), None)
+            if rec is None:
+                rec = {"p": p}
+                arr.append(rec)
+                nuevos += 1
+            rec["pob"] = pob
+            if p in POBREZA_IND_OVERRIDE and rec.get("ind") is None:
+                rec["ind"] = POBREZA_IND_OVERRIDE[p]
+        # Orden cronológico (sem, año)
+        arr.sort(key=lambda r: (int(r["p"].split(" ")[1]), int(r["p"].split(" ")[0])))
+        if arr:
+            log(f"Pobreza: actualizado (último {arr[-1]['p']}, pob={arr[-1].get('pob')}% ind={arr[-1].get('ind')}%)", "ok")
+    except Exception as e:
+        log(f"Pobreza falló: {e}", "warn")
+    return nuevos
+
 def update_empleo(D: dict) -> int:
     """Empleo SIPA total + privado. Schema histórico: {f, tot, priv} (valores en unidades, no miles).
 
@@ -3004,6 +3048,7 @@ def main() -> int:
     update_empleo(D)
     update_eph(D)
     update_pbi(D)
+    update_pobreza(D)
     update_empresas(D)
     update_fiscal_indec(D)
     update_fiscal_hacienda(D)  # complementa: fiscal Hacienda llega antes que IMIG INDEC
