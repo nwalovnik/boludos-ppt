@@ -985,6 +985,50 @@ EPH_OVERRIDE = [
     {"p": "1er t. 2026", "td": 7.8, "act": 48.6, "emp": 44.8},
 ]
 
+# Indigencia semestral oficial (web INDEC) — la API datos.gob.ar no expone una serie
+# nacional continua confiable de indigencia; estos valores se mergean por período.
+POBREZA_IND_OVERRIDE = {"2 2025": 6.3}
+
+def update_pobreza(D: dict) -> int:
+    """Pobreza e indigencia (personas, % total 31 aglomerados), semestral.
+
+    Fuente pobreza: API datos.gob.ar (64.2_POBLACION_NUA_0_0_34_74 = % personas pobres).
+    Convención de fechas API → label bedrock:
+      Y-07-01  → '1 Y' (1er semestre Y)   ·   (Y+1)-01-01 → '2 Y' (2do semestre Y)
+    Indigencia: POBREZA_IND_OVERRIDE (web INDEC) por período nuevo.
+    Schema: D.pobreza=[{p, pob, ind}]
+    """
+    arr = D.setdefault("pobreza", [])
+    nuevos = 0
+    try:
+        data = fetch_indec("64.2_POBLACION_NUA_0_0_34_74", last=12)
+        for row in data:
+            if not row[0] or row[1] is None:
+                continue
+            y, m = int(row[0][:4]), int(row[0][5:7])
+            if m == 7:
+                p = f"1 {y}"
+            elif m == 1:
+                p = f"2 {y - 1}"
+            else:
+                continue
+            pob = round(float(row[1]) * 100, 1)
+            rec = next((x for x in arr if x.get("p") == p), None)
+            if rec is None:
+                rec = {"p": p}
+                arr.append(rec)
+                nuevos += 1
+            rec["pob"] = pob
+            if p in POBREZA_IND_OVERRIDE and rec.get("ind") is None:
+                rec["ind"] = POBREZA_IND_OVERRIDE[p]
+        # Orden cronológico (sem, año)
+        arr.sort(key=lambda r: (int(r["p"].split(" ")[1]), int(r["p"].split(" ")[0])))
+        if arr:
+            log(f"Pobreza: actualizado (último {arr[-1]['p']}, pob={arr[-1].get('pob')}% ind={arr[-1].get('ind')}%)", "ok")
+    except Exception as e:
+        log(f"Pobreza falló: {e}", "warn")
+    return nuevos
+
 def update_empleo(D: dict) -> int:
     """Empleo SIPA total + privado. Schema histórico: {f, tot, priv} (valores en unidades, no miles).
 
@@ -2352,6 +2396,168 @@ def update_uci_xls(D: dict) -> int:
         log(f"UCI XLS parse falló: {e}", "warn")
     return nuevos
 
+def find_pbi_xls_url() -> str | None:
+    """sh_oferta_demanda_MM_YY.xls de INDEC (CCNN). Busca el más reciente."""
+    today = datetime.now(timezone.utc)
+    for delta in range(0, 6):
+        y, m = today.year, today.month - delta
+        while m <= 0:
+            m += 12
+            y -= 1
+        url = f"{INDEC_XLS_BASE}/sh_oferta_demanda_{m:02d}_{y % 100:02d}.xls"
+        try:
+            r = requests.head(url, timeout=8, headers={**HEADERS, "User-Agent": "Mozilla/5.0"})
+            if r.status_code == 200 and "excel" in r.headers.get("Content-Type", "").lower():
+                return url
+        except Exception:
+            continue
+    return None
+
+_PBI_QLBL = {"1º": "1er trimestre", "2º": "2do trimestre", "3º": "3er trimestre", "4º": "4to trimestre"}
+
+def update_pbi(D: dict) -> int:
+    """PBI trimestral a precios constantes 2004 + componentes + PBI en USD.
+
+    Fuente: sh_oferta_demanda_MM_YY.xls de INDEC (CCNN).
+      cuadro 1 = millones de pesos a precios de 2004 (constantes)  → pbi real
+      cuadro 8 = millones de pesos a precios corrientes (nominal)  → base de pbi_usd
+    Filas: 6=PBI, 7=Importaciones, 11=Consumo priv, 12=Consumo púb, 13=Expo, 14=FBCF.
+    Layout cols: cada año = Q1,Q2,Q3,Q4,Total + separador; año en fila 3, trim en fila 4.
+
+    Schema: D.pbi=[{p, pbi, via, comp:{c_priv,c_pub,fbcf,expo,impo}}]
+            D.pbi_anual=[{a, pbi, via}]
+            D.pbi_usd=[{p, pbi_usd, pbi_pc, tc, pob}]  (nominal/TC + población)
+    """
+    arr = D.setdefault("pbi", [])
+    anual = D.setdefault("pbi_anual", [])
+    usd_arr = D.setdefault("pbi_usd", [])
+    url = find_pbi_xls_url()
+    if not url:
+        log("PBI XLS no encontrado (sh_oferta_demanda)", "warn")
+        return 0
+    nuevos = 0
+    try:
+        wb = download_xls(url, serie="pbi")
+
+        def col_map(sh):
+            """Devuelve [(col, periodo_label, year, is_total)] leyendo filas 3 (año) y 4 (trim)."""
+            out = []
+            cur_year = None
+            for c in range(2, sh.ncols):
+                yv = sh.cell_value(3, c)
+                if isinstance(yv, (int, float)) and yv:
+                    cur_year = int(yv)
+                elif isinstance(yv, str):
+                    digits = "".join(ch for ch in yv if ch.isdigit())[:4]
+                    if len(digits) == 4:
+                        cur_year = int(digits)
+                tv = str(sh.cell_value(4, c)).strip()
+                trim = tv[:2]
+                if cur_year and trim in _PBI_QLBL:
+                    out.append((c, f"{_PBI_QLBL[trim]} {cur_year}", cur_year, False))
+                elif cur_year and tv.lower().startswith("total"):
+                    out.append((c, None, cur_year, True))
+            return out
+
+        c1 = wb.sheet_by_name("cuadro 1")     # constantes 2004
+        c8 = wb.sheet_by_name("cuadro 8")     # corrientes (nominal)
+        cols1 = col_map(c1)
+        cols8 = {p: c for c, p, y, t in col_map(c8) if p}
+
+        # TC oficial promedio por trimestre (de D.tc, campo 'of')
+        def tc_trim_avg(year, q):
+            meses = [f"{year}-{mm:02d}" for mm in ((q - 1) * 3 + 1, (q - 1) * 3 + 2, (q - 1) * 3 + 3)]
+            vals = [r.get("of") for r in D.get("tc", []) if r.get("f") in meses and r.get("of")]
+            return sum(vals) / len(vals) if vals else None
+
+        # Población proyectada (millones): extiende la última conocida ~0.85%/año
+        pob_known = {r["p"]: r.get("pob") for r in usd_arr if r.get("pob")}
+        qmap_n = {"1er trimestre": 1, "2do trimestre": 2, "3er trimestre": 3, "4to trimestre": 4}
+        ult_pob = max(((p, v) for p, v in pob_known.items()), key=lambda kv: (int(kv[0].rsplit(" ", 1)[1]), qmap_n.get(kv[0].rsplit(" ", 1)[0], 0)), default=(None, None))
+
+        def proj_pob(p):
+            if p in pob_known:
+                return pob_known[p]
+            if not ult_pob[0]:
+                return None
+            y0, q0 = int(ult_pob[0].rsplit(" ", 1)[1]), qmap_n.get(ult_pob[0].rsplit(" ", 1)[0], 1)
+            y1, q1 = int(p.rsplit(" ", 1)[1]), qmap_n.get(p.rsplit(" ", 1)[0], 1)
+            dq = (y1 - y0) * 4 + (q1 - q0)
+            return round(ult_pob[1] * (1.0085 ** (dq / 4)), 2) if dq > 0 else ult_pob[1]
+
+        # Trimestrales
+        for c, p, y, is_total in cols1:
+            if is_total:
+                pbi_tot = _safe_float(c1.cell_value(6, c))
+                if pbi_tot is None:
+                    continue
+                rec = next((x for x in anual if x.get("a") == y), None)
+                if rec is None:
+                    anual.append({"a": y, "pbi": round(pbi_tot)})
+                    nuevos += 1
+                else:
+                    rec["pbi"] = round(pbi_tot)
+                continue
+            pbi = _safe_float(c1.cell_value(6, c))
+            if pbi is None:
+                continue
+            rec = next((x for x in arr if x.get("p") == p), None)
+            new = {"p": p, "pbi": round(pbi)}
+            comp = {}
+            for fila, k in [(11, "c_priv"), (12, "c_pub"), (14, "fbcf"), (13, "expo"), (7, "impo")]:
+                v = _safe_float(c1.cell_value(fila, c))
+                if v is not None:
+                    comp[k] = round(v)
+            if comp:
+                new["comp"] = comp
+            if rec is None:
+                arr.append(new)
+                nuevos += 1
+            else:
+                rec.update(new)
+
+            # pbi_usd: solo trimestres NUEVOS (no pisar el histórico del bedrock,
+            # que usó su propio TC). nominal (cuadro 8) / TC promedio trimestre.
+            if not any(x.get("p") == p for x in usd_arr):
+                cd = cols8.get(p)
+                q = qmap_n.get(p.rsplit(" ", 1)[0])
+                tcq = tc_trim_avg(y, q) if q else None
+                nominal = _safe_float(c8.cell_value(6, cd)) if cd is not None else None
+                if nominal and tcq:
+                    pbi_usd = round(nominal / tcq, 1)
+                    pob = proj_pob(p)
+                    unew = {"p": p, "pbi_usd": pbi_usd, "tc": round(tcq, 2)}
+                    if pob:
+                        unew["pob"] = pob
+                        unew["pbi_pc"] = round(pbi_usd / pob, 1)
+                    usd_arr.append(unew)
+
+        # Orden cronológico
+        qord = {"1er trimestre": 1, "2do trimestre": 2, "3er trimestre": 3, "4to trimestre": 4}
+        def _k(r):
+            parts = r["p"].rsplit(" ", 1)
+            return (int(parts[1]), qord.get(parts[0], 0))
+        arr.sort(key=_k)
+        anual.sort(key=lambda r: r["a"])
+        usd_arr.sort(key=_k)
+
+        # Recalcular via (i.a. sobre pbi)
+        idx = {r["p"]: i for i, r in enumerate(arr)}
+        for i, r in enumerate(arr):
+            parts = r["p"].rsplit(" ", 1)
+            p_ia = f"{parts[0]} {int(parts[1]) - 1}"
+            if p_ia in idx and arr[idx[p_ia]].get("pbi"):
+                r["via"] = round((r["pbi"] / arr[idx[p_ia]]["pbi"] - 1) * 100, 1)
+        for i, a in enumerate(anual):
+            if i > 0 and anual[i - 1].get("pbi"):
+                a["via"] = round((a["pbi"] / anual[i - 1]["pbi"] - 1) * 100, 1)
+
+        if arr:
+            log(f"PBI (XLS oficial {url.split('/')[-1]}): actualizado (último {arr[-1]['p']}, via={arr[-1].get('via')}%)", "ok")
+    except Exception as e:
+        log(f"PBI XLS parse falló: {e}", "warn")
+    return nuevos
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Detección de publicaciones nuevas (para sección "Esta semana" del dashboard)
 # ──────────────────────────────────────────────────────────────────────────────
@@ -2841,6 +3047,8 @@ def main() -> int:
     update_comercio_interior(D)  # Supermercados + Autoservicios mayoristas
     update_empleo(D)
     update_eph(D)
+    update_pbi(D)
+    update_pobreza(D)
     update_empresas(D)
     update_fiscal_indec(D)
     update_fiscal_hacienda(D)  # complementa: fiscal Hacienda llega antes que IMIG INDEC
