@@ -989,6 +989,36 @@ EPH_OVERRIDE = [
 # nacional continua confiable de indigencia; estos valores se mergean por período.
 POBREZA_IND_OVERRIDE = {"2 2025": 6.3}
 
+# Informalidad laboral EPH (trimestral). INDEC sólo la publica en PDF (sin XLS/API),
+# con desglose por sexo/categoría/sector. Se carga por override al salir cada informe
+# (~mes y medio después del cierre del trimestre). El continuity mantiene el histórico.
+# Schema por período: {tasa, muj, var, asal, cp, const, indust, comer, dom}
+INFORMALIDAD_OVERRIDE = {
+    # "1er t. 2026": {"tasa": 44.2, "muj": ..., "var": ..., ...},  # publica ~jul-2026
+}
+
+def update_informalidad(D: dict) -> int:
+    """Informalidad laboral EPH (trimestral). Aplica INFORMALIDAD_OVERRIDE.
+
+    INDEC publica este informe sólo en PDF; cuando sale un trimestre nuevo se
+    agrega su línea al dict de arriba y queda en el sistema. El histórico se
+    preserva vía el mecanismo de continuidad.
+    """
+    arr = D.setdefault("informalidad", [])
+    nuevos = 0
+    for p, vals in INFORMALIDAD_OVERRIDE.items():
+        rec = next((x for x in arr if x.get("p") == p), None)
+        if rec is None:
+            arr.append({"p": p, **vals})
+            nuevos += 1
+        else:
+            rec.update(vals)
+    qord = {"1er t.": 1, "2do t.": 2, "3er t.": 3, "4to t.": 4}
+    arr.sort(key=lambda r: (int(r["p"].rsplit(" ", 1)[1]), qord.get(r["p"].rsplit(" ", 1)[0], 0)))
+    if nuevos:
+        log(f"Informalidad: {nuevos} trimestre(s) nuevo(s) (último {arr[-1]['p']})", "ok")
+    return nuevos
+
 def update_bal_cam(D: dict) -> int:
     """Balance cambiario BCRA (mercado de cambios), mensual.
 
@@ -3161,6 +3191,7 @@ def main() -> int:
     update_pobreza(D)
     update_jubi(D)
     update_bal_cam(D)
+    update_informalidad(D)
     update_empresas(D)
     update_fiscal_indec(D)
     update_fiscal_hacienda(D)  # complementa: fiscal Hacienda llega antes que IMIG INDEC
