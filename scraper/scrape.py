@@ -989,6 +989,64 @@ EPH_OVERRIDE = [
 # nacional continua confiable de indigencia; estos valores se mergean por período.
 POBREZA_IND_OVERRIDE = {"2 2025": 6.3}
 
+def update_jubi(D: dict) -> int:
+    """Haber jubilatorio mínimo ANSES, mensual.
+
+    Movilidad DNU 274/2024: el haber se ajusta cada mes por el IPC de DOS meses
+    antes → hm(M) = hm(M-1) × (1 + IPC_vm(M-2)/100). Verificado contra valores
+    oficiales (jun/jul/ago 2025). El bono extraordinario está fijo en $70.000.
+
+    Proyecta desde el último valor OFICIAL del bedrock hacia adelante mientras
+    haya IPC real de M-2. Marca proj=True los meses estimados con IPC proyectado.
+    Schema: D.jubi=[{f, hm, bo, tot, proj?}]
+    """
+    BONO = 70000.0
+    arr = D.setdefault("jubi", [])
+    if not arr:
+        return 0
+    ipc = {r["f"]: r for r in D.get("ipc", [])}
+    arr.sort(key=lambda r: r.get("f", ""))
+    # Anclar en el último registro NO proyectado (oficial)
+    oficiales = [r for r in arr if not r.get("proj") and r.get("hm")]
+    if not oficiales:
+        return 0
+    ancla = oficiales[-1]
+    existing = {r["f"]: r for r in arr}
+    nuevos = 0
+    f = ancla["f"]
+    hm = ancla["hm"]
+    # Proyectar mes a mes mientras haya IPC REAL de M-2 (no proyección REM).
+    # El haber se conoce con certeza hasta 2 meses después del último IPC real.
+    for _ in range(36):
+        f = prox_mes(f)
+        ipc_m2 = ipc.get(prev_month(prev_month(f)))
+        if not ipc_m2 or ipc_m2.get("vm") is None or ipc_m2.get("proj"):
+            break  # sin IPC real de M-2 → no proyectamos con REM
+        hm = hm * (1 + ipc_m2["vm"] / 100)
+        rec = existing.get(f)
+        new = {"f": f, "hm": round(hm), "bo": BONO, "tot": round(hm) + BONO}
+        if rec is None:
+            arr.append(new)
+            existing[f] = new
+            nuevos += 1
+        elif rec.get("proj") or not rec.get("hm"):
+            rec.clear()
+            rec.update(new)
+        else:
+            # ya existe valor oficial → usarlo como nueva ancla y no pisar
+            hm = rec["hm"]
+    arr.sort(key=lambda r: r.get("f", ""))
+    if arr:
+        log(f"Jubilaciones: proyectado hasta {arr[-1]['f']} (mínima ${arr[-1].get('hm'):,.0f} + bono ${BONO:,.0f})", "ok")
+    return nuevos
+
+def prox_mes(f: str) -> str:
+    y, m = int(f[:4]), int(f[5:7])
+    m += 1
+    if m > 12:
+        m = 1; y += 1
+    return f"{y:04d}-{m:02d}"
+
 def update_pobreza(D: dict) -> int:
     """Pobreza e indigencia (personas, % total 31 aglomerados), semestral.
 
@@ -3049,6 +3107,7 @@ def main() -> int:
     update_eph(D)
     update_pbi(D)
     update_pobreza(D)
+    update_jubi(D)
     update_empresas(D)
     update_fiscal_indec(D)
     update_fiscal_hacienda(D)  # complementa: fiscal Hacienda llega antes que IMIG INDEC

@@ -560,7 +560,7 @@ hr.d{border:none;border-top:.5px solid var(--bd);margin:16px 0}
     <div class="cc"><div class="cc-hd"><div><div class="cc-t">Trabajo registrado <span class="breal">MTEYSS</span></div><div class="cc-s">Total y privado &#183; mensual</div></div><button class="dl-btn" onclick="dlCSV('trabajo')">&#8595; CSV</button></div><div style="position:relative;height:180px"><canvas id="c-trab"></canvas></div></div>
     <div class="cc"><div class="cc-hd"><div><div class="cc-t">Salarios reales <span class="breal">INDEC</span></div><div class="cc-s">Registrado, público y privado deflactados por IPC &#183; base oct-2016=100</div></div><button class="dl-btn" onclick="dlCSV('salarios')">&#8595; CSV</button></div><div style="position:relative;height:180px"><canvas id="c-sal"></canvas></div></div>
     <div class="cc"><div class="cc-hd"><div><div class="cc-t">RIPTE <span class="breal">MTEYSS</span></div><div class="cc-s">Variación real mensual e interanual &#183; descontada inflación</div></div><button class="dl-btn" onclick="dlCSV('ripte')">&#8595; CSV</button></div><div style="position:relative;height:180px"><canvas id="c-ripte"></canvas></div></div>
-    <div class="cc"><div class="cc-hd"><div><div class="cc-t">Jubilación mínima real <span class="breal">ANSES</span></div><div class="cc-s">Total y haber mínimo deflactados por IPC &#183; poder adquisitivo</div></div><button class="dl-btn" onclick="dlCSV('jubi')">&#8595; CSV</button></div><div style="position:relative;height:180px"><canvas id="c-jubi"></canvas></div></div>
+    <div class="cc"><div class="cc-hd"><div><div class="cc-t">Jubilación mínima real <span class="breal">ANSES</span></div><div class="cc-s">Con y sin bono ($70.000 fijo) · deflactado por IPC · movilidad = IPC rezagado 2 meses</div></div><button class="dl-btn" onclick="dlCSV('jubi')">&#8595; CSV</button></div><div style="position:relative;height:180px"><canvas id="c-jubi"></canvas></div></div>
   </div>
   <hr class="d"/>
   <div class="slbl">Empresas privadas activas &#183; OEDE (anual)</div>
@@ -2429,8 +2429,8 @@ function buildLaboral(){
   var hmReal=jb.map(function(r){var idx=ipcLk[r.f];return idx?Math.round(r.hm/idx*baseIPC):null;});
   var anyReal=totReal.some(function(v){return v!=null;});
   if(anyReal&&LM.real){
-    var jSets=[line("Total real",totReal,C.blue),line("Haber mín. real",hmReal,C.green,{fill:false})];
-    if(LM.nom)jSets.push(line("Haber mín. nom.",jb.map(function(r){return r.hm;}),C.gray,{fill:false,borderDash:[4,3],borderWidth:1.5}));
+    var jSets=[line("Mínima con bono (real)",totReal,C.blue),line("Mínima sin bono (real)",hmReal,C.green,{fill:false})];
+    if(LM.nom)jSets.push(line("Mínima sin bono (nom.)",jb.map(function(r){return r.hm;}),C.gray,{fill:false,borderDash:[4,3],borderWidth:1.5}));
     mk("c-jubi",jb.map(function(r){return r.f;}),jSets,{yf:function(v){return"$"+fmtN(v);},leg:true});
   } else {
     mk("c-jubi",jb.map(function(r){return r.f;}),[bar("Haber mín.",jb.map(function(r){return r.hm;}),C.blue,{stack:"s"}),bar("Bonos",jb.map(function(r){return r.bo;}),C.green,{stack:"s"})],{type:"bar",yf:function(v){return"$"+fmtN(v);},leg:true});
