@@ -989,6 +989,88 @@ EPH_OVERRIDE = [
 # nacional continua confiable de indigencia; estos valores se mergean por período.
 POBREZA_IND_OVERRIDE = {"2 2025": 6.3}
 
+# Informalidad laboral EPH (trimestral). INDEC sólo la publica en PDF (sin XLS/API),
+# con desglose por sexo/categoría/sector. Se carga por override al salir cada informe
+# (~mes y medio después del cierre del trimestre). El continuity mantiene el histórico.
+# Schema por período: {tasa, muj, var, asal, cp, const, indust, comer, dom}
+INFORMALIDAD_OVERRIDE = {
+    # "1er t. 2026": {"tasa": 44.2, "muj": ..., "var": ..., ...},  # publica ~jul-2026
+}
+
+def update_informalidad(D: dict) -> int:
+    """Informalidad laboral EPH (trimestral). Aplica INFORMALIDAD_OVERRIDE.
+
+    INDEC publica este informe sólo en PDF; cuando sale un trimestre nuevo se
+    agrega su línea al dict de arriba y queda en el sistema. El histórico se
+    preserva vía el mecanismo de continuidad.
+    """
+    arr = D.setdefault("informalidad", [])
+    nuevos = 0
+    for p, vals in INFORMALIDAD_OVERRIDE.items():
+        rec = next((x for x in arr if x.get("p") == p), None)
+        if rec is None:
+            arr.append({"p": p, **vals})
+            nuevos += 1
+        else:
+            rec.update(vals)
+    qord = {"1er t.": 1, "2do t.": 2, "3er t.": 3, "4to t.": 4}
+    arr.sort(key=lambda r: (int(r["p"].rsplit(" ", 1)[1]), qord.get(r["p"].rsplit(" ", 1)[0], 0)))
+    if nuevos:
+        log(f"Informalidad: {nuevos} trimestre(s) nuevo(s) (último {arr[-1]['p']})", "ok")
+    return nuevos
+
+def update_bal_cam(D: dict) -> int:
+    """Balance cambiario BCRA (mercado de cambios), mensual.
+
+    Fuente: API datos.gob.ar dataset 182.1 (Subsec. Programación Macroeconómica,
+    en base a BCRA). Es autoritativa — el bedrock tenía duplicados/inconsistencias.
+    Schema: D.bal_cam=[{f, total, cta_cte, bienes, cta_fin, var_rrii}]
+      total   = cta_cte + cta_fin (resultado del balance cambiario)
+      cta_cte = total cuenta corriente cambiaria
+      bienes  = cuenta corriente cambiaria · bienes
+      cta_fin = cuenta capital y financiera cambiaria
+      var_rrii= variación de reservas por transacciones
+    """
+    arr = D.setdefault("bal_cam", [])
+    # Dedupe histórico por mes (el bedrock tiene duplicados): conservar el último
+    dedup = {}
+    for r in arr:
+        if r.get("f"):
+            dedup[r["f"]] = r
+    IDS = {
+        "cta_cte": "182.1_TOTAL_CUENRIA_0_M_32",
+        "bienes":  "182.1_CUENTA_CORNES_0_M_39",
+        "cta_fin": "182.1_C_CAP_FINARIA_0_M_37",
+        "var_rrii": "182.1_VARIACION_NES_0_M_48",
+    }
+    nuevos = 0
+    try:
+        ids = ",".join(IDS.values())
+        data = fetch_indec(ids, last=60)
+        keys = list(IDS.keys())
+        for row in data:
+            if not row[0]:
+                continue
+            f = ym(row[0])
+            rec = dedup.get(f)
+            if rec is None:
+                rec = {"f": f}
+                dedup[f] = rec
+                nuevos += 1
+            for i, k in enumerate(keys):
+                v = row[i + 1]
+                if v is not None:
+                    rec[k] = round(float(v))
+            if rec.get("cta_cte") is not None and rec.get("cta_fin") is not None:
+                rec["total"] = rec["cta_cte"] + rec["cta_fin"]
+        D["bal_cam"] = sorted(dedup.values(), key=lambda r: r.get("f", ""))
+        ult = D["bal_cam"][-1] if D["bal_cam"] else None
+        if ult:
+            log(f"Balance cambiario: actualizado (último {ult['f']}, cta_cte={ult.get('cta_cte')} M USD)", "ok")
+    except Exception as e:
+        log(f"Balance cambiario falló: {e}", "warn")
+    return nuevos
+
 def update_jubi(D: dict) -> int:
     """Haber jubilatorio mínimo ANSES, mensual.
 
@@ -3108,6 +3190,8 @@ def main() -> int:
     update_pbi(D)
     update_pobreza(D)
     update_jubi(D)
+    update_bal_cam(D)
+    update_informalidad(D)
     update_empresas(D)
     update_fiscal_indec(D)
     update_fiscal_hacienda(D)  # complementa: fiscal Hacienda llega antes que IMIG INDEC
