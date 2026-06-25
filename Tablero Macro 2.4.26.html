@@ -586,6 +586,10 @@ hr.d{border:none;border-top:.5px solid var(--bd);margin:16px 0}
   <div class="insight warn"><strong>ICA vs Balance cambiario:</strong> El ICA mide comercio según declaraciones aduaneras. El balance cambiario BCRA mide divisas efectivamente liquidadas — pueden diferir por timing de liquidaciones.</div>
   <div class="cc"><div class="cc-hd"><div><div class="cc-t">Balance cambiario y cuenta corriente <span class="breal">BCRA</span></div><div class="cc-s">USD millones &#183; incluye servicios, rentas y transferencias</div></div><button class="dl-btn" onclick="dlCSV('bal_cam')">&#8595; CSV</button></div><div style="position:relative;height:220px"><canvas id="c-bal-cam"></canvas></div></div>
   <hr class="d"/>
+  <div class="slbl">Balanza de pagos INDEC &#183; cuenta corriente trimestral</div>
+  <div class="info-box"><strong>Balanza de pagos (INDEC)</strong> mide transacciones <em>devengadas</em> (base BPM6), a diferencia del balance cambiario del BCRA que mide divisas liquidadas (base caja). La cuenta corriente = <strong>bienes + servicios + ingreso primario (rentas) + ingreso secundario</strong>. Trimestral. Fuente: INDEC.</div>
+  <div class="cc"><div class="cc-hd"><div><div class="cc-t">Cuenta corriente y componentes <span class="breal">INDEC</span></div><div class="cc-s">USD millones &#183; saldo trimestral (línea) y componentes (barras)</div></div><button class="dl-btn" onclick="dlCSV('bdp')">&#8595; CSV</button></div><div style="position:relative;height:240px"><canvas id="c-bdp"></canvas></div></div>
+  <hr class="d"/>
   <div class="slbl">Detalle reciente · USD millones</div>
   <div style="position:relative;overflow-x:auto;margin-bottom:24px"><table id="t-bc" class="data-table"></table></div>
 </div>
@@ -2489,6 +2493,19 @@ function buildExterno(){
     line("Saldo bienes",bcamR.map(function(r){return r.bienes;}),C.green,{fill:false}),
   ],{yf:function(v){return fmtN(v)+"M";},leg:true,xt:8});
 
+  // Balanza de pagos INDEC (cuenta corriente trimestral + componentes)
+  var bdp=(D.bdp||[]).filter(function(r){return r.cta_cte!=null;}).slice(-20);
+  if(bdp.length){
+    var lbl=bdp.map(function(r){return r.p.replace(" trimestre "," T ");});
+    mk("c-bdp",lbl,[
+      bar("Bienes",bdp.map(function(r){return r.bienes;}),C.green,{stack:"s",order:2}),
+      bar("Servicios",bdp.map(function(r){return r.servicios;}),C.orange,{stack:"s",order:2}),
+      bar("Rentas (ing. primario)",bdp.map(function(r){return r.ing_prim;}),C.red,{stack:"s",order:2}),
+      bar("Ing. secundario",bdp.map(function(r){return r.ing_sec;}),C.purple,{stack:"s",order:2}),
+      Object.assign(line("Cuenta corriente",bdp.map(function(r){return r.cta_cte;}),C.blue,{fill:false,borderWidth:2.25,pointRadius:2,type:"line",order:1}))
+    ],{type:"bar",yf:function(v){return fmtN(v)+"M";},leg:true,xt:10});
+  }
+
   // Tabla detalle reciente Comercio Exterior
   renderTablaBC(bcR);
 }
@@ -2833,7 +2850,8 @@ var CSV_MAP={
   mayor:{g:function(){return D.mayor;},n:"mayoristas_indec",f:["f","ventas_nom","via_nom","bocas","operac"],h:["Mes","Ventas_miles_pesos","VIA_nominal_pct","Bocas","Operaciones"]},
   jubi:{g:function(){return D.jubi;},n:"jubilaciones",f:["f","hm","bo","tot"],h:["Fecha","Haber_min","Bonos","Total"]},
   turismo:{g:function(){return D.turismo;},n:"turismo",f:["f","rec","em","sal"],h:["Fecha","Receptivo","Emisivo","Saldo"]},
-  bal_cam:{g:function(){return D.bal_cam||[];},n:"balance_cambiario_bcra",f:["f","total","cta_cte","bienes","cta_fin","var_rrii"],h:["Fecha","Total_BC","Cta_Corriente","Saldo_Bienes","Cta_Financiera","Var_RRII"]}
+  bal_cam:{g:function(){return D.bal_cam||[];},n:"balance_cambiario_bcra",f:["f","total","cta_cte","bienes","cta_fin","var_rrii"],h:["Fecha","Total_BC","Cta_Corriente","Saldo_Bienes","Cta_Financiera","Var_RRII"]},
+  bdp:{g:function(){return D.bdp||[];},n:"balanza_pagos_indec",f:["p","cta_cte","bienes","servicios","ing_prim","ing_sec"],h:["Trimestre","Cta_Corriente","Bienes","Servicios","Ing_Primario","Ing_Secundario"]}
 };
 
 function dlCSV(key){

@@ -50,6 +50,7 @@ SERIE_MAP_INDEC = [
     (re.compile(r".ndice de salarios", re.I),                             "salarios"),
     (re.compile(r"mercado de trabajo|EPH.*trimestre|condiciones de vida", re.I), "eph"),
     (re.compile(r"informe de avance del nivel de actividad", re.I),       "pbi"),
+    (re.compile(r"balanza de pagos", re.I),                               "bdp"),
 ]
 
 def _map_serie(label: str) -> str | None:

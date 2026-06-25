@@ -713,7 +713,7 @@
    "fuente": "INDEC",
    "label": "Balanza de pagos, posición de inversión internacional y deuda externa. Cuarto trimestre de 2025",
    "periodo": "4°T 2025",
-   "serie_key": null
+   "serie_key": "bdp"
   },
   {
    "fecha": "2026-03-27",
@@ -1455,7 +1455,7 @@
    "fuente": "INDEC",
    "label": "Balanza de pagos, posición de inversión internacional y deuda externa. Primer trimestre de 2026",
    "periodo": "1°T 2026",
-   "serie_key": null
+   "serie_key": "bdp"
   },
   {
    "fecha": "2026-06-24",
@@ -2288,7 +2288,7 @@
    "fuente": "INDEC",
    "label": "Balanza de pagos, posición de inversión internacional y deuda externa. Segundo trimestre de 2026",
    "periodo": "2°T 2026",
-   "serie_key": null
+   "serie_key": "bdp"
   },
   {
    "fecha": "2026-09-30",
@@ -3002,7 +3002,7 @@
    "fuente": "INDEC",
    "label": "Balanza de pagos, posición de inversión internacional y deuda externa. Tercer trimestre de 2026",
    "periodo": "3°T 2026",
-   "serie_key": null
+   "serie_key": "bdp"
   },
   {
    "fecha": "2026-12-22",
