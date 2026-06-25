@@ -1019,6 +1019,66 @@ def update_informalidad(D: dict) -> int:
         log(f"Informalidad: {nuevos} trimestre(s) nuevo(s) (último {arr[-1]['p']})", "ok")
     return nuevos
 
+# Balanza de pagos INDEC — último trimestre oficial (web INDEC) hasta que la API
+# datos.gob.ar lo incorpore. La API rezaga ~semanas el trimestre recién publicado.
+BDP_OVERRIDE = {
+    "1er trimestre 2026": {"cta_cte": -1651, "bienes": 6339, "servicios": -4028,
+                            "ing_prim": -4676, "ing_sec": 714},
+}
+_BDP_QLBL = {1: "1er trimestre", 4: "2do trimestre", 7: "3er trimestre", 10: "4to trimestre"}
+
+def update_bdp(D: dict) -> int:
+    """Balanza de pagos INDEC — cuenta corriente trimestral (devengado, base BPM6).
+
+    Distinta del balance cambiario BCRA (caja): mide transacciones devengadas.
+    Fuente: API datos.gob.ar dataset 160.2 + BDP_OVERRIDE para el trimestre nuevo.
+    Schema: D.bdp=[{p, cta_cte, bienes, servicios, ing_prim, ing_sec}]
+      cta_cte = saldo cuenta corriente (= bienes+servicios+ing_prim+ing_sec)
+    """
+    arr = D.setdefault("bdp", [])
+    IDS = {
+        "cta_cte":   "160.2_TL_CUENNTE_0_T_22",
+        "bienes":    "160.2_CTA_CORNES_0_T_46",
+        "servicios": "160.2_CTA_CORIOS_0_T_49",
+        "ing_prim":  "160.2_CTA_CORIOS_0_T_41",
+        "ing_sec":   "160.2_CTA_CORIOS_0_T_37",
+    }
+    nuevos = 0
+    try:
+        data = fetch_indec(",".join(IDS.values()), last=24)
+        keys = list(IDS.keys())
+        for row in data:
+            if not row[0]:
+                continue
+            y, m = int(row[0][:4]), int(row[0][5:7])
+            if m not in _BDP_QLBL:
+                continue
+            p = f"{_BDP_QLBL[m]} {y}"
+            rec = next((x for x in arr if x.get("p") == p), None)
+            if rec is None:
+                rec = {"p": p}
+                arr.append(rec)
+                nuevos += 1
+            for i, k in enumerate(keys):
+                v = row[i + 1]
+                if v is not None:
+                    rec[k] = round(float(v))
+        # Override del último trimestre oficial si la API aún no lo trae
+        for p, vals in BDP_OVERRIDE.items():
+            rec = next((x for x in arr if x.get("p") == p), None)
+            if rec is None:
+                arr.append({"p": p, **vals})
+                nuevos += 1
+            elif rec.get("cta_cte") is None:
+                rec.update(vals)
+        qord = {"1er trimestre": 1, "2do trimestre": 2, "3er trimestre": 3, "4to trimestre": 4}
+        arr.sort(key=lambda r: (int(r["p"].rsplit(" ", 1)[1]), qord.get(r["p"].rsplit(" ", 1)[0], 0)))
+        if arr:
+            log(f"Balanza de pagos: actualizado (último {arr[-1]['p']}, cta_cte={arr[-1].get('cta_cte')} M USD)", "ok")
+    except Exception as e:
+        log(f"Balanza de pagos falló: {e}", "warn")
+    return nuevos
+
 def update_bal_cam(D: dict) -> int:
     """Balance cambiario BCRA (mercado de cambios), mensual.
 
@@ -2724,6 +2784,7 @@ SERIES_TRACK_PUB = {
     "mora":     ("BCRA Informe sobre Bancos", "f"),
     "eph":      ("INDEC EPH", "p"),
     "pbi":      ("INDEC CCNN", "p"),
+    "bdp":      ("INDEC", "p"),
 }
 
 SERIE_LBL = {
@@ -2748,6 +2809,7 @@ SERIE_LBL = {
     "mora":     "Irregularidad cartera",
     "eph":      "Desocupación EPH",
     "pbi":      "PBI trimestral",
+    "bdp":      "Balanza de pagos",
 }
 
 def _ultimo_real(arr: list, fecha_key: str) -> dict | None:
@@ -3015,6 +3077,7 @@ SERIE_PERIODICIDAD = {
     "empresas": "anual",
     "eph":      "trimestral",
     "pbi":      "trimestral",
+    "bdp":      "trimestral",
     # resto: mensual por default
 }
 
@@ -3191,6 +3254,7 @@ def main() -> int:
     update_pobreza(D)
     update_jubi(D)
     update_bal_cam(D)
+    update_bdp(D)
     update_informalidad(D)
     update_empresas(D)
     update_fiscal_indec(D)
