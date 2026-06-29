@@ -1507,6 +1507,13 @@
    "serie_key": "emae"
   },
   {
+   "fecha": "2026-06-29",
+   "fuente": "BCRA",
+   "label": "Informe de Pagos Minoristas anual",
+   "periodo": "",
+   "serie_key": null
+  },
+  {
    "fecha": "2026-06-30",
    "fuente": "INDEC",
    "label": "Indicadores del sector energético. Primer trimestre de 2026",
