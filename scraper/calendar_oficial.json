@@ -2300,7 +2300,7 @@
   {
    "fecha": "2026-09-30",
    "fuente": "INDEC",
-   "label": "Dosier estadístico de personas mayores 2026 Actualizado al 20/02/2026 CALENDARIO DE DIFUSIÓN. Segundo semestre de 2026",
+   "label": "Dosier estadístico de personas mayores 2026 Actualizado al 1/7/2026 CALENDARIO DE DIFUSIÓN. Segundo semestre de 2026",
    "periodo": "",
    "serie_key": null
   },
@@ -2382,17 +2382,17 @@
    "serie_key": null
   },
   {
+   "fecha": "2026-10-13",
+   "fuente": "INDEC",
+   "label": "Valorización mensual de la canasta básica alimentaria (CBA) y de la canasta básica total (CBT). Septiembre de 2026",
+   "periodo": "2026-09",
+   "serie_key": null
+  },
+  {
    "fecha": "2026-10-14",
    "fuente": "BCRA",
    "label": "Boletín Estadístico",
    "periodo": "",
-   "serie_key": null
-  },
-  {
-   "fecha": "2026-10-15",
-   "fuente": "INDEC",
-   "label": "Valorización mensual de la canasta básica alimentaria (CBA) y de la canasta básica total (CBT). Septiembre de 2026",
-   "periodo": "2026-09",
    "serie_key": null
   },
   {
