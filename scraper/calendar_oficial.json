@@ -1577,6 +1577,13 @@
    "serie_key": "isac"
   },
   {
+   "fecha": "2026-07-08",
+   "fuente": "BCRA",
+   "label": "Informe de Estabilidad Financiera (IEF)",
+   "periodo": "",
+   "serie_key": null
+  },
+  {
    "fecha": "2026-07-13",
    "fuente": "INDEC",
    "label": "Indicador sintético de servicios públicos (ISSP). Abril de 2026",
