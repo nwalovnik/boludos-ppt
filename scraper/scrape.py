@@ -3181,7 +3181,58 @@ MANUAL_OVERRIDES = [
         "fuente": "Infobae/1816 via CENDEU",
         "publicado_at": "2026-06-02T00:00:00+00:00",
     },
+    {
+        # Mayo 2026: preliminar de prensa (consultora 1816 / CENDEU sobre Central de
+        # Deudores BCRA). El Informe sobre Bancos oficial todavía no salió; cuando
+        # salga, update_mora() reemplaza este registro (pop 'prov').
+        "serie": "mora", "f": "2026-05",
+        "data": {"fam": 12.7, "emp": 3.5},
+        "fuente": "1816/CENDEU (prelim · prev. Informe BCRA)",
+        "publicado_at": "2026-06-29T00:00:00+00:00",
+    },
 ]
+
+# ── Contexto de endeudamiento (Central de Deudores BCRA + Informe PNFC + 1816) ──
+# El Informe de Proveedores No Financieros de Crédito del BCRA es un PDF escaneado
+# (no parseable), y el conteo de personas / apertura por edad viene de la consultora
+# 1816 vía medios. Se mantiene como snapshot manual hasta que haya fuente machine-
+# readable. Estructura pensada para agregar snapshots mensuales (evolución).
+ENDEU_SNAP = {
+    "periodo": "2026-05",
+    "pub_at": "2026-06-29T00:00:00+00:00",
+    "fuente": "BCRA (Central de Deudores · Informe PNFC) + consultora 1816 · vía medios",
+    "mora_bancos_fam": 12.7,      # irregularidad familias en bancos (%)
+    "mora_ent_no_fin": 32.2,      # irregularidad entidades no financieras (fintech/billeteras) (%)
+    "ent_no_fin_share": 17.0,     # peso de las no financieras en el crédito a familias (%)
+    "personas_excluidas_mill": 6.9,   # "casi 7 millones" excluidos del crédito (>90 días)
+    "pct_no_sujeto_credito": 27.0,    # % de la población que dejó de ser sujeto de crédito
+    "meses_suba_consecutiva": 19,
+    # Irregularidad por tramo de edad (personas con ≥1 crédito irregular, banca+no fin.)
+    "por_edad": [
+        {"r": "18-25", "v": 42.8},
+        {"r": "26-35", "v": 39.3},
+        {"r": "36-45", "v": 31.0},
+        {"r": "46-55", "v": 23.5},
+    ],
+    # Anclas de evolución de la mora de entidades no financieras (distintas fuentes/medios).
+    "ent_no_fin_hist": [
+        {"f": "2024-12", "v": 9.0},
+        {"f": "2026-02", "v": 26.9},
+        {"f": "2026-05", "v": 32.2},
+    ],
+}
+
+def set_endeu(D: dict) -> None:
+    """Escribe/actualiza el snapshot de contexto de endeudamiento en D.endeu.
+
+    Si D.endeu ya trae un periodo más nuevo (por continuidad de una corrida futura),
+    no lo pisa con uno viejo.
+    """
+    prev = D.get("endeu")
+    if isinstance(prev, dict) and prev.get("periodo", "") > ENDEU_SNAP["periodo"]:
+        return
+    D["endeu"] = dict(ENDEU_SNAP)
+    log(f"Endeudamiento: snapshot {ENDEU_SNAP['periodo']} (mora fam {ENDEU_SNAP['mora_bancos_fam']}% · no fin. {ENDEU_SNAP['mora_ent_no_fin']}% · {ENDEU_SNAP['personas_excluidas_mill']}M excluidos)", "ok")
 
 def apply_manual_overrides(D: dict) -> None:
     for ov in MANUAL_OVERRIDES:
@@ -3266,6 +3317,7 @@ def main() -> int:
     update_merval(D)
     update_daily_series(D)
     apply_manual_overrides(D)  # datos preliminares de notas/consultoras hasta que llegue el oficial
+    set_endeu(D)  # contexto de endeudamiento (personas en mora, fintech vs bancos, por edad)
 
     # Detectar nuevas publicaciones comparando contra el data.json previo
     pubs = detect_publicaciones(D_prev, D)
