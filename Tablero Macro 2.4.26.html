@@ -708,6 +708,15 @@ hr.d{border:none;border-top:.5px solid var(--bd);margin:16px 0}
     <div class="cc"><div class="cc-hd"><div><div class="cc-t">Irregularidad de cartera <span class="breal">BCRA</span></div><div class="cc-s">% de préstamos en situación irregular &#183; familias y empresas</div></div><button class="dl-btn" onclick="dlCSV('mora')">&#8595; CSV</button></div><div style="position:relative;height:210px"><canvas id="c-mora"></canvas></div></div>
     <div class="cc"><div class="cc-hd"><div><div class="cc-t">Préstamos por sector <span class="breal">BCRA API</span></div><div class="cc-s">Familias vs empresas &#183; billones de pesos</div></div></div><div style="position:relative;height:210px"><canvas id="c-prest-sect"></canvas></div></div>
   </div>
+
+  <div class="slbl" style="margin-top:18px">Endeudamiento de las personas &#183; <span class="daily-note">&#128197; Central de Deudores BCRA + consultora 1816 &#183; vía medios</span></div>
+  <div class="insight warn" id="endeu-stats">
+    <strong>Deudores excluidos del crédito.</strong> Cargando datos de endeudamiento&#8230;
+  </div>
+  <div class="cgrid">
+    <div class="cc"><div class="cc-hd"><div><div class="cc-t">Mora: bancos vs entidades no financieras <span class="breal">prelim</span></div><div class="cc-s">Irregularidad de cartera a familias &#183; % &#183; <span id="endeu-per-a">&#8212;</span></div></div></div><div style="position:relative;height:210px"><canvas id="c-mora-comp"></canvas></div></div>
+    <div class="cc"><div class="cc-hd"><div><div class="cc-t">Mora por tramo de edad <span class="breal">prelim</span></div><div class="cc-s">% de personas con &#8805;1 crédito irregular (banca + no financieras) &#183; <span id="endeu-per-b">&#8212;</span></div></div></div><div style="position:relative;height:210px"><canvas id="c-mora-edad"></canvas></div></div>
+  </div>
 </div>
 
 <div id="pg-fuentes" class="pg">
@@ -3476,6 +3485,30 @@ function buildFinanciero(){
     ],{yf:function(v){return fmtN(v,0);},leg:true});
   }
   buildAgregatosMonetarios();
+  buildEndeu();
+}
+
+// Endeudamiento de las personas (Central de Deudores BCRA + consultora 1816).
+// Sale de D.endeu (data.json local), no depende de la API del BCRA, por eso se
+// dibuja directo desde buildFinanciero sin esperar el fetch de agregados monetarios.
+function buildEndeu(){
+  var EN=(typeof D!=="undefined"&&D.endeu)?D.endeu:null;
+  if(!EN)return;
+  var perTxt=(typeof lblMes==="function")?lblMes(EN.periodo):EN.periodo;
+  var st=document.getElementById("endeu-stats");
+  if(st)st.innerHTML="<strong>Casi "+EN.personas_excluidas_mill.toFixed(1).replace(".",",")+" millones</strong> de personas quedaron fuera del crédito por atrasos de más de 90 días, y <strong>+"+EN.pct_no_sujeto_credito+"%</strong> de la población dejó de ser sujeto de crédito. La mora en <strong>entidades no financieras (fintech, billeteras)</strong> trepó al <strong>"+String(EN.mora_ent_no_fin).replace(".",",")+"%</strong> &#8212; casi el triple que en bancos ("+String(EN.mora_bancos_fam).replace(".",",")+"%) &#8212; y ya son el "+EN.ent_no_fin_share+"% del crédito a familias. Es la <strong>"+EN.meses_suba_consecutiva+"ª suba mensual consecutiva</strong>. <span style='color:var(--tx2)'>Fuente: "+EN.fuente+".</span>";
+  var pa=document.getElementById("endeu-per-a");if(pa)pa.textContent=perTxt;
+  var pb=document.getElementById("endeu-per-b");if(pb)pb.textContent=perTxt;
+  var pctf=function(v){return(Math.round(v)===v?v.toFixed(0):v.toFixed(1))+"%";};
+  // Bancos vs entidades no financieras
+  mk("c-mora-comp",[["Bancos","(familias)"],["Entidades no financieras","(fintech / billeteras)"]],
+    [bar("Irregularidad",[EN.mora_bancos_fam,EN.mora_ent_no_fin],C.red,{backgroundColor:[C.orange+"cc",C.red+"cc"]})],
+    {type:"bar",yf:pctf,leg:false});
+  // Mora por tramo de edad
+  var ed=EN.por_edad||[];
+  mk("c-mora-edad",ed.map(function(r){return r.r+" años";}),
+    [bar("Personas con crédito irregular",ed.map(function(r){return r.v;}),C.red)],
+    {type:"bar",yf:pctf,leg:false});
 }
 
 // ── M1/M2/M3 y Mora vía BCRA API ─────────────────────────────────────────────
@@ -4063,6 +4096,8 @@ function _applyDataJson(dj){
     }
     changed++;
   });
+  // Objetos (no arrays) que igual queremos propagar a D.
+  if (dj.endeu && typeof dj.endeu === "object") { D.endeu = dj.endeu; changed++; }
   return changed;
 }
 
