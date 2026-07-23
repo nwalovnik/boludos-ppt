@@ -1703,6 +1703,13 @@
    "serie_key": null
   },
   {
+   "fecha": "2026-07-23",
+   "fuente": "BCRA",
+   "label": "Encuesta de Condiciones Crediticias (ECC)",
+   "periodo": "",
+   "serie_key": null
+  },
+  {
    "fecha": "2026-07-24",
    "fuente": "INDEC",
    "label": "Índices de patentamientos. Segundo trimestre de 2026",
