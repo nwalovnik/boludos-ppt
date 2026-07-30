@@ -1822,6 +1822,13 @@
    "serie_key": null
   },
   {
+   "fecha": "2026-08-06",
+   "fuente": "BCRA",
+   "label": "Informe de Política Monetaria",
+   "periodo": "",
+   "serie_key": null
+  },
+  {
    "fecha": "2026-08-07",
    "fuente": "INDEC",
    "label": "Índice de producción industrial manufacturero (IPI manufacturero). Junio de 2026",
