@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-07-31",
+ "generated_at": "2026-08-01",
  "eventos": [
   {
    "fecha": "2026-01-06",
@@ -1780,13 +1780,6 @@
    "serie_key": null
   },
   {
-   "fecha": "2026-08-03",
-   "fuente": "ARCA",
-   "label": "Recaudación tributaria nacional",
-   "periodo": "2026-07",
-   "serie_key": "rec"
-  },
-  {
    "fecha": "2026-08-04",
    "fuente": "INDEC",
    "label": "Argentine Foreign Trade Statistics. Merchandise. Preliminary data for the first half of 2026",
@@ -2760,6 +2753,13 @@
    "serie_key": null
   },
   {
+   "fecha": "2026-11-22",
+   "fuente": "Hacienda",
+   "label": "Resultado fiscal SPNF (IMIG)",
+   "periodo": "2026-10",
+   "serie_key": "fiscal"
+  },
+  {
    "fecha": "2026-11-24",
    "fuente": "INDEC",
    "label": "Estimador mensual de actividad económica (EMAE). Septiembre de 2026",
@@ -2835,6 +2835,13 @@
    "label": "Dotación de personal de la administración pública nacional, empresas y sociedades. Octubre 2026",
    "periodo": "",
    "serie_key": null
+  },
+  {
+   "fecha": "2026-12-01",
+   "fuente": "ARCA",
+   "label": "Recaudación tributaria nacional",
+   "periodo": "2026-11",
+   "serie_key": "rec"
   },
   {
    "fecha": "2026-12-02",
