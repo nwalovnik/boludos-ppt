@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-08-31",
+ "generated_at": "2026-09-01",
  "eventos": [
   {
    "fecha": "2026-01-06",
@@ -2039,13 +2039,6 @@
    "serie_key": null
   },
   {
-   "fecha": "2026-09-01",
-   "fuente": "ARCA",
-   "label": "Recaudación tributaria nacional",
-   "periodo": "2026-08",
-   "serie_key": "rec"
-  },
-  {
    "fecha": "2026-09-02",
    "fuente": "INDEC",
    "label": "Origen provincial de las exportaciones. Bienes. Primer semestre de 2026",
@@ -3061,6 +3054,13 @@
    "serie_key": null
   },
   {
+   "fecha": "2026-12-22",
+   "fuente": "Hacienda",
+   "label": "Resultado fiscal SPNF (IMIG)",
+   "periodo": "2026-11",
+   "serie_key": "fiscal"
+  },
+  {
    "fecha": "2026-12-23",
    "fuente": "INDEC",
    "label": "Evolución de la distribución del ingreso (EPH). Tercer trimestre de 2026",
@@ -3122,6 +3122,13 @@
    "label": "Informe de Evolución del Mercado de Cambios y Balance Cambiario",
    "periodo": "",
    "serie_key": null
+  },
+  {
+   "fecha": "2027-01-01",
+   "fuente": "ARCA",
+   "label": "Recaudación tributaria nacional",
+   "periodo": "2026-12",
+   "serie_key": "rec"
   }
  ]
 }
