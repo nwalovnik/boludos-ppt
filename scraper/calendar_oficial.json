@@ -2067,6 +2067,13 @@
    "serie_key": null
   },
   {
+   "fecha": "2026-09-07",
+   "fuente": "BCRA",
+   "label": "Informe Monetario Mensual",
+   "periodo": "",
+   "serie_key": null
+  },
+  {
    "fecha": "2026-09-08",
    "fuente": "INDEC",
    "label": "Índice de producción industrial manufacturero (IPI manufacturero). Julio de 2026",
@@ -2092,13 +2099,6 @@
    "fuente": "INDEC",
    "label": "Índice de producción industrial minero (IPI minero). Julio de 2026",
    "periodo": "2026-07",
-   "serie_key": null
-  },
-  {
-   "fecha": "2026-09-09",
-   "fuente": "BCRA",
-   "label": "Informe Monetario Mensual",
-   "periodo": "",
    "serie_key": null
   },
   {
