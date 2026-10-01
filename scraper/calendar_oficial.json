@@ -2286,7 +2286,7 @@
   {
    "fecha": "2026-09-30",
    "fuente": "INDEC",
-   "label": "Dosier estadístico de personas mayores 2026 Actualizado al 9/9/2026 CALENDARIO DE DIFUSIÓN. Segundo semestre de 2026",
+   "label": "Dosier estadístico de personas mayores 2026 Actualizado al 1/10/2026 CALENDARIO DE DIFUSIÓN. Segundo semestre de 2026",
    "periodo": "",
    "serie_key": null
   },
@@ -2599,14 +2599,14 @@
    "serie_key": null
   },
   {
-   "fecha": "2026-11-09",
+   "fecha": "2026-11-06",
    "fuente": "INDEC",
    "label": "Índice de producción industrial manufacturero (IPI manufacturero). Septiembre de 2026",
    "periodo": "2026-09",
    "serie_key": "ipi"
   },
   {
-   "fecha": "2026-11-09",
+   "fecha": "2026-11-06",
    "fuente": "INDEC",
    "label": "Indicadores de coyuntura de la actividad de la construcción. Septiembre de 2026",
    "periodo": "2026-09",
