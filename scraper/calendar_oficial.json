@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-09-30",
+ "generated_at": "2026-10-01",
  "eventos": [
   {
    "fecha": "2026-01-06",
@@ -2298,13 +2298,6 @@
    "serie_key": "eph"
   },
   {
-   "fecha": "2026-10-01",
-   "fuente": "ARCA",
-   "label": "Recaudación tributaria nacional",
-   "periodo": "2026-09",
-   "serie_key": "rec"
-  },
-  {
    "fecha": "2026-10-02",
    "fuente": "INDEC",
    "label": "Medición de la productividad 2016-2025 y el stock de capital 2004-2025 de la República Argentina",
@@ -3128,6 +3121,20 @@
    "fuente": "ARCA",
    "label": "Recaudación tributaria nacional",
    "periodo": "2026-12",
+   "serie_key": "rec"
+  },
+  {
+   "fecha": "2027-01-22",
+   "fuente": "Hacienda",
+   "label": "Resultado fiscal SPNF (IMIG)",
+   "periodo": "2026-12",
+   "serie_key": "fiscal"
+  },
+  {
+   "fecha": "2027-02-01",
+   "fuente": "ARCA",
+   "label": "Recaudación tributaria nacional",
+   "periodo": "2027-01",
    "serie_key": "rec"
   }
  ]
