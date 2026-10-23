@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-10-22",
+ "generated_at": "2026-10-23",
  "eventos": [
   {
    "fecha": "2026-01-06",
@@ -2485,13 +2485,6 @@
    "label": "Encuesta de Condiciones Crediticias (ECC)",
    "periodo": "",
    "serie_key": null
-  },
-  {
-   "fecha": "2026-10-22",
-   "fuente": "Hacienda",
-   "label": "Resultado fiscal SPNF (IMIG)",
-   "periodo": "2026-09",
-   "serie_key": "fiscal"
   },
   {
    "fecha": "2026-10-26",
