@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-10-29",
+ "generated_at": "2026-10-30",
  "eventos": [
   {
    "fecha": "2026-01-06",
@@ -2504,6 +2504,13 @@
    "fecha": "2026-10-29",
    "fuente": "BCRA",
    "label": "Informe sobre Deuda Externa Privada",
+   "periodo": "",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-10-29",
+   "fuente": "BCRA",
+   "label": "Informe de Política Monetaria",
    "periodo": "",
    "serie_key": null
   },
