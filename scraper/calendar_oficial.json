@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-10-31",
+ "generated_at": "2026-11-01",
  "eventos": [
   {
    "fecha": "2026-01-06",
@@ -2543,13 +2543,6 @@
    "serie_key": null
   },
   {
-   "fecha": "2026-11-02",
-   "fuente": "ARCA",
-   "label": "Recaudación tributaria nacional",
-   "periodo": "2026-10",
-   "serie_key": "rec"
-  },
-  {
    "fecha": "2026-11-03",
    "fuente": "INDEC",
    "label": "Índices de precios y cantidades del comercio exterior. Tercer trimestre de 2026",
@@ -3131,10 +3124,24 @@
    "serie_key": "fiscal"
   },
   {
+   "fecha": "2027-01-22",
+   "fuente": "Hacienda",
+   "label": "Resultado fiscal SPNF (IMIG)",
+   "periodo": "2026-13",
+   "serie_key": "fiscal"
+  },
+  {
    "fecha": "2027-02-01",
    "fuente": "ARCA",
    "label": "Recaudación tributaria nacional",
    "periodo": "2027-01",
+   "serie_key": "rec"
+  },
+  {
+   "fecha": "2027-03-01",
+   "fuente": "ARCA",
+   "label": "Recaudación tributaria nacional",
+   "periodo": "2027-02",
    "serie_key": "rec"
   }
  ]
