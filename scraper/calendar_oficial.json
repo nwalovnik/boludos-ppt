@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-11-18",
+ "generated_at": "2026-11-19",
  "eventos": [
   {
    "fecha": "2026-01-06",
@@ -2862,6 +2862,13 @@
    "fuente": "INDEC",
    "label": "Índice de producción industrial pesquero (IPI pesquero). Octubre de 2026",
    "periodo": "2026-10",
+   "serie_key": null
+  },
+  {
+   "fecha": "2026-12-04",
+   "fuente": "BCRA",
+   "label": "Relevamiento de Expectativas de Mercado (REM)",
+   "periodo": "",
    "serie_key": null
   },
   {
