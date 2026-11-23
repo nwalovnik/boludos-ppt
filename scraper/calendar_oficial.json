@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-11-22",
+ "generated_at": "2026-11-23",
  "eventos": [
   {
    "fecha": "2026-01-06",
@@ -2723,13 +2723,6 @@
    "label": "Informe sobre Bancos",
    "periodo": "",
    "serie_key": "mora"
-  },
-  {
-   "fecha": "2026-11-22",
-   "fuente": "Hacienda",
-   "label": "Resultado fiscal SPNF (IMIG)",
-   "periodo": "2026-10",
-   "serie_key": "fiscal"
   },
   {
    "fecha": "2026-11-24",
